@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>小星 · 语音理财助手（原型）</title>
+<style>
+  :root{
+    --bg:#F6F2EA; --panel:#FFFFFF; --ink:#16181D; --muted:#4A4F57; --line:#D9D3C7;
+    --primary:#1F3A5F; --primary-ink:#FFFFFF; --ok:#1C6B3C; --ok-bg:#E5F2EA;
+    --warn:#8A5A00; --warn-bg:#FFF3D6; --bad:#A3271F; --bad-bg:#FBE7E4;
+    --user:#1F3A5F; --bot:#FFFFFF;
+    --fs:22px; --fs-big:30px; --fs-huge:46px; --radius:18px;
+    --trace-bg:#14171C; --trace-ink:#DDE3EA; --trace-muted:#8D96A3;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"PingFang SC","Noto Sans SC","Microsoft YaHei",system-ui,sans-serif}
+  body{font-size:var(--fs);line-height:1.5}
+  body.normal{--fs:17px;--fs-big:22px;--fs-huge:34px}
+  button{font:inherit;cursor:pointer}
+  .app{display:grid;grid-template-columns:minmax(0,1fr) 420px;min-height:100vh}
+  .app.no-trace{grid-template-columns:minmax(0,1fr)}
+  .app.no-trace .trace{display:none}
+  @media (max-width:980px){.app{grid-template-columns:minmax(0,1fr)}.trace{min-height:50vh;position:static}}
+  @media (max-width:560px){
+    header{flex-wrap:wrap}.toggles{width:100%;justify-content:flex-start}
+    .main{padding:12px}.mic{width:72px;height:72px}.mic svg{width:34px;height:34px}
+    .send{padding:0 14px}.msg{max-width:94%}
+  }
+  html,body{overflow-x:hidden}
+
+  /* ---------- 用户侧 ---------- */
+  .main{display:flex;flex-direction:column;max-width:760px;width:100%;margin:0 auto;padding:16px;height:100vh;height:100dvh}
+  header{display:flex;align-items:center;gap:14px;padding:14px 4px 18px;border-bottom:2px solid var(--line)}
+  .avatar{width:56px;height:56px;border-radius:50%;background:var(--primary);color:#fff;display:grid;place-items:center;font-weight:700;font-size:26px;flex:none}
+  .who{flex:1;min-width:0}
+  .who b{display:block;font-size:var(--fs-big)}
+  .who span{color:var(--muted);font-size:.8em}
+  .toggles{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .tog{border:2px solid var(--line);background:#fff;border-radius:999px;padding:6px 14px;font-size:16px;color:var(--ink)}
+  .tog[aria-pressed="true"]{border-color:var(--primary);background:var(--primary);color:#fff}
+  .badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+  .badge{font-size:13px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px;background:#fff}
+
+  .chat{flex:1;min-height:0;overflow-y:auto;padding:18px 2px;display:flex;flex-direction:column;gap:14px}
+  .msg{max-width:88%;padding:14px 18px;border-radius:var(--radius);white-space:pre-wrap;word-break:break-word}
+  .msg.user{align-self:flex-end;background:var(--user);color:#fff;border-bottom-right-radius:6px}
+  .msg.bot{align-self:flex-start;background:var(--bot);border:2px solid var(--line);border-bottom-left-radius:6px}
+  .msg.ok{background:var(--ok-bg);border-color:var(--ok);color:var(--ok);font-weight:600}
+  .msg.sys{align-self:center;background:transparent;color:var(--muted);font-size:.75em;padding:2px}
+  .msg .replay{margin-left:8px;border:none;background:none;color:inherit;opacity:.7;font-size:.9em}
+
+  .chips{display:flex;gap:10px;flex-wrap:wrap;padding:6px 0 12px}
+  #chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}
+  #chips .chip{flex:none}
+  .chip{border:2px solid var(--primary);color:var(--primary);background:#fff;border-radius:999px;padding:8px 16px;font-size:.8em;font-weight:600}
+  .chip.danger{border-color:var(--bad);color:var(--bad)}
+
+  .composer{display:flex;gap:12px;align-items:center;padding:12px 0 6px;border-top:2px solid var(--line)}
+  .mic{width:92px;height:92px;border-radius:50%;border:none;background:var(--primary);color:#fff;flex:none;display:grid;place-items:center;box-shadow:0 4px 0 #0e2038}
+  .mic svg{width:42px;height:42px}
+  .mic.rec{background:var(--bad);box-shadow:0 0 0 10px rgba(163,39,31,.18);animation:pulse 1.2s infinite}
+  @keyframes pulse{50%{box-shadow:0 0 0 18px rgba(163,39,31,.08)}}
+  .input{flex:1;display:flex;gap:8px;min-width:0}
+  .input input{flex:1;min-width:0;font:inherit;padding:16px;border:2px solid var(--line);border-radius:14px;background:#fff}
+  .input input:focus{outline:3px solid var(--primary);outline-offset:1px}
+  .send{border:none;background:var(--ink);color:#fff;border-radius:14px;padding:0 20px;font-weight:700}
+  .hint{color:var(--muted);font-size:.7em;text-align:center;min-height:1.5em}
+
+  /* ---------- 确认卡 ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(10,14,20,.55);display:none;align-items:flex-end;justify-content:center;z-index:20}
+  .overlay.show{display:flex}
+  .card{background:var(--panel);width:min(640px,100%);border-radius:24px 24px 0 0;padding:26px 24px 30px;max-height:94vh;overflow:auto}
+  @media (min-width:700px){.overlay{align-items:center}.card{border-radius:24px}}
+  .card h2{margin:0 0 14px;font-size:var(--fs-big)}
+  .row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px dashed var(--line)}
+  .row .k{color:var(--muted)}
+  .row .v{font-weight:700;text-align:right}
+  .amount{font-size:var(--fs-huge);font-weight:800;letter-spacing:.5px;margin:6px 0 0}
+  .amount-words{color:var(--muted);font-size:.85em}
+  .risk{border-radius:14px;padding:12px 16px;margin:16px 0 6px;font-size:.85em}
+  .risk.MEDIUM{background:var(--warn-bg);color:var(--warn);border:2px solid #E2B04A}
+  .risk.HIGH,.risk.BLOCK{background:var(--bad-bg);color:var(--bad);border:2px solid #E3958D}
+  .risk ul{margin:6px 0 0;padding-left:1.1em}
+  .verify{margin:14px 0;padding:14px;border:2px solid var(--line);border-radius:14px}
+  .verify .q{font-weight:700;margin-bottom:10px}
+  .yesno{display:flex;gap:10px}
+  .yesno button{flex:1;padding:12px;border-radius:12px;border:2px solid var(--line);background:#fff}
+  .yesno button[aria-pressed="true"]{border-color:var(--primary);background:var(--primary);color:#fff}
+  .cool{text-align:center;margin:14px 0;font-weight:700;color:var(--bad)}
+  .actions{display:flex;gap:12px;margin-top:20px}
+  .btn{flex:1;min-height:68px;border-radius:16px;border:none;font-weight:800;font-size:var(--fs)}
+  .btn.cancel{background:#E8E3D9;color:var(--ink)}
+  .btn.go{background:var(--ok);color:#fff;display:flex;align-items:center;justify-content:center;gap:10px}
+  .btn.go:disabled{background:#9AA59E;cursor:not-allowed}
+  .digest{margin-top:14px;font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--muted);text-align:center}
+
+  .blocked{background:var(--bad-bg);border:2px solid var(--bad);color:var(--bad);border-radius:var(--radius);padding:16px 18px;align-self:stretch}
+  .blocked b{display:block;font-size:var(--fs-big);margin-bottom:6px}
+  .blocked .acts{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .blocked a,.blocked button{flex:1;min-width:150px;text-align:center;text-decoration:none;border-radius:12px;padding:12px;font-weight:700;border:2px solid var(--bad)}
+  .blocked a{background:var(--bad);color:#fff}
+  .blocked button{background:#fff;color:var(--bad)}
+
+  /* ---------- Agent 轨迹（给评委/工程师看） ---------- */
+  .trace{background:var(--trace-bg);color:var(--trace-ink);font-size:14px;line-height:1.45;display:flex;flex-direction:column;max-height:100vh;position:sticky;top:0}
+  .trace h3{margin:0;padding:16px 18px 6px;font-size:16px;letter-spacing:.3px}
+  .trace .sub{padding:0 18px 10px;color:var(--trace-muted);font-size:12.5px;border-bottom:1px solid #2A2F37}
+  .tlist{flex:1;overflow-y:auto;padding:10px 12px 20px}
+  .ti{display:grid;grid-template-columns:96px 1fr;gap:8px;padding:6px 6px;border-radius:6px}
+  .ti:hover{background:#1D2128}
+  .ti .k{font-family:ui-monospace,Menlo,monospace;font-size:12px;text-transform:uppercase;padding-top:1px}
+  .ti .l{word-break:break-word}
+  .ti details{grid-column:2;color:var(--trace-muted);font-family:ui-monospace,Menlo,monospace;font-size:11.5px}
+  .ti details pre{white-space:pre-wrap;margin:4px 0 0;max-height:220px;overflow:auto}
+  .k-user{color:#9CC3FF}.k-thought{color:#C7B3FF}.k-action{color:#7FD1B9}.k-observation{color:#A9B4C2}
+  .k-rule{color:#FFD27A}.k-guard{color:#FF8A80}.k-judge{color:#F7A3D3}.k-state{color:#8D96A3}
+  .k-sign{color:#9BE28A}.k-exec{color:#5FE07F}.k-plan{color:#80D8FF}.k-asr{color:#B0E0FF}.k-fallback{color:#FFB74D}.k-handoff{color:#FFB74D}
+  .ti.turn{border-top:1px solid #2A2F37;margin-top:6px;padding-top:10px}
+  .tfoot{display:flex;gap:8px;padding:10px 12px;border-top:1px solid #2A2F37;flex-wrap:wrap}
+  .tfoot button{background:#232832;color:var(--trace-ink);border:1px solid #39404B;border-radius:8px;padding:6px 10px;font-size:13px}
+  .tfoot .res{color:var(--trace-muted);font-size:12.5px;align-self:center}
+  .sr{position:absolute;left:-9999px}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <section class="main" aria-label="语音理财助手">
+    <header>
+      <div class="avatar" aria-hidden="true">陈</div>
+      <div class="who">
+        <b id="who">陈阿姨，您好</b>
+        <span id="bal">储蓄账户 —</span>
+        <div class="badges"><span class="badge" id="b-llm">模型：—</span><span class="badge" id="b-asr">语音：—</span><span class="badge">原型 · 非 DBS 官方产品</span></div>
+      </div>
+      <div class="toggles">
+        <button class="tog" id="t-big" aria-pressed="true">大字</button>
+        <button class="tog" id="t-voice" aria-pressed="true">朗读</button>
+        <button class="tog" id="t-trace" aria-pressed="true">轨迹</button>
+      </div>
+    </header>
+
+    <div class="chat" id="chat" aria-live="polite"></div>
+
+    <div class="chips" id="chips">
+      <button class="chip">我的养老金到了没有？</button>
+      <button class="chip">帮我交水电费</button>
+      <button class="chip">给女儿转两百</button>
+      <button class="chip">交完电费再给女儿转200</button>
+      <button class="chip danger">警察说我账户有问题，要我转5万到安全账户</button>
+    </div>
+
+    <div class="composer">
+      <button class="mic" id="mic" aria-label="按一下开始说话，再按一下结束">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      </button>
+      <form class="input" id="form">
+        <label class="sr" for="text">也可以打字</label>
+        <input id="text" autocomplete="off" placeholder="也可以打字，比如：给女儿转两百">
+        <button class="send" type="submit">发送</button>
+      </form>
+    </div>
+    <div class="hint" id="hint">按一下圆形按钮开始说话，说完再按一下</div>
+  </section>
+
+  <aside class="trace" aria-label="Agent 轨迹">
+    <h3>Agent 轨迹</h3>
+    <div class="sub">Thought → Action → Observation · 规则判级 · 签名 · 执行 —— 每一步都写入哈希链审计日志</div>
+    <div class="tlist" id="tlist"></div>
+    <div class="tfoot">
+      <button id="verify">校验审计链</button>
+      <button id="reset">重置演示</button>
+      <span class="res" id="vres"></span>
+    </div>
+  </aside>
+</div>
+
+<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="c-title">
+  <div class="card" id="card"></div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const state = { sid: localStorage.getItem('sid') || null, card: null, verify: null, coolTimer: null, health: {} };
+const KIND = {user:'用户',thought:'Thought',action:'Action',observation:'Observe',rule:'Rule',guard:'Guard',judge:'Judge',
+  state:'State',sign:'Sign',exec:'Execute',plan:'Plan',asr:'ASR',fallback:'Fallback',handoff:'Handoff'};
+
+// ---------------------------------------------------------------- 基础
+async function api(path, body){
+  const opt = body ? {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)} : {};
+  const r = await fetch(path, opt);
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok) throw Object.assign(new Error(data.error || r.statusText), {data, status:r.status});
+  return data;
+}
+function esc(s){return String(s ?? '').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function addMsg(text, who='bot', cls=''){
+  const el = document.createElement('div');
+  el.className = `msg ${who} ${cls}`;
+  el.textContent = text;
+  if(who==='bot'){
+    const b = document.createElement('button'); b.className='replay'; b.title='再听一遍'; b.setAttribute('aria-label','再听一遍');
+    b.textContent='🔊'; b.onclick=()=>speak(text, true); el.appendChild(b);
+  }
+  $('#chat').appendChild(el); el.scrollIntoView({behavior:'smooth',block:'end'});
+  return el;
+}
+function addTrace(items){
+  const list = $('#tlist');
+  (items||[]).forEach((it,i)=>{
+    const el = document.createElement('div');
+    el.className = 'ti' + (it.kind==='user' ? ' turn' : '');
+    el.innerHTML = `<div class="k k-${esc(it.kind)}">${esc(KIND[it.kind]||it.kind)}</div><div class="l">${esc(it.label)}</div>` +
+      (it.detail !== undefined ? `<details><summary>详情</summary><pre>${esc(JSON.stringify(it.detail,null,2))}</pre></details>` : '');
+    list.appendChild(el);
+  });
+  list.scrollTop = list.scrollHeight;
+}
+
+// ---------------------------------------------------------------- 朗读（v1 用浏览器 TTS，可换腾讯云 TTS）
+function speak(text, force=false){
+  if(!force && $('#t-voice').getAttribute('aria-pressed')!=='true') return;
+  if(!('speechSynthesis' in window) || !text) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = /[一-鿿]/.test(text) ? 'zh-CN' : 'en-SG';
+  u.rate = 0.82;  // 适老：放慢语速
+  speechSynthesis.speak(u);
+}
+
+// ---------------------------------------------------------------- 对话
+async function send(text){
+  text = text.trim(); if(!text) return;
+  addMsg(text,'user');
+  $('#text').value='';
+  const typing = addMsg('……','bot','sys');
+  try{
+    const r = await api('/api/chat',{session_id:state.sid, text});
+    typing.remove();
+    state.sid = r.session_id; localStorage.setItem('sid', r.session_id);
+    addTrace(r.trace);
+    handleTurn(r);
+  }catch(e){ typing.remove(); addMsg('网络有点问题，请再说一次。'); console.error(e); }
+}
+function handleTurn(r){
+  const ui = r.ui || {type:'text'};
+  if(ui.type==='blocked'){ showBlocked(r.reply, ui); speak(r.speak); return; }
+  addMsg(r.reply);
+  speak(r.speak);
+  if(ui.card) openCard(ui.card);
+  refreshWorld();
+}
+function showBlocked(text, ui){
+  const el = document.createElement('div'); el.className='blocked'; el.setAttribute('role','alert');
+  el.innerHTML = `<b>已帮您停下这笔交易</b>${esc(text)}
+    <div class="acts"><a href="tel:1799">拨打反诈热线 1799</a><button type="button">通知我的家人</button></div>`;
+  el.querySelector('button').onclick = ()=>addMsg('（演示）已发送提醒给您设置的家人：陈美玲。');
+  $('#chat').appendChild(el); el.scrollIntoView({behavior:'smooth',block:'end'});
+}
+
+// ---------------------------------------------------------------- 确认卡
+function openCard(c){
+  state.card = c; state.verify = null;
+  clearInterval(state.coolTimer);
+  renderCard();
+  $('#overlay').classList.add('show');
+  setTimeout(()=>$('#card .btn.go')?.focus(), 50);
+  if(c.cooldown_left > 0){
+    state.coolTimer = setInterval(async ()=>{
+      state.card.cooldown_left = Math.max(0, state.card.cooldown_left - 1);
+      if(state.card.cooldown_left === 0){
+        clearInterval(state.coolTimer);
+        try{ const r = await api('/api/card/'+state.sid); if(r.card) state.card = r.card; }catch(e){}
+      }
+      renderCard();
+    }, 1000);
+  }
+}
+function renderCard(){
+  const c = state.card; if(!c) return;
+  const needVerify = !!c.verify_question;
+  const cooling = c.cooldown_left > 0;
+  const canGo = c.can_confirm && !cooling && (!needVerify || state.verify === true);
+  const rel = c.payee_relation && c.payee_relation !== '账单' ? `（${esc(c.payee_relation)}）` : '';
+  $('#card').innerHTML = `
+    <h2 id="c-title">${esc(c.title)}</h2>
+    <div class="row"><span class="k">收款人</span><span class="v">${esc(c.payee_name)}${rel}<br><small style="font-weight:400;color:var(--muted)">${esc(c.payee_account)}</small></span></div>
+    <div class="row" style="display:block"><span class="k">金额</span>
+      <div class="amount">${esc(c.amount)}</div><div class="amount-words">${esc(c.amount_words)}</div></div>
+    <div class="row"><span class="k">扣款账户</span><span class="v">${esc(c.from_account)}</span></div>
+    ${c.risk_level!=='LOW' ? `<div class="risk ${esc(c.risk_level)}"><b>${c.risk_level==='MEDIUM'?'请多看一眼':'为了安全，我们多等一会儿'}</b><ul>${c.reasons.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}
+    ${needVerify ? `<div class="verify"><div class="q">${esc(c.verify_question)}</div><div class="yesno">
+        <button type="button" data-v="yes" aria-pressed="${state.verify===true}">是的</button>
+        <button type="button" data-v="no" aria-pressed="${state.verify===false}">不是 / 不确定</button></div></div>` : ''}
+    ${cooling ? `<div class="cool">冷静期：还需等待 ${c.cooldown_left} 秒<br><small style="font-weight:400">这段时间可以给家人打个电话确认一下</small></div>` : ''}
+    <div class="actions">
+      <button type="button" class="btn cancel" id="c-cancel">取消</button>
+      <button type="button" class="btn go" id="c-go" ${canGo?'':'disabled'}>
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M7 11c0-3 2.2-5 5-5s5 2 5 5v2M9.5 11c0-1.4 1.1-2.5 2.5-2.5s2.5 1.1 2.5 2.5v3c0 2-1 4-2 5M12 11v3c0 1.5-.5 3-1.5 4.5M7 14c0 2 .5 3.5 1.5 5M17 16c-.2 1.3-.6 2.5-1.2 3.5"/></svg>
+        按指纹确认</button>
+    </div>
+    <div class="digest" title="确认码 = 本卡全部内容的哈希。您签名的就是这串码，执行时会再核对一次。">确认码 ${esc(c.digest.slice(0,8))}…${esc(c.digest.slice(-4))}</div>`;
+  $('#card').querySelectorAll('.yesno button').forEach(b=>b.onclick=()=>{
+    state.verify = b.dataset.v==='yes';
+    if(state.verify===false){ addMsg('没关系。如果不确定，我们先不转，可以问问家人再说。'); speak('没关系。如果不确定，我们先不转，可以问问家人再说。'); }
+    renderCard();
+  });
+  $('#c-cancel').onclick = cancelCard;
+  $('#c-go').onclick = confirmCard;
+}
+async function confirmCard(){
+  const c = state.card;
+  $('#c-go').disabled = true; $('#c-go').textContent = '正在验证指纹…';
+  try{
+    // 演示：模拟设备生物识别。生产环境：navigator.credentials.get() 对 digest 签名（WebAuthn/Passkey）。
+    const r = await api('/api/confirm',{session_id:state.sid, draft_id:c.draft_id, digest:c.digest,
+      assertion:'demo-fingerprint', verify_answer: c.verify_question ? state.verify : null});
+    closeCard(); addTrace(r.trace);
+    addMsg('✓ ' + r.reply,'bot','ok'); speak(r.speak);
+    if(r.next_task){ setTimeout(()=>{ addMsg(`接下来还有一件：“${r.next_task}”。现在继续吗？`); offerNext(r.next_task); }, 600); }
+    refreshWorld();
+  }catch(e){
+    addTrace(e.data?.trace); addMsg(e.message); speak(e.message);
+    if(e.data?.code==='NOT_AWAITING_AUTH' || e.data?.code==='RECHECK_BLOCKED') closeCard(); else renderCard();
+  }
+}
+function offerNext(task){
+  const wrap = document.createElement('div'); wrap.className='chips';
+  wrap.innerHTML = `<button class="chip">继续：${esc(task)}</button><button class="chip">先不用了</button>`;
+  const [go, no] = wrap.querySelectorAll('button');
+  go.onclick = ()=>{ wrap.remove(); send(task); };
+  no.onclick = ()=>{ wrap.remove(); addMsg('好的，有需要随时叫我。'); };
+  $('#chat').appendChild(wrap); wrap.scrollIntoView({behavior:'smooth',block:'end'});
+}
+async function cancelCard(){
+  const c = state.card; closeCard();
+  try{ const r = await api('/api/cancel',{session_id:state.sid, draft_id:c.draft_id}); addMsg(r.reply); speak(r.speak); }
+  catch(e){ addMsg(e.message); }
+}
+function closeCard(){ clearInterval(state.coolTimer); $('#overlay').classList.remove('show'); state.card=null; }
+document.addEventListener('keydown', e=>{ if(e.key==='Escape' && state.card) cancelCard(); });
+
+// ---------------------------------------------------------------- 语音输入
+// 优先：录 16k 单声道 WAV → 后端腾讯云一句话识别（带收款人热词表）
+// 兜底：服务器没配 ASR 时，用浏览器自带的语音识别（Chrome）
+const rec = { ctx:null, stream:null, node:null, chunks:[], rate:48000, on:false, timer:null, sr:null };
+const MAX_SEC = 15;   // 一句话识别请求体有大小限制，单次录音控制在 15 秒内
+async function micToggle(){
+  if(rec.on) return stopRec();
+  if(state.health.asr === 'tencent') return startWavRec();
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ addMsg('这个浏览器不支持语音输入，请用 Chrome，或者直接打字。'); return; }
+  rec.sr = new SR(); rec.sr.lang = 'zh-CN'; rec.sr.interimResults = false;
+  rec.sr.onresult = e => { const t = e.results[0][0].transcript; addTrace([{kind:'asr',label:'浏览器语音识别：'+t}]); send(t); };
+  rec.sr.onend = () => setRec(false);
+  rec.sr.onerror = e => { setRec(false); $('#hint').textContent = '没听清，请再试一次（'+e.error+'）'; };
+  rec.sr.start(); setRec(true);
+}
+async function startWavRec(){
+  try{ rec.stream = await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:true,noiseSuppression:true}}); }
+  catch(e){ addMsg('没有麦克风权限，可以直接打字。'); return; }
+  rec.ctx = new (window.AudioContext||window.webkitAudioContext)();
+  rec.rate = rec.ctx.sampleRate; rec.chunks = [];
+  const src = rec.ctx.createMediaStreamSource(rec.stream);
+  rec.node = rec.ctx.createScriptProcessor(4096,1,1);
+  rec.node.onaudioprocess = e => rec.chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+  src.connect(rec.node); rec.node.connect(rec.ctx.destination);
+  setRec(true);
+  rec.timer = setTimeout(stopRec, MAX_SEC*1000);
+}
+async function stopRec(){
+  clearTimeout(rec.timer);
+  if(rec.sr){ rec.sr.stop(); rec.sr = null; return; }
+  setRec(false);
+  rec.node?.disconnect(); rec.stream?.getTracks().forEach(t=>t.stop()); await rec.ctx?.close();
+  const wav = encodeWav(downsample(flatten(rec.chunks), rec.rate, 16000), 16000);
+  if(wav.byteLength < 16000){ $('#hint').textContent='太短了，请按住多说一会儿'; return; }
+  $('#hint').textContent='正在识别…';
+  try{
+    const r = await api('/api/asr',{session_id:state.sid, audio_b64: b64(wav)});
+    $('#hint').textContent='';
+    addTrace([{kind:'asr',label:`腾讯云 ASR（${r.engine}，${r.latency_ms}ms）：${r.text}`}]);
+    if(r.text) send(r.text); else $('#hint').textContent='没听清，请再说一次';
+  }catch(e){ $('#hint').textContent='识别失败：'+e.message; }
+}
+function setRec(on){ rec.on=on; $('#mic').classList.toggle('rec',on); $('#hint').textContent = on ? '正在听…说完再按一下' : '按一下圆形按钮开始说话，说完再按一下'; }
+function flatten(chunks){ const n=chunks.reduce((a,c)=>a+c.length,0), out=new Float32Array(n); let o=0; chunks.forEach(c=>{out.set(c,o);o+=c.length}); return out; }
+function downsample(buf, from, to){
+  if(from===to) return buf;
+  const ratio = from/to, len = Math.floor(buf.length/ratio), out = new Float32Array(len);
+  for(let i=0;i<len;i++){ const s=Math.floor(i*ratio), e=Math.min(buf.length,Math.floor((i+1)*ratio)); let sum=0; for(let j=s;j<e;j++) sum+=buf[j]; out[i]=sum/Math.max(1,e-s); }
+  return out;
+}
+function encodeWav(samples, rate){
+  const buf = new ArrayBuffer(44 + samples.length*2), v = new DataView(buf);
+  const w = (o,s)=>{ for(let i=0;i<s.length;i++) v.setUint8(o+i,s.charCodeAt(i)); };
+  w(0,'RIFF'); v.setUint32(4,36+samples.length*2,true); w(8,'WAVE'); w(12,'fmt ');
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true); v.setUint32(24,rate,true);
+  v.setUint32(28,rate*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true); w(36,'data'); v.setUint32(40,samples.length*2,true);
+  for(let i=0;i<samples.length;i++){ const s=Math.max(-1,Math.min(1,samples[i])); v.setInt16(44+i*2, s<0?s*0x8000:s*0x7FFF, true); }
+  return buf;
+}
+function b64(buf){ let s=''; const b=new Uint8Array(buf); for(let i=0;i<b.length;i+=0x8000) s+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000)); return btoa(s); }
+
+// ---------------------------------------------------------------- 其他
+async function refreshWorld(){
+  try{ const w = await api('/api/world' + (state.sid ? '?session_id='+state.sid : '')); $('#bal').textContent = `${w.account} ${w.balance}`; }catch(e){}
+}
+function toggle(btn, fn){ btn.onclick = ()=>{ const on = btn.getAttribute('aria-pressed')!=='true'; btn.setAttribute('aria-pressed', on); fn(on); }; }
+toggle($('#t-big'), on => document.body.classList.toggle('normal', !on));
+toggle($('#t-voice'), on => { if(!on) speechSynthesis?.cancel(); });
+toggle($('#t-trace'), on => $('#app').classList.toggle('no-trace', !on));
+$('#mic').onclick = micToggle;
+$('#form').onsubmit = e => { e.preventDefault(); send($('#text').value); };
+$('#chips').querySelectorAll('.chip').forEach(c => c.onclick = () => send(c.textContent));
+$('#verify').onclick = async ()=>{ const r = await api('/api/audit/verify'); $('#vres').textContent = r.ok ? `✓ 完整，共 ${r.records} 条` : `✗ 第 ${r.broken_at_line} 行被篡改`; };
+$('#reset').onclick = async ()=>{
+  const r = await api('/api/reset',{session_id:state.sid, world:true});
+  state.sid = r.session_id; localStorage.setItem('sid', r.session_id);
+  $('#chat').innerHTML=''; $('#tlist').innerHTML=''; closeCard(); greet(); refreshWorld();
+};
+function greet(){ addMsg('陈阿姨您好，我是小星。可以直接跟我说：“给女儿转两百”“养老金到了没有”“帮我交水电费”。'); }
+
+(async function init(){
+  try{
+    state.health = await api('/api/health');
+    $('#b-llm').textContent = '模型：' + (state.health.llm==='offline' ? '离线规则（未配置 key）' : state.health.model);
+    $('#b-asr').textContent = '语音：' + (state.health.asr==='tencent' ? '腾讯云 ASR' : '浏览器识别');
+  }catch(e){}
+  if(!state.sid){ const r = await api('/api/reset',{}); state.sid = r.session_id; localStorage.setItem('sid', r.session_id); }
+  greet(); refreshWorld();
+})();
+</script>
+</body>
+</html>
