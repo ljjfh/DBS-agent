@@ -4,8 +4,6 @@
 
 > 原型，非 DBS 官方产品。银行接口为 Mock，生物识别为模拟。
 
-## 5 分钟跑起来
-
 ```bash
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
