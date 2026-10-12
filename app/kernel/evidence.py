@@ -112,7 +112,9 @@ def ground(utterances: list[str], payee: dict | None, amount_cents: int, kind: s
     if not amount_ok and proposal and amount_cents in amounts_in(proposal):
         # the assistant asked "Did you mean a grand (S$1,000)?" and the user's latest words were "yes"
         amount_ok, source = True, "confirmed"
-        heard_note = f"you said yes when I asked: “{proposal.strip()[:90]}”"
+        asked = next((q for q in re.split(r"(?<=[.!?])\s+", proposal.strip())
+                      if q.endswith("?") and amount_cents in amounts_in(q)), proposal)
+        heard_note = f"you said yes when I asked: “{asked.strip()[:90]}”"
     if not amount_ok and heard and all(heard):
         # The model's reading of a speech slip ("a grant" -> "a grand"). The model does the understanding; code only
         # checks it: the misheard words really are in what the user said, they sound like what the model says was
@@ -144,7 +146,7 @@ def ground(utterances: list[str], payee: dict | None, amount_cents: int, kind: s
     else:
         who = next((u for u in reversed(utterances) if _mentions(u, names)), "")
         how_much = next((u for u in reversed(utterances) if amount_cents in amounts_in(u)), "") or rel_said or \
-            next((u for u in reversed(utterances) if heard_note and _norm(heard[0]) in _norm(u)), "")
+            next((u for u in reversed(utterances) if heard and heard[0] and _norm(heard[0]) in _norm(u)), "")
         parts = [p for p in dict.fromkeys([who, how_much]) if p]
         parts.sort(key=lambda p: max(i for i, u in enumerate(utterances) if u == p))   # in the order they were said
         quote = " … ".join(p.strip() for p in parts)
