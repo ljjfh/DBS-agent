@@ -155,6 +155,7 @@ main{width:100%;max-width:1480px;margin:0 auto;padding:28px 32px 40px}
 .mic{display:inline-flex;align-items:center;gap:6px;color:#636a73;padding:9px 10px;border-radius:8px;font-size:12px;font-weight:700}
 .mic:hover{background:#f0f1f3}
 .mic.rec{color:var(--bad);background:var(--bad-bg);animation:pulse 1.2s infinite}
+.mic.rec.live{animation:none;box-shadow:0 0 0 calc(2px + var(--lvl,0) * 8px) #b4233233;transition:box-shadow .08s linear}
 @keyframes pulse{50%{box-shadow:0 0 0 6px #b4233222}}
 .send{background:var(--brand);color:#fff;border-radius:8px;width:42px;height:42px;display:grid;place-items:center}
 .send:hover{background:var(--brand-dark)}
@@ -337,6 +338,7 @@ body.senior .mic{order:1;flex-direction:column;width:132px;height:132px;border-r
   font-size:16px;gap:6px;box-shadow:0 6px 0 #9e0012}
 body.senior .mic svg{width:46px;height:46px}
 body.senior .mic.rec{background:var(--bad);color:#fff;animation:pulse-big 1.2s infinite}
+body.senior .mic.rec.live{animation:none;box-shadow:0 0 0 calc(4px + var(--lvl,0) * 22px) #b4233233}
 @keyframes pulse-big{50%{box-shadow:0 0 0 16px #b4233233}}
 body.senior .send{order:4;width:auto;height:52px;padding:0 22px;font-size:18px;font-weight:700;display:flex;gap:6px}
 body.senior .send .label{display:inline}
@@ -427,3 +429,5 @@ body.senior .plan ol{font-size:18px}
 .hold-val small.up{color:var(--ok)}
 .hold-val small.down{color:var(--bad)}
 .locked{display:inline-block;font-size:12px;font-weight:700;color:var(--bad);background:var(--bad-bg);border:1px solid var(--bad-line);border-radius:6px;padding:3px 8px}
+.k-model{color:#b39ddb}
+.demo-hint{display:block;margin-top:8px;color:var(--muted);font-size:12px}

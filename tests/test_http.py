@@ -171,6 +171,14 @@ class HttpTest(unittest.TestCase):
         r = self.post("/api/cancel", {"session_id": sid, "draft_id": card["draft_id"]}).json()
         self.assertEqual(r["next_task"], "Send 500 to my son")
 
+    def test_history_never_has_two_assistant_turns_in_a_row(self):
+        from app import runtime
+        sid = self.post("/api/reset", {"world": True}).json()["session_id"]
+        card = self.post("/api/chat", {"session_id": sid, "text": "Send 50 to my daughter"}).json()["ui"]["card"]
+        self.post("/api/cancel", {"session_id": sid, "draft_id": card["draft_id"]})
+        roles = [m["role"] for m in runtime.sessions.get(sid).messages]
+        self.assertFalse(any(a == b == "assistant" for a, b in zip(roles, roles[1:])), roles)
+
     def test_audit_endpoints(self):
         sid = self.post("/api/reset", {}).json()["session_id"]
         self.post("/api/chat", {"session_id": sid, "text": "What's my balance?"})

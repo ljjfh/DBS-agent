@@ -3,7 +3,7 @@
 * Host allowlist      - only answer to localhost (or ALLOWED_HOSTS): blocks DNS-rebinding attacks
 * Same-origin POSTs   - a browser POST with a foreign Origin header is refused: blocks cross-site requests
 * JSON only           - POST bodies must be application/json: a plain HTML form can't trigger an API call
-* Size limits         - 32 KB for API calls, 2 MB for the speech endpoint
+* Size limits         - 32 KB for API calls, 3 MB for the speech endpoint
 * Security headers    - strict CSP (no inline script, no third-party code), no framing, no sniffing,
                         microphone allowed only for this page
 
@@ -25,7 +25,7 @@ HEADERS = [
     (b"permissions-policy", b"camera=(), geolocation=(), microphone=(self)"),
     (b"cache-control", b"no-store"),
 ]
-API_LIMIT, ASR_LIMIT = 32 * 1024, 2 * 1024 * 1024
+API_LIMIT, ASR_LIMIT = 32 * 1024, 3 * 1024 * 1024   # 50 s of 16 kHz WAV is ~2.2 MB as base64
 
 
 class SecurityMiddleware:

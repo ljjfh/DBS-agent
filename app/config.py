@@ -27,6 +27,10 @@ class Settings:
     # Using a DIFFERENT model here makes the two engines more independent.
     llm_verifier_model = _f("LLM_VERIFIER_MODEL", "")
     llm_timeout = float(_f("LLM_TIMEOUT", "30"))
+    llm_max_tokens = int(_f("LLM_MAX_TOKENS", "600"))      # cap per call: a runaway generation can't stall a turn
+    # A forced tool call (tool_choice=required) slower than this switches forced calls off for this model server;
+    # the harness nudge + rule-based fallback still keep the model honest
+    llm_required_slow = float(_f("LLM_REQUIRED_SLOW_SECONDS", "8"))
     # off = ask Qwen-style (vLLM) servers to skip the hidden "thinking" step: ~3x faster per call.
     # Leave empty for providers that don't accept chat_template_kwargs.
     llm_thinking = _f("LLM_THINKING", "").lower()

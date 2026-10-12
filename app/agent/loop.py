@@ -15,12 +15,13 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from dataclasses import dataclass, field
 
 from app.agent import fraud, presenter
 from app.agent.llm import LLMError, OfflineLLM, detect_intent
 from app.agent.prompts import SYSTEM_PROMPT, state_summary
-from app.agent.textparse import money_mentions
+from app.agent.textparse import money_mentions, parse_amount
 from app.agent.tools import ToolGateway
 from app.bank.mock_bank import MockBank
 from app.config import settings
@@ -60,15 +61,83 @@ class TurnResult:
         return {"reply": self.reply, "ui": self.ui, "speak": self.speak, "trace": self.trace, "llm": self.llm}
 
 
+_LIST = re.compile(r",(?!\d)|;|\band\b|\balso\b", re.I)          # "1,000" is a number, not a list
+_EACHWORD = re.compile(r"\b(each|both)\b", re.I)
+_VERB = {"transfer": "send", "invest": "invest", "bill_pay": "pay"}
+_INVESTY = re.compile(r"\b(stocks?|shares?|funds?|etfs?|bonds?|deposit|apple|microsoft|singtel|unit trust)\b", re.I)
+
+
+def _verb_for(item: str, last: str) -> str:
+    """Verb for a list item that has none: from its own words first ("2000 in Microsoft stock" -> invest),
+    otherwise the previous item's."""
+    if _INVESTY.search(item):
+        return "invest"
+    if re.search(r"\bto\b", item, re.I):
+        return "send"
+    return _VERB[last]
+
+
+def _split_list(text: str) -> list[str]:
+    """ "invest 500 in Microsoft, 1000 dollars in Apple" -> ["invest 500 in Microsoft", "invest 1000 dollars in Apple"].
+    Only when EVERY item has its own amount; an item without a verb borrows the previous item's.
+    "give my daughter and Chen Wei 50 each" is kept together here (split later by _split_each)."""
+    segs = [p.strip(" ,.") for p in _LIST.split(text) if p and p.strip(" ,.")]
+    merged: list[str] = []
+    i = 0
+    while i < len(segs):
+        seg = segs[i]
+        # "give my daughter" + "Chen Wei 50 each" -> one item for _split_each
+        while not parse_amount(seg) and i + 1 < len(segs) and _EACHWORD.search(segs[i + 1]):
+            i += 1
+            seg = f"{seg} and {segs[i]}"
+        merged.append(seg)
+        i += 1
+    if len(merged) < 2 or not all(parse_amount(p) for p in merged):
+        return [text]
+    out, last = [], None
+    for p in merged:
+        intent = detect_intent(p)
+        if intent == "unknown" or (re.match(r"(s\$|\$)?\d", p, re.I) and last in _VERB):
+            if last not in _VERB:
+                return [text]
+            p = f"{_verb_for(p, last)} {p}"    # "1000 in a fixed deposit" -> "invest 1000 in a fixed deposit"
+        else:
+            last = intent
+        out.append(p)
+    return out
+
+
+_EACH = [  # "send 100 to my son and daughter each" / "give my son and my daughter 100 each"
+    re.compile(r"^(?P<head>.*?\b(?:send|transfer|give|pay)\b.*?\bto\s+)(?P<a>.+?)\s*(?:,|\band\b)\s*(?P<b>.+?)\s+"
+               r"(?:each|both)\b\.?$", re.I),
+    re.compile(r"^(?P<verb>.*?\b(?:send|transfer|give)\b)\s+(?P<a>.+?)\s*(?:,|\band\b)\s*(?P<b>.+?)\s+"
+               r"(?P<amt>(?:s\$|\$)?[\d,.]+(?:\s*dollars?)?)\s+(?:each|both)\b\.?$", re.I),
+]
+
+
+def _split_each(text: str) -> list[str]:
+    m = _EACH[0].match(text)
+    if m and parse_amount(m["head"]):
+        out = [f"{m['head']}{who}" for who in (m["a"], m["b"])]
+    else:
+        m = _EACH[1].match(text)
+        if not m:
+            return [text]
+        out = [f"{m['verb']} {who} {m['amt']}" for who in (m["a"], m["b"])]
+    return out if all(detect_intent(p) == "transfer" and parse_amount(p) for p in out) else [text]
+
+
 def split_plan(text: str) -> list[str]:
     """Split a compound request into ordered tasks, only when every part is a request on its own:
-    "pay the bill, then send 200 to my daughter", "send 500 to my son and invest the rest in a fund".
-    ("send 50 to my son and daughter" stays one task: "daughter" alone is not a request.)"""
+    "pay the bill, then send 200 to my daughter", "send 500 to my son and invest the rest in a fund",
+    "invest 500 in Microsoft, 1000 in Apple". ("send 50 to my son and daughter" stays one task.)"""
+    parts = [text]
     for rx in (_SPLIT, _AND):
-        parts = [p.strip(" ,.") for p in rx.split(text) if p.strip(" ,.")]
-        if len(parts) > 1 and all(detect_intent(p) != "unknown" for p in parts):
-            return parts
-    return [text]
+        cand = [p.strip(" ,.") for p in rx.split(text) if p.strip(" ,.")]
+        if len(cand) > 1 and all(detect_intent(p) != "unknown" for p in cand):
+            parts = cand
+            break
+    return [each for p in parts for item in _split_list(p) for each in _split_each(item)]
 
 
 class Agent:
@@ -84,6 +153,7 @@ class Agent:
         self.audit.append("user.utterance", s.session_id, {"text": text})
 
         # 0. Plan
+        plan_before = list(s.plan)
         parts = split_plan(text)
         if len(parts) > 1:
             s.plan[:] = parts[1:]          # a restated compound request replaces what was queued before
@@ -105,6 +175,11 @@ class Agent:
         # shrunk the tool set (no more drafting transactions).
         if level.rank >= RiskLevel.HIGH.rank and fraud.wants_money_move(text):
             return self._intercept(s, start, text)
+
+        # 1a. Scam signs earlier in this conversation removed the draft tools. Say so plainly (deterministic) instead of
+        #     letting the model improvise, and drop the remaining steps of any plan.
+        if s.scam_level.rank >= RiskLevel.HIGH.rank and detect_intent(text_now) in _MONEY_INTENTS:
+            return self._locked(s, start, text)
 
         # 1b. A payment is still waiting for the user's fingerprint: never let a new request get lost or be confused
         #     with it. Show the waiting card again and queue the new request for afterwards (deterministic).
@@ -165,8 +240,16 @@ class Agent:
                 s.add_trace("ui", "Offered tap-to-choose buttons", [o["label"] for o in options])
         if ui["type"] != "choose":
             s.pending_choice = None
+        # A step that ends with a plain answer (no card, no question) moves straight on to the next queued step
+        if ui["type"] == "text" and s.phase == Phase.IDLE and s.plan and not reply.rstrip().endswith("?"):
+            ui["next_task"] = s.plan.pop(0)
+        # A step the rules stopped or the verifier froze: don't silently drop the rest, ask whether to go on
+        elif ui["type"] in ("blocked", "frozen") and ui.get("card") and s.plan:
+            ui["offer_next"] = s.plan.pop(0)
         if len(parts) > 1:
             ui["plan"] = parts          # "I'll do this in N steps; you confirm each one"
+        elif [t for t in s.plan if t not in plan_before]:
+            ui["plan"] = [text_now, *s.plan]    # the model queued follow-up steps (queue_follow_up)
         self.audit.append("agent.reply", s.session_id, {"reply": reply, "ui": ui["type"], "llm": llm_name})
         return TurnResult(reply=reply, ui=ui, speak=speak, trace=s.trace[start:], llm=llm_name)
 
@@ -189,13 +272,37 @@ class Agent:
             # message, and helps prompt caching
             msgs = [{"role": "system", "content": SYSTEM_PROMPT + "\n\n" + state_summary(s, self.bank)},
                     *history, *working]
-            kw = {"tool_choice": "required"} if (money and step == 0 and getattr(llm, "supports_tool_choice", False)) else {}
+            forced = money and step == 0 and getattr(llm, "supports_tool_choice", False)
+            kw = {"tool_choice": "required"} if forced else {}
+            t0 = time.time()
             try:
                 msg = llm.chat(msgs, tools=self.gateway.schemas(s), **kw)
-            except LLMError as e:      # fallback: if the online model is unavailable, switch to the offline model
-                s.add_trace("fallback", f"Model call failed, falling back to offline mode: {str(e)[:80]}")
-                llm, llm_name = self.fallback, "offline(fallback)"
-                msg = llm.chat(msgs, tools=self.gateway.schemas(s))
+            except LLMError as e:
+                if forced:             # forced call failed / timed out: stop forcing on this server, retry normally once
+                    llm.supports_tool_choice = False
+                    s.add_trace("guard", f"Forced tool call failed after {time.time() - t0:.1f}s ({str(e)[:60]}); "
+                                         "forced calls switched off, retrying normally")
+                    forced, kw, t0 = False, {}, time.time()
+                    try:
+                        msg = llm.chat(msgs, tools=self.gateway.schemas(s))
+                    except LLMError as e2:
+                        e = e2
+                        msg = None
+                else:
+                    msg = None
+                if msg is None:        # fallback: the online model is unavailable, the offline model keeps service going
+                    s.add_trace("fallback", f"Model call failed, falling back to offline mode: {str(e)[:80]}")
+                    llm, llm_name = self.fallback, "offline(fallback)"
+                    msg = llm.chat(msgs, tools=self.gateway.schemas(s))
+            took = time.time() - t0
+            if not str(llm_name).startswith("offline"):
+                s.add_trace("model", f"Model call {step + 1}: {took:.1f}s" + (" (forced tool call)" if forced else ""))
+                self.audit.append("llm.call", s.session_id, {"step": step + 1, "seconds": round(took, 2),
+                                                             "forced_tool_call": forced, "messages": len(msgs)})
+            if forced and took > settings.llm_required_slow:
+                llm.supports_tool_choice = False
+                s.add_trace("guard", f"Forced tool call took {took:.1f}s on this model server; switched forced calls "
+                                     "off (the harness nudge and fallback still apply)")
             tool_calls = msg.get("tool_calls") or []
             if msg.get("content") and tool_calls:
                 s.add_trace("thought", msg["content"])
@@ -284,6 +391,19 @@ class Agent:
         card = presenter.build_card(d, self.bank, s.phase)
         return TurnResult(reply=reply, ui={"type": "cooldown" if s.phase == Phase.COOLING else "confirm", "card": card,
                                            "reopened": True}, speak=reply, trace=s.trace[start:], llm="guard")
+
+    def _locked(self, s: Session, start: int, text: str) -> TurnResult:
+        s.plan.clear()
+        reply = ("Earlier in this conversation there were signs of a scam, so for your safety I can't prepare any "
+                 "payments in this conversation. If this really is your own idea, please check with your family first, "
+                 "then use the DBS app or call DBS on 1800 111 1111.")
+        s.messages.extend([{"role": "user", "content": text}, {"role": "assistant", "content": reply}])
+        s.add_trace("guard", f"Session is flagged for scams ({s.scam_level.value}); money request answered by the "
+                             "harness, remaining plan dropped", {"reasons": s.scam_reasons[:3]})
+        self.audit.append("agent.reply", s.session_id, {"reply": reply, "ui": "blocked", "llm": "guard"})
+        return TurnResult(reply=reply, speak=reply, trace=s.trace[start:], llm="guard",
+                          ui={"type": "blocked", "reasons": s.scam_reasons[:3], "locked": True,
+                              "hint": "Demo: Settings → Reset demo starts a clean conversation."})
 
     # ------------------------------------------------------------------ Intercept
     def _intercept(self, s: Session, start: int, text: str) -> TurnResult:

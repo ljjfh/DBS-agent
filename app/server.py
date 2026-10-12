@@ -52,6 +52,15 @@ async def _bad_input(_: Request, exc: BadInput):
     return _err(str(exc), "BAD_REQUEST", 400)
 
 
+def _say(s, text: str) -> None:
+    """Add a system message (receipt, cancel) to the history without creating two assistant turns in a row, which
+    some model servers handle badly: merge it into the previous assistant message."""
+    if s.messages and s.messages[-1]["role"] == "assistant":
+        s.messages[-1] = {**s.messages[-1], "content": s.messages[-1]["content"] + "\n" + text}
+    else:
+        s.messages.append({"role": "assistant", "content": text})
+
+
 def _site(request: Request) -> Site:
     """The passkey's website = the host the browser used (the middleware already restricts it to ALLOWED_HOSTS)."""
     host = request.headers.get("host", "localhost")
@@ -246,7 +255,7 @@ async def confirm(request: Request):
     if receipt.get("verifiable"):
         s.receipts.insert(0, receipt["verifiable"])
     text = presenter.receipt_text(draft, receipt)
-    s.messages.append({"role": "assistant", "content": text})
+    _say(s, text)
     s.settle()
     next_task = s.plan.pop(0) if s.plan else None
     return JSONResponse({"receipt": receipt, "reply": text, "speak": text, "next_task": next_task,
@@ -262,7 +271,7 @@ async def cancel(request: Request):
         return _err(str(e), e.code)
     s.settle()
     msg = "OK, it's cancelled. No money was sent."
-    s.messages.append({"role": "assistant", "content": msg})
+    _say(s, msg)
     next_task = s.plan.pop(0) if s.plan else None      # offered as a button, never run automatically
     return JSONResponse({"reply": msg, "speak": msg, "phase": s.phase.value, "next_task": next_task})
 

@@ -82,10 +82,11 @@ shows `Fallback` with the error. Check the trace after your first message to con
 
 ## Connecting Tencent Cloud ASR
 
-Set `TENCENTCLOUD_SECRET_ID / SECRET_KEY` in `.env`. The frontend records 16k mono WAV (max 15 seconds per
-recording), the backend calls SentenceRecognition, and payee names (daughter, Mei Ling, …) are passed in
+Set `TENCENTCLOUD_SECRET_ID / SECRET_KEY` in `.env`. The frontend records 16k mono WAV and stops when the
+customer taps the mic again or has been quiet for 3 seconds after speaking (4 seconds in Senior mode; at most 50
+seconds per recording), the backend calls SentenceRecognition, and payee names (daughter, Mei Ling, …) are passed in
 automatically as temporary hotwords. Without keys, the frontend uses the browser's built-in speech recognition
-(Chrome).
+(Chrome) in continuous mode with the same pause rules, showing the words in the text box as they are heard.
 
 The engine defaults to `16k_en`. The international endpoint (`asr.intl.tencentcloudapi.com`) does **not** support
 `16k_zh_large`; that engine is only available on the China endpoint.
@@ -137,7 +138,7 @@ prototype (Aegis).
 - **Host allowlist** — only answers to `localhost`, `127.0.0.1`, `[::1]` (blocks DNS rebinding). To demo from a phone
   on the same Wi-Fi, add your laptop's IP: `ALLOWED_HOSTS=localhost,127.0.0.1,192.168.1.23`. Note that browsers only
   allow Web Crypto signing on `localhost` or HTTPS, so on a LAN IP the payment step needs an HTTPS tunnel.
-- **Same-origin, JSON-only POSTs** — a foreign `Origin` gets 403, a form post gets 415, bodies over 32 KB (2 MB for
+- **Same-origin, JSON-only POSTs** — a foreign `Origin` gets 403, a form post gets 415, bodies over 32 KB (3 MB for
   speech) get 413; missing fields or malformed JSON get a clean 400.
 - **Strict CSP** — no inline scripts or styles, no third-party code; framing denied; `nosniff`; `no-store`.
 - **Static allowlist** — only `index.html`, `app.js`, `styles.css` and the two SVGs are ever served; source code,

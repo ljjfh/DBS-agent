@@ -245,6 +245,38 @@ class TestLookupDiscipline(Base):
         Agent(self.bank, self.gw, self.audit, Forcing()).run_turn(Session(session_id="q"), "Hello there")
         self.assertTrue(all(c is None for c in seen))
 
+    def test_slow_forced_call_switches_forcing_off(self):
+        from unittest import mock
+        from app.config import settings
+
+        class SlowForced(OfflineLLM):
+            name = "openai_compat"
+            supports_tool_choice = True
+            def chat(inner, messages, tools=None, tool_choice=None, **kw):
+                return super().chat(messages, tools=tools, **kw)
+        llm = SlowForced()
+        with mock.patch.object(settings, "llm_required_slow", -1.0):        # every forced call counts as "slow"
+            r = Agent(self.bank, self.gw, self.audit, llm).run_turn(self.s, "Send 50 to my daughter")
+        self.assertFalse(llm.supports_tool_choice)
+        self.assertEqual(r.ui["type"], "confirm")                           # the turn itself still completes
+        self.assertTrue(any(t["kind"] == "model" for t in self.s.trace))   # every call is timed in the trace
+
+    def test_failed_forced_call_retries_normally_not_offline(self):
+        from app.agent.llm import LLMError
+
+        class Flaky(OfflineLLM):
+            name = "openai_compat"
+            supports_tool_choice = True
+            def chat(inner, messages, tools=None, tool_choice=None, **kw):
+                if tool_choice == "required":
+                    raise LLMError("timeout")
+                return super().chat(messages, tools=tools, **kw)
+        llm = Flaky()
+        r = Agent(self.bank, self.gw, self.audit, llm).run_turn(self.s, "Send 50 to my daughter")
+        self.assertEqual(r.llm, "openai_compat")                            # not "offline(fallback)"
+        self.assertFalse(llm.supports_tool_choice)
+        self.assertEqual(self.s.current_draft.payee_id, "p_daughter")
+
     def test_server_without_required_degrades_to_auto(self):
         from unittest import mock
         from app.agent.llm import OpenAICompatLLM
@@ -318,6 +350,111 @@ class TestDbsProducts(Base):
 
     def test_no_unlock_tool_exists(self):
         self.assertFalse([n for n in self.gw.tools if "unlock" in n])
+
+
+class TestPlans(Base):
+    """Reported: 'invest 500 in Microsoft stock, 1000 dollars in apple stock' -> only Microsoft was done."""
+    def test_list_of_investments_becomes_two_steps(self):
+        r = self.turn("invest 500 in Microsoft stock, 1000 dollars in apple stock")
+        self.assertEqual((self.s.current_draft.payee_id, self.s.current_draft.amount_cents), ("s_msft", 50000))
+        self.assertEqual(self.s.plan, ["invest 1000 dollars in apple stock"])
+        self.assertEqual(len(r.ui["plan"]), 2)
+
+    def test_three_steps_flattened(self):
+        self.turn("Send 200 to my daughter and invest 500 in Microsoft stock, 1000 dollars in apple stock")
+        self.assertEqual(self.s.plan, ["invest 500 in Microsoft stock", "invest 1000 dollars in apple stock"])
+
+    def test_question_step_moves_on_by_itself(self):
+        r = self.turn("What is my balance and has my pension come in")
+        self.assertEqual(r.ui.get("next_task"), "has my pension come in")
+
+    def sign_and_pay(self, key):
+        d = self.s.current_draft
+        payload = self.kernel.issue_challenge(self.s, d.draft_id, d.digest, verify_answer=True)
+        a = {"payload": payload, "signature": base64.b64encode(p256.sign(key, payload.encode())).decode()}
+        self.kernel.commit(self.s, d.draft_id, self.kernel.authorize(self.s, d.draft_id, d.digest, a, verify_answer=True))
+        self.s.settle()
+
+    def test_long_plan_runs_in_order_each_step_signed(self):
+        import time as _t
+        from app.config import settings
+        key, jwk = p256.generate_keypair()
+        self.kernel.register_key(self.s, jwk)
+        self.bank.risk_profile("u_chen")["max_product_risk"] = 5
+        r = self.turn("Pay the electricity bill, then send 100 to my son, give my daughter and Chen Wei 50 each "
+                      "and invest 300 in Apple")
+        self.assertEqual(len(r.ui["plan"]), 5)
+        done = []
+        for _ in range(5):
+            d = self.s.current_draft
+            if self.s.phase == Phase.COOLING:
+                d.cooling_until = _t.time() - 1
+            self.sign_and_pay(key)
+            done.append((d.payee_name, d.amount_cents))
+            if self.s.plan:
+                self.turn(self.s.plan.pop(0))          # what the page does after each confirmation
+        self.assertEqual(done, [("SP Group Utilities", 8640), ("Chen Zhi Qiang", 10000), ("Chen Mei Ling", 5000),
+                                ("Chen Wei", 5000), ("Apple Inc. shares", 30000)])
+        self.assertEqual(len(self.bank.executed), 5)
+
+    def test_stopped_step_offers_the_rest(self):
+        r = self.turn("Invest 5000 in a fixed deposit and send 50 to my daughter")    # 5000 > balance
+        self.assertEqual(r.ui["type"], "blocked")
+        self.assertEqual(r.ui["offer_next"], "send 50 to my daughter")
+
+    def test_each_split(self):
+        from app.agent.loop import split_plan
+        self.assertEqual(split_plan("Send 100 to my son and daughter each"), ["Send 100 to my son", "Send 100 to daughter"])
+        self.assertEqual(len(split_plan("Send 50 to my son and daughter")), 1)
+
+    def test_flagged_session_says_so_and_drops_the_plan(self):
+        self.turn("The police say I must move my savings to a safe account")
+        r = self.turn("I want to send 300 to my daughter, 500 to my grandson, 2000 dollars in Microsoft stock")
+        self.assertEqual(r.ui["type"], "blocked")
+        self.assertIn("signs of a scam", r.reply)
+        self.assertEqual(self.s.plan, [])
+        self.assertFalse(self.s.drafts)
+        self.assertEqual(self.turn("How much money do I have?").ui["type"], "text")   # reading still works
+
+    def test_answering_a_question_does_not_show_a_plan(self):
+        self.turn("Send 50 to my grandson and invest 300 in Apple")          # asks which grandson
+        r = self.turn("Yes.")
+        self.assertNotIn("plan", r.ui)
+
+    def test_list_item_verb_comes_from_its_own_words(self):
+        from app.agent.loop import split_plan
+        self.assertEqual(split_plan("send 300 to my daughter, 2000 dollars in Microsoft stock"),
+                         ["send 300 to my daughter", "invest 2000 dollars in Microsoft stock"])
+
+    def model_queues(self, task):
+        class Planner(OfflineLLM):
+            def chat(inner, messages, tools=None, **kw):
+                done = sum(1 for m in messages if m["role"] == "tool")
+                call = lambda n, a: {"role": "assistant", "content": "", "tool_calls": [  # noqa: E731
+                    {"id": f"c{done}", "type": "function", "function": {"name": n, "arguments": json.dumps(a)}}]}
+                if done == 0:
+                    return call("draft_investment", {"product_id": "s_msft", "amount": 500,
+                                                     "evidence": "Put 500 into Microsoft for me"})
+                if done == 1:
+                    return call("queue_follow_up", {"task": task})
+                return {"role": "assistant", "content": "Please check the card. I'll do the next one after.",
+                        "tool_calls": []}
+        return Agent(self.bank, self.gw, self.audit, Planner()).run_turn(
+            self.s, "Put 500 into Microsoft for me, oh and Apple with 1000 too")
+
+    def test_model_can_queue_what_the_user_said(self):
+        r = self.model_queues("invest 1000 in Apple shares")
+        self.assertEqual(self.s.plan, ["invest 1000 in Apple shares"])
+        self.assertIn("plan", r.ui)
+
+    def test_model_cannot_queue_an_amount_the_user_never_said(self):
+        self.model_queues("invest 5000 in Apple shares")
+        self.assertEqual(self.s.plan, [])
+        self.assertTrue(any("isn't in the user's own words" in t["label"] for t in self.s.trace))
+
+    def test_model_cannot_queue_a_payee_the_user_never_mentioned(self):
+        self.model_queues("send 1000 to my son")
+        self.assertEqual(self.s.plan, [])
 
 
 # ---------------------------------------------------------------- 2. disambiguation

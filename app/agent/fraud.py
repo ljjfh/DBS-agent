@@ -33,6 +33,9 @@ PATTERNS = [
      "Being asked to pay with gift cards is a classic sign of a scam."),
     ("romance", 2, r"online friend|met online|(boyfriend|girlfriend) (overseas|abroad)|army officer|dating app",
      "Sending money to someone you've only met online is very risky."),
+    ("asks_money", 1, r"\b(he|she|they|him|her)\b.{0,20}\b(needs?|wants?|asked (me )?for|asking (me )?for)\b.{0,20}"
+                      r"(money|\$|\d)|\blend (him|her|them)\b|\bborrow(ed)? (money|\$|\d)",
+     "Someone asking you for money, especially someone you haven't met in person, is a warning sign."),
     ("urgency", 1, r"urgent|immediately|right now|right away|within (the )?(hour|day|\d+ minutes)",
      "They are rushing you so you don't have time to think."),
     ("prize", 2, r"you (have )?won|prize|processing fee|lucky draw|lottery",
@@ -40,7 +43,7 @@ PATTERNS = [
 ]
 _COMPILED = [(c, w, re.compile(p, re.I), why) for c, w, p, why in PATTERNS]
 
-MONEY_MOVE = re.compile(r"\b(transfer|send|pay|wire|give|buy|move)\b|money to", re.I)
+MONEY_MOVE = re.compile(r"\b(transfer|send|pay|wire|give|buy|move|put|invest|top up|deposit)\b|money to", re.I)
 
 
 def scan(text: str) -> tuple[RiskLevel, list[str], list[str]]:

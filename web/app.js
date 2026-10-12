@@ -49,7 +49,7 @@ const NAV = [
 ];
 const KIND = {user:'User', thought:'Thought', action:'Action', observation:'Observe', rule:'Rule', guard:'Guard', judge:'Judge',
   state:'State', sign:'Sign', exec:'Execute', plan:'Plan', asr:'ASR', fallback:'Fallback', handoff:'Handoff', evidence:'Evidence', ui:'UI',
-  verify:'Verifier', gateway:'Gateway'};
+  verify:'Verifier', gateway:'Gateway', model:'Model'};
 
 // ---------------------------------------------------------------- Basics
 async function api(path, body){
@@ -320,7 +320,7 @@ function renderStage(){
     if(m.type === 'frozen') return `<div class="alert-block frozen" role="alert"><b>Frozen: this didn't match what you said</b>
       <ul>${m.items.map(x => `<li>${esc(x)}</li>`).join('')}</ul><small>A second, independent check re-read your own words. Nothing was sent.</small>
       <div class="acts"><button class="again" type="button">Say it again</button></div></div>`;
-    if(m.type === 'blocked') return `<div class="alert-block" role="alert"><b>I've stopped this for you</b>${esc(m.text)}
+    if(m.type === 'blocked') return `<div class="alert-block" role="alert"><b>I've stopped this for you</b>${esc(m.text)}${m.hint ? `<small class="demo-hint">${esc(m.hint)}</small>` : ''}
       <div class="acts"><a href="tel:1799">Call ScamShield 1799</a><button class="notify" type="button">Tell my family</button></div></div>`;
     if(m.type === 'next') return m.done ? '' : `<div class="next-chips"><button class="nx-go" data-i="${i}">Continue: ${esc(m.task)}</button><button class="nx-no" data-i="${i}">Not now</button></div>`;
     return `<div class="msg bot ${m.ok ? 'ok' : ''}"><span class="who">Star</span>${esc(m.text)}<button class="replay" data-i="${i}" aria-label="Read this aloud">🔊</button>${m.receipt ? `<button class="receipt" data-i="${i}">${icon('download')} Download signed receipt</button>` : ''}</div>`;
@@ -338,12 +338,13 @@ function renderStage(){
 function push(m){ state.messages.push(m); renderStage(); }
 // After a payment is confirmed, the next step of the user's own plan is prepared right away (it still needs its own
 // confirmation). After a cancel we ask instead, because the user may have changed their mind.
-function continueWith(task){
+function continueWith(task, payment = true){
   setTimeout(() => {
-    push({role:'bot', text:`Next step: “${task}”. I'm preparing it now — you'll check and confirm it the same way.`});
+    push({role:'bot', text: payment ? `Next step: “${task}”. I'm preparing it now — you'll check and confirm it the same way.`
+                                    : `Next: “${task}”.`});
     state.queueSpeech = true;                        // don't cut off the "Done" read-out; queue after it
     send(task, '/api/chat', state.voiceTurn, true);
-  }, 700);
+  }, 300);
 }
 function offerNext(task){
   setTimeout(() => { push({role:'bot', text:`You also asked: “${task}”. Shall we do that now?`}); push({type:'next', task}); }, 500);
@@ -383,7 +384,7 @@ function handleTurn(r){
   const ui = r.ui || {type:'text'};
   if(ui.plan?.length > 1) push({type:'plan', items: ui.plan});
   if(ui.type === 'blocked' && !ui.card){
-    push({type:'blocked', text:r.reply}); speak(r.speak);
+    push({type:'blocked', text:r.reply, hint: ui.hint}); speak(r.speak);
     state.check = {title:'Stopped before reaching the payment step', rows:[
       ['pass', 'Request heard', 'We listened to everything you said.'],
       ['fail', 'Looks like a scam', (ui.reasons || []).join(' ') || 'This matches common scam patterns.'],
@@ -396,6 +397,8 @@ function handleTurn(r){
     else if(ui.type === 'frozen') push({type:'frozen', items: ui.card.verification.mismatches});
     else openConfirm(ui.card); }
   if(ui.type === 'choose') push({type:'choices', options: ui.options});
+  if(ui.next_task) continueWith(ui.next_task, false);
+  if(ui.offer_next) offerNext(ui.offer_next);
   refresh();
 }
 
@@ -703,8 +706,12 @@ async function resetDemo(){
 // ---------------------------------------------------------------- Voice input
 // Preferred: record 16 kHz mono WAV -> Tencent Cloud SentenceRecognition on the server (with payee hotwords).
 // Fallback: the browser's own speech recognition when the server has no ASR keys.
-const rec = {ctx:null, stream:null, node:null, chunks:[], rate:48000, on:false, timer:null, sr:null};
-const MAX_SEC = 15;
+// Recording ends when the customer taps the mic again, or by itself once they have been quiet for a while
+// after speaking (longer in Senior mode, because pauses mid-sentence are normal), or at the hard cap.
+const rec = {ctx:null, stream:null, node:null, chunks:[], rate:48000, on:false, timer:null, sr:null,
+             t0:0, heard:0, lastVoice:0, noise:null, final:'', interim:'', stopping:false, shown:0};
+const MAX_SEC = 50;                                  // Tencent SentenceRecognition accepts up to 60 s
+const VOICE = {silenceMs: () => state.senior ? 4000 : 3000, noSpeechMs: 12000, minSpeechMs: 300};
 const hint = t => { const h = $('#hint'); if(h) h.textContent = t; };
 async function micToggle(){
   if(rec.on) return stopRec();
@@ -712,28 +719,94 @@ async function micToggle(){
   if(state.health.asr === 'tencent') return startWavRec();
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if(!SR){ push({role:'bot', text:"This browser doesn't support voice input. Please use Chrome, or type instead."}); return; }
-  rec.sr = new SR(); rec.sr.lang = 'en-SG'; rec.sr.interimResults = false;
-  rec.sr.onresult = e => { const t = e.results[0][0].transcript; addTrace([{kind:'asr', label:'Browser speech recognition: ' + t}]); send(t, undefined, true); };
-  rec.sr.onend = () => setRec(false);
-  rec.sr.onerror = e => { setRec(false); hint(`Didn't catch that, please try again (${e.error})`); };
-  rec.sr.start(); setRec(true);
+  Object.assign(rec, {final:'', interim:'', stopping:false, t0:Date.now(), lastVoice:0, heard:0, err:''});
+  startBrowserSR(SR); setRec(true);
+  rec.timer = setInterval(() => {                   // the browser recogniser has no audio level, so its results count as speech
+    const now = Date.now();
+    if(now - rec.t0 > MAX_SEC * 1000) return stopRec();
+    if(rec.lastVoice && now - rec.lastVoice > VOICE.silenceMs()) return stopRec();
+    if(!rec.lastVoice && now - rec.t0 > VOICE.noSpeechMs) return stopRec();
+    listeningHint(now);
+  }, 250);
+}
+function startBrowserSR(SR){
+  const sr = rec.sr = new SR();
+  sr.lang = 'en-SG'; sr.continuous = true; sr.interimResults = true; sr.maxAlternatives = 1;
+  sr.onresult = e => {
+    let fin = '', mid = '';
+    for(let i = 0; i < e.results.length; i++){ const t = e.results[i][0].transcript; if(e.results[i].isFinal) fin += t + ' '; else mid += t; }
+    rec.final = (rec.base || '') + fin; rec.interim = mid; rec.lastVoice = Date.now();
+    const ta = $('#text'); if(ta) ta.value = (rec.final + rec.interim).trim();   // show what has been heard so far
+  };
+  sr.onerror = e => {
+    if(e.error === 'not-allowed' || e.error === 'service-not-allowed'){ rec.stopping = true; rec.err = 'No microphone permission. You can type instead.'; }
+    else if(e.error === 'network' || e.error === 'audio-capture'){ rec.stopping = true; rec.err = "Voice input isn't working right now. Please type instead."; }
+  };
+  sr.onend = () => {
+    // Chrome ends a session on its own after a pause or a network blip; keep listening until we decide to stop.
+    if(rec.on && !rec.stopping && rec.sr === sr){
+      rec.base = rec.final; rec.interim && (rec.base += rec.interim + ' '); rec.interim = '';
+      try{ sr.start(); return; }catch{ /* fall through and finish */ }
+    }
+    if(rec.sr === sr) finishBrowserSR();
+  };
+  rec.base = ''; sr.start();
+}
+function finishBrowserSR(){
+  const text = (rec.final + ' ' + rec.interim).replace(/\s+/g, ' ').trim();
+  rec.sr = null; rec.base = ''; setRec(false);
+  if(!text){ hint(rec.err || "Didn't catch that, please tap the mic and try again"); rec.err = ''; return; }
+  rec.err = '';
+  addTrace([{kind:'asr', label:'Browser speech recognition: ' + text}]);
+  send(text, undefined, true);
+}
+function listeningHint(now){
+  if(now - rec.shown < 500) return; rec.shown = now;
+  const left = MAX_SEC - Math.floor((now - rec.t0) / 1000);
+  hint(left <= 10 ? `Recording stops in ${left} s. Tap the mic when you're done.`
+                  : "I'm listening. Take your time, I'll wait until you finish. Tap the mic when you're done.");
 }
 async function startWavRec(){
   try{ rec.stream = await navigator.mediaDevices.getUserMedia({audio:{channelCount:1, echoCancellation:true, noiseSuppression:true}}); }
   catch{ push({role:'bot', text:'No microphone permission. You can type instead.'}); return; }
   rec.ctx = new (window.AudioContext || window.webkitAudioContext)(); rec.rate = rec.ctx.sampleRate; rec.chunks = [];
+  Object.assign(rec, {t0:Date.now(), heard:0, lastVoice:0, noise:null, stopping:false});
   const src = rec.ctx.createMediaStreamSource(rec.stream);
   rec.node = rec.ctx.createScriptProcessor(4096, 1, 1);
-  rec.node.onaudioprocess = e => rec.chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+  rec.node.onaudioprocess = e => {
+    const x = new Float32Array(e.inputBuffer.getChannelData(0));
+    rec.chunks.push(x);
+    voiceActivity(x, x.length / rec.rate * 1000);
+  };
   src.connect(rec.node); rec.node.connect(rec.ctx.destination);
-  setRec(true); rec.timer = setTimeout(stopRec, MAX_SEC * 1000);
+  setRec(true); $('#mic')?.classList.add('live');
+  rec.timer = setTimeout(stopRec, MAX_SEC * 1000);
+}
+// Simple energy-based voice activity detection. The noise floor is learnt from the quietest moments, so a soft voice
+// in a quiet room still counts as speech; silence only ends the recording after real speech has been heard.
+function voiceActivity(x, ms){
+  if(!rec.on || rec.stopping) return;
+  let sum = 0; for(let i = 0; i < x.length; i++) sum += x[i] * x[i];
+  const rms = Math.sqrt(sum / x.length), now = Date.now();
+  rec.noise = rec.noise === null ? Math.min(rms, 0.02) : Math.min(0.03, rms < rec.noise ? rms : rec.noise * 0.995 + rms * 0.005);
+  const speaking = rms > Math.max(0.01, rec.noise * 3);
+  if(speaking){ rec.heard += ms; rec.lastVoice = now; }
+  $('#mic')?.style.setProperty('--lvl', Math.min(1, rms * 8).toFixed(2));
+  const armed = rec.heard >= VOICE.minSpeechMs;
+  if(armed && now - rec.lastVoice > VOICE.silenceMs()) return stopRec();
+  if(!armed && now - rec.t0 > VOICE.noSpeechMs) return stopRec();   // send what we have; the recogniser decides
+  listeningHint(now);
 }
 async function stopRec(){
-  clearTimeout(rec.timer);
-  if(rec.sr){ rec.sr.stop(); rec.sr = null; return; }
+  if(rec.stopping && !rec.sr) return;
+  rec.stopping = true;
+  clearTimeout(rec.timer); clearInterval(rec.timer);
+  if(rec.sr){ try{ rec.sr.stop(); }catch{ finishBrowserSR(); } return; }   // onend sends what was heard
   setRec(false);
   rec.node?.disconnect(); rec.stream?.getTracks().forEach(t => t.stop()); await rec.ctx?.close();
+  rec.node = rec.stream = rec.ctx = null;
   const wav = encodeWav(downsample(flatten(rec.chunks), rec.rate, 16000), 16000);
+  rec.chunks = [];
   if(wav.byteLength < 16000){ hint('Too short, please speak a little longer'); return; }
   hint('Recognizing…');
   try{
@@ -743,9 +816,11 @@ async function stopRec(){
   }catch(e){ hint('Recognition failed: ' + e.message); }
 }
 function setRec(on){
-  rec.on = on; $('#mic')?.classList.toggle('rec', on);
-  const label = $('#mic span'); if(label) label.textContent = on ? 'Listening… tap to stop' : (state.senior ? 'Tap to speak' : 'Speak');
-  hint(on ? "I'm listening. Tap again when you're done." : '');
+  rec.on = on; const mic = $('#mic');
+  if(mic){ mic.classList.toggle('rec', on); if(!on){ mic.classList.remove('live'); mic.style.removeProperty('--lvl'); } }
+  const label = $('#mic span'); if(label) label.textContent = on ? (state.senior ? 'Tap when done' : 'Listening… tap to stop') : (state.senior ? 'Tap to speak' : 'Speak');
+  rec.shown = 0;
+  hint(on ? "I'm listening. Take your time, I'll wait until you finish. Tap the mic when you're done." : '');
 }
 function flatten(chunks){ const n = chunks.reduce((a, c) => a + c.length, 0), out = new Float32Array(n); let o = 0; chunks.forEach(c => { out.set(c, o); o += c.length; }); return out; }
 function downsample(buf, from, to){

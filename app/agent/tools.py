@@ -64,6 +64,11 @@ class DraftInvestmentArgs(BaseModel):
                           description="Quote the user's exact words that asked for this investment")
 
 
+class QueueArgs(BaseModel):
+    task: str = Field(max_length=200, description="One remaining transaction, in the user's own words with its amount, "
+                                                  "e.g. \"invest 1000 dollars in Apple shares\"")
+
+
 class LockCardArgs(BaseModel):
     card_id: str = Field(description="card_id from get_cards, or \"all\" to lock every card (e.g. a lost wallet)")
 
@@ -141,6 +146,10 @@ class ToolGateway:
             Tool("lock_card", "control", "Lock a card straight away, e.g. when it is lost or stolen or the user "
                  "suspects fraud. Protective, so no confirmation card is needed. Unlocking is not possible here: the "
                  "user must use the DBS app or call the bank.", LockCardArgs, self._lock_card),
+            Tool("queue_follow_up", "control", "The user asked for more than one transaction in one message: draft the "
+                 "FIRST one now, and call this once for each remaining one. It is prepared automatically right after "
+                 "the user confirms or cancels the current card. Only for things the user actually asked for.",
+                 QueueArgs, self._queue),
             Tool("handoff_to_human", "control", "Hand off to a human staff member when the user asks for a real person, or when you can't complete the task safely.",
                  HandoffArgs, self._handoff),
         ]}
@@ -224,6 +233,30 @@ class ToolGateway:
                               "gain_or_loss": ("+" if r["gain_cents"] >= 0 else "-") + fmt_money(abs(r["gain_cents"]))}
                              for r in rows],
                 "total_value": fmt_money(sum(r["value_cents"] for r in rows))}
+
+    def _queue(self, s: Session, a: QueueArgs):
+        """The model may only queue what the user actually said: every amount in the task, and a payee or product
+        name, must appear in the user's own words. Otherwise a model could slip in a payment of its own."""
+        from app.kernel.evidence import amounts_in, user_utterances
+        said = user_utterances(s.messages)
+        task = a.task.strip()
+        said_amounts = {c for u in said for c in amounts_in(u)}
+        task_amounts = amounts_in(task)
+        names = [n for p in self.bank.payees(s.user_id) for n in [p["name"], *p["aliases"]]] + \
+                [n for p in self.bank.products for n in [p["name"], *p["aliases"]]]
+        mentioned = lambda txt, n: re.search(rf"(?<![a-z]){re.escape(n.lower())}(?![a-z])", txt.lower())  # noqa: E731
+        target_ok = any(mentioned(task, n) and any(mentioned(u, n) for u in said) for n in names)
+        if not task_amounts or not task_amounts <= said_amounts or not target_ok:
+            s.add_trace("guard", "Refused to queue a follow-up that isn't in the user's own words", {"task": task})
+            raise KernelError("Not queued: the amount and the payee/product must be exactly what the user said.")
+        key = re.sub(r"\W+", " ", task.lower()).strip()
+        if any(re.sub(r"\W+", " ", t.lower()).strip() == key for t in s.plan):
+            return {"queued": task, "status": "Already queued."}
+        s.plan.append(task)
+        s.add_trace("plan", f"Queued follow-up step: {task}", list(s.plan))
+        return {"queued": task, "plan": list(s.plan),
+                "status": "Queued. It will be prepared right after the user confirms or cancels the current card. "
+                          "Tell the user in a few words that you'll do it next."}
 
     def _get_cards(self, s: Session, _: NoArgs):
         return [{"card_id": c["card_id"], "name": c["name"], "number": c["masked"], "status": c["status"]}

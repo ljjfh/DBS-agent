@@ -32,7 +32,8 @@ class OpenAICompatLLM:
 
     def chat(self, messages: list[dict], tools: list[dict] | None = None, json_mode: bool = False,
              model: str | None = None, tool_choice: str | None = None) -> dict:
-        body = {"model": model or self.model, "messages": messages, "temperature": 0.1}
+        body = {"model": model or self.model, "messages": messages, "temperature": 0.1,
+                "max_tokens": settings.llm_max_tokens}
         if self.thinking == "off":
             body["chat_template_kwargs"] = {"enable_thinking": False}
         if tools:
@@ -70,7 +71,7 @@ _RX = {
                  r"how (much|many) .{0,25}\b(invested|shares|units)\b",
     "invest": r"\binvest|\bbuy\b.*\b(fund|etf|bonds?|shares?|stocks?|units)\b|unit trust|savings bonds?|"
               r"\b(top up|put)\b.*\b(fund|etf|bonds?|deposit)\b|fixed deposit|time deposit|"
-              r"\bbuy\b.{0,20}\b(apple|microsoft|singtel|dbs shares)\b",
+              r"\b(buy|put|top up)\b.{0,30}\b(apple|microsoft|singtel|dbs shares|dbs stock)\b",
     "bill": r"\bbills?\b|utilit|electric|water|s&cc|town council|conservancy",
     "pay": r"\bpay",
     "transfer": r"\b(transfer|send|wire)\b|\bgive\b(?! me\b)",
@@ -273,8 +274,9 @@ class OfflineLLM:
                 return self._call("get_balance", {}, "The user named an account to pay from; look up the account ids.")
             if "draft_investment" not in results:
                 if "draft_investment" not in allowed:
-                    return self._say("You still have a transaction waiting, or I can't prepare this one safely. "
-                                     "Please confirm or cancel it first.")
+                    return self._say("For your safety I can't set up an investment in this conversation. Promises of "
+                                     "guaranteed or very high returns are a common scam. Please talk to your family or "
+                                     "call the ScamShield helpline 1799.")
                 args = {"product_id": prod["product_id"], "amount": amount, "evidence": self._last_user(messages)}
                 if acct:
                     args["from_account"] = acct
