@@ -1,6 +1,7 @@
-"""Mock 银行：固定的“测试世界”。真实接入时只需替换这个模块，Agent 代码不变。
+"""Mock bank: a fixed "test world". For a real integration, replace only this module; the Agent code stays the same.
 
-注意：Agent（模型）从不直接调用这里，只有工具网关（读）和执行器（写）能调用。
+Note: the Agent (model) never calls this directly. The tool gateway reads; writes go only through the execution
+gateway (app/bank/gateway.py), which re-verifies the customer's signature before posting to the ledger.
 """
 from __future__ import annotations
 
@@ -12,44 +13,102 @@ import uuid
 _WORLD = {
     "users": {
         "u_chen": {
-            "name": "陈阿姨",
-            "lang": "zh",
+            "name": "Mdm Chen",
+            "lang": "en",
+            # MAS-style suitability: products riskier than this need extra care (rules R70)
+            "risk_profile": {"label": "Conservative", "max_product_risk": 2},
+            # Protection level is an ACCOUNT setting, not a screen setting (see kernel/protection.py)
+            "protection": {"level": "enhanced", "pending": None},
             "accounts": [
-                {"account_id": "SAV-001", "name": "储蓄账户", "balance_cents": 325000, "currency": "SGD"},
+                {"account_id": "SAV-001", "name": "Savings Account", "balance_cents": 325000, "currency": "SGD"},
+                {"account_id": "CUR-002", "name": "Current Account", "balance_cents": 82000, "currency": "SGD"},
             ],
             "payees": [
-                {"payee_id": "p_daughter", "name": "陈美玲", "relation": "女儿", "type": "person",
-                 "aliases": ["女儿", "阿囡", "美玲", "daughter", "mei ling", "meiling"],
+                {"payee_id": "p_daughter", "name": "Chen Mei Ling", "relation": "daughter", "type": "person",
+                 "aliases": ["daughter", "my girl", "ah girl", "mei ling", "meiling"],
                  "masked_account": "DBS ••••4821"},
-                {"payee_id": "p_son", "name": "陈志强", "relation": "儿子", "type": "person",
-                 "aliases": ["儿子", "志强", "son", "ah keong"],
+                {"payee_id": "p_son", "name": "Chen Zhi Qiang", "relation": "son", "type": "person",
+                 "aliases": ["son", "zhi qiang", "ah keong"],
                  "masked_account": "OCBC ••••1937"},
-                {"payee_id": "p_sp", "name": "SP Group 水电费", "relation": "账单", "type": "biller",
-                 "aliases": ["水电", "电费", "水费", "sp", "sp group", "utilities"],
-                 "masked_account": "账单号 ••••5502"},
-                {"payee_id": "p_tc", "name": "Bukit Timah 市镇理事会", "relation": "账单", "type": "biller",
-                 "aliases": ["杂费", "s&cc", "town council", "市镇理事会"],
-                 "masked_account": "账单号 ••••0718"},
+                # Two grandsons: "my grandson" is ambiguous on purpose, so the agent must ask (with buttons)
+                {"payee_id": "p_grandson_wei", "name": "Chen Wei", "relation": "grandson", "type": "person",
+                 "aliases": ["grandson", "ah wei", "chen wei"], "masked_account": "POSB ••••2290"},
+                {"payee_id": "p_grandson_jun", "name": "Chen Jun", "relation": "grandson", "type": "person",
+                 "aliases": ["grandson", "ah jun", "chen jun"], "masked_account": "DBS ••••6613"},
+                {"payee_id": "p_sp", "name": "SP Group Utilities", "relation": "bill", "type": "biller",
+                 "aliases": ["utilities", "utility", "electricity", "water", "sp", "sp group"],
+                 "masked_account": "Bill no. ••••5502"},
+                {"payee_id": "p_tc", "name": "Bukit Timah Town Council", "relation": "bill", "type": "biller",
+                 "aliases": ["s&cc", "town council", "conservancy"],
+                 "masked_account": "Bill no. ••••0718"},
             ],
             "bills": [
-                {"bill_id": "b_sp_oct", "payee_id": "p_sp", "title": "10 月水电费",
+                {"bill_id": "b_sp_oct", "payee_id": "p_sp", "title": "October utilities bill",
                  "amount_cents": 8640, "due": "2026-10-20", "status": "unpaid"},
-                {"bill_id": "b_tc_oct", "payee_id": "p_tc", "title": "10 月市镇理事会杂费 (S&CC)",
+                {"bill_id": "b_tc_oct", "payee_id": "p_tc", "title": "October town council charges (S&CC)",
                  "amount_cents": 4200, "due": "2026-10-31", "status": "unpaid"},
             ],
-            # 历史流水：负数=支出，正数=收入
+            # units x current demo price = value; cost = what was paid
+            "holdings": [
+                {"product_id": "b_ssb", "units": 5000.0, "cost_cents": 500000},
+                {"product_id": "s_d05", "units": 50.0, "cost_cents": 160000},
+            ],
+            "cards": [
+                {"card_id": "c_debit", "name": "DBS Visa Debit Card", "masked": "•••• 7781", "status": "active"},
+                {"card_id": "c_credit", "name": "DBS Live Fresh Card", "masked": "•••• 3304", "status": "active"},
+            ],
+            # Transaction history: negative = outgoing, positive = incoming
             "transactions": [
-                {"date": "2026-10-01", "desc": "养老金入账 CPF LIFE", "amount_cents": 98000, "payee_id": None},
-                {"date": "2026-09-28", "desc": "转账给 陈美玲", "amount_cents": -20000, "payee_id": "p_daughter"},
-                {"date": "2026-09-15", "desc": "转账给 陈志强", "amount_cents": -10000, "payee_id": "p_son"},
-                {"date": "2026-09-12", "desc": "SP Group 水电费", "amount_cents": -8230, "payee_id": "p_sp"},
-                {"date": "2026-09-01", "desc": "养老金入账 CPF LIFE", "amount_cents": 98000, "payee_id": None},
-                {"date": "2026-08-27", "desc": "转账给 陈美玲", "amount_cents": -20000, "payee_id": "p_daughter"},
-                {"date": "2026-08-20", "desc": "NTUC FairPrice 消费", "amount_cents": -6450, "payee_id": None},
+                {"date": "2026-10-01", "desc": "Pension payout CPF LIFE", "amount_cents": 98000, "payee_id": None},
+                {"date": "2026-09-28", "desc": "Transfer to Chen Mei Ling", "amount_cents": -20000, "payee_id": "p_daughter"},
+                {"date": "2026-09-15", "desc": "Transfer to Chen Zhi Qiang", "amount_cents": -10000, "payee_id": "p_son"},
+                {"date": "2026-09-20", "desc": "Transfer to Chen Wei", "amount_cents": -5000, "payee_id": "p_grandson_wei"},
+                {"date": "2026-09-18", "desc": "Transfer to Chen Jun", "amount_cents": -5000, "payee_id": "p_grandson_jun"},
+                {"date": "2026-09-12", "desc": "SP Group Utilities", "amount_cents": -8230, "payee_id": "p_sp"},
+                {"date": "2026-09-01", "desc": "Pension payout CPF LIFE", "amount_cents": 98000, "payee_id": None},
+                {"date": "2026-08-27", "desc": "Transfer to Chen Mei Ling", "amount_cents": -20000, "payee_id": "p_daughter"},
+                {"date": "2026-08-20", "desc": "NTUC FairPrice purchase", "amount_cents": -6450, "payee_id": None},
             ],
         }
     }
 }
+
+# What Star can buy, modelled on what DBS digibank offers (synthetic products, DEMO prices and rates).
+# risk: 1 (lowest) .. 5 (highest). price is per unit in `currency`; units can be fractional in this demo.
+USD_SGD = 1.30          # demo exchange rate
+_PRODUCTS = [
+    {"product_id": "d_fd12", "name": "DBS Fixed Deposit (12 months)", "asset_class": "Fixed deposit", "risk": 1,
+     "min_cents": 100000, "currency": "SGD", "price": 1.0, "rate_pa": 1.80, "tenor_months": 12,
+     "aliases": ["fixed deposit", "time deposit", "fd", "12 month deposit", "12-month deposit"]},
+    {"product_id": "b_ssb", "name": "Singapore Savings Bonds", "asset_class": "Government bond", "risk": 1,
+     "min_cents": 50000, "currency": "SGD", "price": 1.0,
+     "aliases": ["savings bond", "savings bonds", "ssb", "government bond", "bonds"]},
+    {"product_id": "f_income", "name": "DBS Income Fund", "asset_class": "Unit trust", "risk": 2,
+     "min_cents": 10000, "currency": "SGD", "price": 1.0234, "aliases": ["income fund", "dbs income"]},
+    {"product_id": "f_asia_div", "name": "DBS Asia Dividend Fund", "asset_class": "Unit trust", "risk": 3,
+     "min_cents": 10000, "currency": "SGD", "price": 0.8712,
+     "aliases": ["asia dividend", "asia fund", "dividend fund", "asian fund"]},
+    {"product_id": "e_sti", "name": "SPDR STI ETF", "asset_class": "ETF", "risk": 4,
+     "min_cents": 10000, "currency": "SGD", "price": 3.85,
+     "aliases": ["sti", "sti etf", "straits times index", "singapore index", "etf"]},
+    {"product_id": "s_d05", "name": "DBS Group Holdings shares", "asset_class": "Shares (SGX)", "risk": 5,
+     "min_cents": 10000, "currency": "SGD", "price": 38.50, "ticker": "D05", "exchange": "SGX",
+     "aliases": ["dbs shares", "dbs share", "dbs stock", "dbs group", "d05"]},
+    {"product_id": "s_z74", "name": "Singtel shares", "asset_class": "Shares (SGX)", "risk": 5,
+     "min_cents": 10000, "currency": "SGD", "price": 3.20, "ticker": "Z74", "exchange": "SGX",
+     "aliases": ["singtel", "z74"]},
+    {"product_id": "s_aapl", "name": "Apple Inc. shares", "asset_class": "Shares (US)", "risk": 5,
+     "min_cents": 10000, "currency": "USD", "price": 228.40, "ticker": "AAPL", "exchange": "NASDAQ",
+     "aliases": ["apple", "aapl"]},
+    {"product_id": "s_msft", "name": "Microsoft Corp. shares", "asset_class": "Shares (US)", "risk": 5,
+     "min_cents": 10000, "currency": "USD", "price": 415.20, "ticker": "MSFT", "exchange": "NASDAQ",
+     "aliases": ["microsoft", "msft"]},
+]
+
+
+def price_sgd_cents(prod: dict) -> int:
+    """Demo price of one unit in SGD cents."""
+    return round(prod["price"] * (USD_SGD if prod.get("currency") == "USD" else 1) * 100)
 
 
 class MockBank:
@@ -60,10 +119,11 @@ class MockBank:
     def reset(self):
         with self._lock:
             self.world = copy.deepcopy(_WORLD)
-            self.executed: dict[str, dict] = {}   # 幂等键 -> 回执
+            self.products = copy.deepcopy(_PRODUCTS)
+            self.executed: dict[str, dict] = {}   # idempotency key -> receipt
             self.recent_exec_times: dict[str, list[float]] = {}
 
-    # ---------- 只读 ----------
+    # ---------- Read-only ----------
     def user(self, user_id: str) -> dict:
         return self.world["users"][user_id]
 
@@ -90,29 +150,94 @@ class MockBank:
         return self.user(user_id)["transactions"][:limit]
 
     def payee_history(self, user_id: str, payee_id: str) -> list[int]:
-        """该收款人的历史支出金额（正数，分）。供风控比较，不进模型提示。"""
+        """Past amounts paid to this payee (positive, in cents). Used by the risk rules; never shown to the model."""
         return [-t["amount_cents"] for t in self.user(user_id)["transactions"]
                 if t["payee_id"] == payee_id and t["amount_cents"] < 0]
+
+    def product(self, product_id: str) -> dict | None:
+        return next((p for p in self.products if p["product_id"] == product_id), None)
+
+    def holdings(self, user_id: str) -> list[dict]:
+        return self.user(user_id)["holdings"]
+
+    def portfolio(self, user_id: str) -> list[dict]:
+        out = []
+        for h in self.holdings(user_id):
+            p = self.product(h["product_id"]) or {}
+            value = round(h["units"] * price_sgd_cents(p)) if p else h["cost_cents"]
+            out.append({"product_id": h["product_id"], "name": p.get("name", h["product_id"]),
+                        "asset_class": p.get("asset_class", ""), "units": h["units"], "value_cents": value,
+                        "cost_cents": h["cost_cents"], "gain_cents": value - h["cost_cents"]})
+        return out
+
+    def cards(self, user_id: str) -> list[dict]:
+        return self.user(user_id)["cards"]
+
+    def card(self, user_id: str, card_id: str) -> dict | None:
+        return next((c for c in self.cards(user_id) if c["card_id"] == card_id), None)
+
+    # Locking a card is a protective action: allowed straight away (unlocking is not offered through Star)
+    def lock_card(self, user_id: str, card_id: str) -> dict:
+        with self._lock:
+            c = self.card(user_id, card_id)
+            if c is None:
+                raise ValueError("Card not found")
+            c["status"], c["locked_at"] = "locked", time.time()
+            return dict(c)
+
+    def risk_profile(self, user_id: str) -> dict:
+        return self.user(user_id)["risk_profile"]
+
+    def protection(self, user_id: str) -> dict:
+        return self.user(user_id)["protection"]
 
     def recent_exec_count(self, user_id: str, window_sec: int) -> int:
         now = time.time()
         return sum(1 for t in self.recent_exec_times.get(user_id, []) if now - t <= window_sec)
 
-    # ---------- 写：只允许执行器调用 ----------
+    # ---------- Write: only the execution gateway may call these ----------
+    def execute_investment(self, user_id: str, from_account: str, product_id: str, amount_cents: int,
+                           idempotency_key: str) -> dict:
+        with self._lock:
+            if idempotency_key in self.executed:
+                return {**self.executed[idempotency_key], "idempotent_replay": True}
+            acct, prod = self.account(user_id, from_account), self.product(product_id)
+            if acct is None or prod is None:
+                raise ValueError("Account or product not found")
+            if acct["balance_cents"] < amount_cents:
+                raise ValueError("Insufficient balance")
+            acct["balance_cents"] -= amount_cents
+            units = round(amount_cents / price_sgd_cents(prod), 4)
+            h = next((h for h in self.holdings(user_id) if h["product_id"] == product_id), None)
+            if h:
+                h["units"] += units
+                h["cost_cents"] += amount_cents
+            else:
+                self.holdings(user_id).append({"product_id": product_id, "units": units, "cost_cents": amount_cents})
+            self.user(user_id)["transactions"].insert(0, {
+                "date": time.strftime("%Y-%m-%d"), "desc": f"Buy {prod['name']} ({prod['asset_class']})",
+                "amount_cents": -amount_cents, "payee_id": product_id})
+            receipt = {"txn_id": "TXN-" + uuid.uuid4().hex[:10].upper(), "status": "SUCCESS",
+                       "amount_cents": amount_cents, "product_id": product_id, "units": units,
+                       "balance_after_cents": acct["balance_cents"], "executed_at": time.time()}
+            self.executed[idempotency_key] = receipt
+            self.recent_exec_times.setdefault(user_id, []).append(time.time())
+            return receipt
+
     def execute_payment(self, user_id: str, from_account: str, payee_id: str,
                         amount_cents: int, idempotency_key: str, bill_id: str | None = None) -> dict:
         with self._lock:
-            if idempotency_key in self.executed:          # 幂等：重试不会重复扣款
+            if idempotency_key in self.executed:          # idempotent: a retry never debits twice
                 return {**self.executed[idempotency_key], "idempotent_replay": True}
             acct = self.account(user_id, from_account)
             if acct is None:
-                raise ValueError("账户不存在")
+                raise ValueError("Account not found")
             if acct["balance_cents"] < amount_cents:
-                raise ValueError("余额不足")
+                raise ValueError("Insufficient balance")
             payee = self.payee(user_id, payee_id)
             acct["balance_cents"] -= amount_cents
             self.user(user_id)["transactions"].insert(0, {
-                "date": time.strftime("%Y-%m-%d"), "desc": f"转账给 {payee['name']}" if payee["type"] == "person"
+                "date": time.strftime("%Y-%m-%d"), "desc": f"Transfer to {payee['name']}" if payee["type"] == "person"
                 else payee["name"], "amount_cents": -amount_cents, "payee_id": payee_id})
             if bill_id:
                 b = self.bill(user_id, bill_id)

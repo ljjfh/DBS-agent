@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 data/*.jsonl
+data/*.json
 eval/eval_audit.jsonl
 eval/report.json
 .venv/

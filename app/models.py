@@ -1,4 +1,4 @@
-"""核心数据结构。金额一律用整数“分”（cents）保存，避免浮点误差。"""
+"""Core data structures. Amounts are always stored as integer cents to avoid floating-point errors."""
 from __future__ import annotations
 
 from enum import Enum
@@ -16,10 +16,10 @@ def fmt_money(cents: int, currency: str = "SGD") -> str:
 
 
 class RiskLevel(str, Enum):
-    LOW = "LOW"          # 一次生物识别
-    MEDIUM = "MEDIUM"    # 生物识别 + 一个核验问题
-    HIGH = "HIGH"        # 冷静期后再确认（可选家人同意）
-    BLOCK = "BLOCK"      # 不允许执行
+    LOW = "LOW"          # one biometric check
+    MEDIUM = "MEDIUM"    # biometric + one verification question
+    HIGH = "HIGH"        # confirm after a cooling-off period (optionally with family approval)
+    BLOCK = "BLOCK"      # not allowed to execute
 
     @property
     def rank(self) -> int:
@@ -31,51 +31,57 @@ class RiskLevel(str, Enum):
 
 
 class Phase(str, Enum):
-    """会话状态机的阶段：只能按允许的路径推进。"""
+    """Phases of the session state machine: can only advance along allowed paths."""
     IDLE = "IDLE"
-    DRAFTED = "DRAFTED"            # 草稿已生成并通过规则判级
-    COOLING = "COOLING"            # 高风险冷静期
+    DRAFTED = "DRAFTED"            # draft created and graded by the rules
+    COOLING = "COOLING"            # high-risk cooling-off period
     AWAITING_AUTH = "AWAITING_AUTH"
     EXECUTED = "EXECUTED"
     CANCELLED = "CANCELLED"
     BLOCKED = "BLOCKED"
-    HANDOFF = "HANDOFF"            # 转人工
+    FROZEN = "FROZEN"              # the independent verifier disagreed with the draft: it can never be signed
+    HANDOFF = "HANDOFF"            # handed off to a human
 
 
 class RiskDecision(BaseModel):
     level: RiskLevel
-    reasons: list[str] = Field(default_factory=list)       # 给用户看的白话理由
-    rule_hits: list[str] = Field(default_factory=list)     # 给审计看的规则编号
+    reasons: list[str] = Field(default_factory=list)       # plain-language reasons shown to the user
+    rule_hits: list[str] = Field(default_factory=list)     # rule codes for the audit log
     verify_question: Optional[str] = None
     cooldown_seconds: int = 0
 
 
 class Draft(BaseModel):
-    """交易草稿：Agent 能产生的最“远”的东西。执行只认这份草稿 + 用户签名。"""
+    """Transaction draft: the furthest the Agent can go. Execution only accepts this draft + the user's signature."""
     draft_id: str
     user_id: str
-    kind: Literal["transfer", "bill"]
+    kind: Literal["transfer", "bill", "investment"]
     from_account: str
-    payee_id: str
+    payee_id: str                    # for an investment: the product_id of the fund / ETF / bond
     payee_name: str
     amount_cents: int
     currency: str = "SGD"
     note: str = ""
     bill_id: Optional[str] = None
+    asset_class: str = "Cash"        # Cash for transfers and bills; e.g. "Unit trust", "ETF" for investments
     created_at: float
     expires_at: float
     nonce: str
-    digest: str = ""                 # 确认卡内容的哈希，“所见即所签”
+    digest: str = ""                 # hash of the confirmation card content: "what you see is what you sign"
     risk: Optional[RiskDecision] = None
     cooling_until: float = 0.0
-    taint: list[str] = Field(default_factory=list)  # 来自不可信来源的字段
+    taint: list[str] = Field(default_factory=list)  # fields that came from untrusted sources
+    grounding: dict = Field(default_factory=dict)  # is payee/amount backed by the user's own words (kernel/evidence.py)
+    you_said: str = ""                             # the user's own words this payment is based on (shown + signed)
+    verification: dict = Field(default_factory=dict)  # independent verifier's verdict (kernel/crosscheck.py)
 
     def card_fields(self) -> dict:
-        """参与哈希的字段：确认卡上展示的每一项都在这里。"""
+        """Fields that go into the hash: every item shown on the confirmation card is here."""
         return {
             "draft_id": self.draft_id, "user_id": self.user_id, "kind": self.kind,
             "from_account": self.from_account, "payee_id": self.payee_id,
             "payee_name": self.payee_name, "amount_cents": self.amount_cents,
-            "currency": self.currency, "bill_id": self.bill_id,
+            "currency": self.currency, "bill_id": self.bill_id, "asset_class": self.asset_class,
+            "you_said": self.you_said,
             "nonce": self.nonce, "expires_at": int(self.expires_at),
         }

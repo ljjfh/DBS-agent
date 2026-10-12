@@ -1,8 +1,9 @@
-"""模型客户端。
+"""Model clients.
 
-* OpenAICompatLLM：任何 OpenAI 兼容的 /chat/completions 接口（默认腾讯混元），支持 Function Calling。
-* OfflineLLM：不需要 key 的规则“模型”，接口与真实模型完全相同（同样返回 tool_calls）。
-  用途：① 没有 key 时先把整条链路跑通；② 线上模型超时/出错时的降级；③ 评测基线。
+* OpenAICompatLLM: any OpenAI-compatible /chat/completions API, with Function Calling.
+* OfflineLLM: a rule-based "model" that needs no key and has exactly the same interface (it also returns tool_calls).
+  Uses: (1) run the whole pipeline before you have a key; (2) fallback when the online model times out or errors;
+  (3) evaluation baseline.
 """
 from __future__ import annotations
 
@@ -13,7 +14,7 @@ import uuid
 import requests
 
 from app.agent import fraud
-from app.agent.textparse import find_raw_account, is_english, match_payees, parse_amount
+from app.agent.textparse import account_id_for, find_account, find_raw_account, match_payees, parse_amount
 from app.config import settings
 
 
@@ -23,37 +24,59 @@ class LLMError(Exception):
 
 class OpenAICompatLLM:
     name = "openai_compat"
+    supports_tool_choice = True      # "required" forces a tool call; switched off if the server rejects it
 
-    def __init__(self, base_url: str, api_key: str, model: str, timeout: float = 30):
+    def __init__(self, base_url: str, api_key: str, model: str, timeout: float = 30, thinking: str = ""):
         self.base_url, self.api_key, self.model, self.timeout = base_url.rstrip("/"), api_key, model, timeout
+        self.thinking = thinking
 
     def chat(self, messages: list[dict], tools: list[dict] | None = None, json_mode: bool = False,
-             model: str | None = None) -> dict:
+             model: str | None = None, tool_choice: str | None = None) -> dict:
         body = {"model": model or self.model, "messages": messages, "temperature": 0.1}
+        if self.thinking == "off":
+            body["chat_template_kwargs"] = {"enable_thinking": False}
         if tools:
             body["tools"] = tools
+            body["tool_choice"] = tool_choice if (tool_choice and self.supports_tool_choice) else "auto"
+        r = self._post(body)
+        if r.status_code == 400 and body.get("tool_choice") == "required":
+            self.supports_tool_choice = False           # this server can't force tool use; the harness covers it
             body["tool_choice"] = "auto"
-        try:
-            r = requests.post(f"{self.base_url}/chat/completions", json=body, timeout=self.timeout,
-                              headers={"Authorization": f"Bearer {self.api_key}"})
-        except requests.RequestException as e:
-            raise LLMError(f"网络错误：{e}") from e
+            r = self._post(body)
         if r.status_code != 200:
             raise LLMError(f"HTTP {r.status_code}: {r.text[:300]}")
-        msg = r.json()["choices"][0]["message"]
+        try:
+            msg = r.json()["choices"][0]["message"]
+        except (ValueError, KeyError, IndexError) as e:
+            raise LLMError(f"Unexpected response: {r.text[:200]}") from e
         return {"role": "assistant", "content": msg.get("content") or "",
                 "tool_calls": msg.get("tool_calls") or []}
 
 
-# ====================================================================== 离线模型
+    def _post(self, body: dict):
+        try:
+            return requests.post(f"{self.base_url}/chat/completions", json=body, timeout=self.timeout,
+                                 headers={"Authorization": f"Bearer {self.api_key}"})
+        except requests.RequestException as e:
+            raise LLMError(f"Network error: {e}") from e
+
+
+# ====================================================================== Offline model
 _RX = {
-    "handoff": r"真人|人工|客服|human|real person|customer service",
-    "bill": r"账单|水电|电费|水费|杂费|s&cc|bill|utilit",
-    "pay": r"交|缴|付|pay",
-    "transfer": r"转|汇|打钱|给.{0,6}钱|transfer|send",
-    "income": r"养老金|退休金|到账|入账|cpf|pension|payout",
-    "balance": r"余额|还有多少钱|有多少钱|balance|how much (money )?(do i have|left|is in)",
-    "spending": r"花了|开销|支出|流水|记录|spent|spending|transactions|history",
+    "handoff": r"human|real person|customer service|(talk|speak) to (someone|a person|staff|an officer)",
+    "card": r"\b(lock|block|freeze|stop|cancel)\b.{0,30}\bcards?\b|\bcards?\b.{0,30}\b(lost|stolen|missing)\b|"
+            r"\b(lost|lose|stole|stolen|missing|took|snatched)\b.{0,25}\b(wallet|purse|cards?)\b|\bmy cards?\b",
+    "portfolio": r"\bportfolio\b|\bholdings?\b|\bmy investments\b|\binvestments? (doing|worth)\b|"
+                 r"how (much|many) .{0,25}\b(invested|shares|units)\b",
+    "invest": r"\binvest|\bbuy\b.*\b(fund|etf|bonds?|shares?|stocks?|units)\b|unit trust|savings bonds?|"
+              r"\b(top up|put)\b.*\b(fund|etf|bonds?|deposit)\b|fixed deposit|time deposit|"
+              r"\bbuy\b.{0,20}\b(apple|microsoft|singtel|dbs shares)\b",
+    "bill": r"\bbills?\b|utilit|electric|water|s&cc|town council|conservancy",
+    "pay": r"\bpay",
+    "transfer": r"\b(transfer|send|wire)\b|\bgive\b(?! me\b)",
+    "income": r"pension|\bcpf\b|payout|(come|came|gone) in|arrived|received",
+    "balance": r"balance|how much (money )?(do i have|have i got|is (there )?in|is left|left)",
+    "spending": r"\bspen[dt]|spending|expenses|transactions|history",
 }
 
 
@@ -64,6 +87,12 @@ def _has(key: str, text: str) -> bool:
 def detect_intent(text: str) -> str:
     if _has("handoff", text):
         return "handoff"
+    if _has("card", text):
+        return "card"
+    if _has("portfolio", text):
+        return "portfolio"
+    if _has("invest", text):
+        return "invest"
     if _has("bill", text) and _has("pay", text):
         return "bill_pay"
     if _has("transfer", text):
@@ -80,131 +109,207 @@ def detect_intent(text: str) -> str:
 
 
 class OfflineLLM:
-    """确定性的“模型”：按 ReAct 的形状工作（先给 Thought，再给 Action），方便轨迹面板展示。"""
+    """A deterministic "model": works in the shape of ReAct (Thought first, then Action) so the trace panel can show it."""
     name = "offline"
 
     def chat(self, messages: list[dict], tools: list[dict] | None = None, json_mode: bool = False,
              model: str | None = None) -> dict:
-        if json_mode:   # 诈骗研判：离线时用关键词规则代替
+        if json_mode:   # scam assessment: use keyword rules when offline
             payload = json.loads(messages[-1]["content"])
             level, reasons, _ = fraud.scan(" ".join(payload.get("user_utterances", [])))
             return {"role": "assistant", "content": json.dumps({"level": level.value, "reasons": reasons},
                                                                 ensure_ascii=False), "tool_calls": []}
         allowed = {t["function"]["name"] for t in tools or []}
-        text, en = self._effective_text(messages), False
-        en = is_english(text)
+        text = self._effective_text(messages)
         results = self._turn_results(messages)
         intent = detect_intent(text)
-        T = (lambda zh, eng: eng if en else zh)
 
-        # 上一个工具报错：把可行动的错误转述给用户
+        # The previous tool errored: relay the actionable error to the user
         last = messages[-1]
         if last["role"] == "tool":
             data = json.loads(last["content"])
             if not data.get("ok"):
-                return self._say(T(f"抱歉，{data['error']}", f"Sorry — {data['error']}"))
+                return self._say(f"Sorry — {data['error']}")
 
         if intent == "handoff":
             if "handoff_to_human" not in results:
-                return self._call("handoff_to_human", {"reason": "用户要求人工服务"}, "用户想找真人，转人工。")
-            return self._say(T("好的，正在为您转接客服人员，请稍等，不用重复说明情况。",
-                               "Sure, connecting you to a staff member now. You won't need to repeat yourself."))
+                return self._call("handoff_to_human", {"reason": "User asked for a human"},
+                                  "The user wants a real person; hand off.")
+            return self._say("Sure, connecting you to a staff member now. You won't need to repeat yourself.")
+
+        if intent == "card":
+            if "get_cards" not in results:
+                return self._call("get_cards", {}, "The user wants a card locked; look up their cards.")
+            if "lock_card" in results:
+                done = results["lock_card"]["data"]["locked"]
+                return self._say("Done. I've locked your " + " and ".join(f"{c['name']} ({c['number']})" for c in done)
+                                 + f" straight away. To unlock {'them' if len(done) > 1 else 'it'} later, use the DBS app"
+                                 " or call 1800 111 1111.")
+            cards = results["get_cards"]["data"]
+            low = text.lower()
+            if re.search(r"\b(all|both|wallet|purse|every)\b", low):
+                pick = "all"
+            else:
+                pick = next((c["card_id"] for c in cards if c["name"].lower() in low
+                             or c["number"][-4:] in low), None) or \
+                    next((c["card_id"] for c in cards if ("credit" in low and "credit" in c["card_id"])
+                          or (re.search(r"debit|atm", low) and "debit" in c["card_id"])), None)
+            if not pick:
+                names = " or ".join(f"your {c['name']} ({c['number']})" for c in cards)
+                return self._say(f"Which card should I lock: {names}, or both?")
+            return self._call("lock_card", {"card_id": pick}, "Lock the card now; it's a protective action.")
+
+        if intent == "portfolio":
+            if "get_portfolio" not in results:
+                return self._call("get_portfolio", {}, "The user asks about their investments.")
+            p = results["get_portfolio"]["data"]
+            parts = "; ".join(f"{h['name']} {h['value']} ({h['gain_or_loss']})" for h in p["holdings"])
+            return self._say(f"Your investments are worth {p['total_value']} in total: {parts}.")
 
         if intent == "balance":
             if "get_balance" not in results:
-                return self._call("get_balance", {}, "用户想知道余额，查询账户。")
+                return self._call("get_balance", {}, "The user wants their balance; look up the account.")
             a = results["get_balance"]["data"][0]
-            return self._say(T(f"您的{a['name']}现在有 {a['balance']}。", f"Your {a['name']} has {a['balance']}."))
+            return self._say(f"Your {a['name']} has {a['balance']}.")
 
         if intent in ("income", "spending"):
             if "get_recent_transactions" not in results:
-                return self._call("get_recent_transactions", {"limit": 8}, "需要看最近的收支记录。")
+                return self._call("get_recent_transactions", {"limit": 8}, "Need to see recent transactions.")
             txns = results["get_recent_transactions"]["data"]
             if intent == "income":
                 inc = next((t for t in txns if t["amount"].startswith("+")), None)
                 if not inc:
-                    return self._say(T("最近没有看到入账记录。", "I don't see any recent incoming payment."))
-                return self._say(T(f"到了，{inc['date']} 收到 {inc['desc']}，金额 {inc['amount'][1:]}。",
-                                   f"Yes — {inc['desc']} of {inc['amount'][1:]} arrived on {inc['date']}."))
+                    return self._say("I don't see any recent incoming payment.")
+                return self._say(f"Yes — {inc['desc']} of {inc['amount'][1:]} arrived on {inc['date']}.")
             month = txns[0]["date"][:7] if txns else ""
             outs = [t for t in txns if t["amount"].startswith("-") and t["date"].startswith(month)]
             total = sum(float(t["amount"].replace("-S$", "").replace(",", "")) for t in outs)
-            return self._say(T(f"{month} 这个月目前支出 {len(outs)} 笔，一共 S${total:,.2f}。",
-                               f"In {month} you've spent S${total:,.2f} across {len(outs)} payments so far."))
+            return self._say(f"In {month} you've spent S${total:,.2f} across {len(outs)} payments so far.")
 
         if intent in ("bill_query", "bill_pay"):
             if "get_bills" not in results:
-                return self._call("get_bills", {}, "先看看有哪些待缴账单。")
+                return self._call("get_bills", {}, "First check which bills are unpaid.")
             bills = results["get_bills"]["data"]
             if not bills:
-                return self._say(T("目前没有待缴的账单。", "You have no unpaid bills right now."))
+                return self._say("You have no unpaid bills right now.")
             if intent == "bill_query":
-                lst = "；".join(f"{b['title']} {b['amount']}（{b['due']} 前）" for b in bills)
-                return self._say(T(f"有 {len(bills)} 张待缴账单：{lst}。要帮您交吗？",
-                                   f"You have {len(bills)} unpaid bills: {lst}. Shall I prepare a payment?"))
+                lst = "; ".join(f"{b['title']} {b['amount']} (due {b['due']})" for b in bills)
+                return self._say(f"You have {len(bills)} unpaid bills: {lst}. Shall I prepare a payment?")
             picked = self._pick_bill(text, bills)
             if picked is None:
-                lst = "、".join(b["title"] for b in bills)
-                return self._say(T(f"有 {len(bills)} 张待缴账单：{lst}。您想交哪一张？",
-                                   f"You have these bills: {lst}. Which one would you like to pay?"))
+                lst = ", ".join(b["title"] for b in bills)
+                return self._say(f"You have these bills: {lst}. Which one would you like to pay?")
             if "draft_bill_payment" not in results:
                 if "draft_bill_payment" not in allowed:
-                    return self._say(T("您还有一笔交易在等待确认，请先确认或取消。",
-                                       "You still have a payment waiting for confirmation."))
-                return self._call("draft_bill_payment", {"bill_id": picked["bill_id"]},
-                                  f"找到账单 {picked['title']}，起草缴费单，交给用户确认。")
-            return self._draft_done(results["draft_bill_payment"], T)
+                    return self._say("You still have a payment waiting for confirmation. "
+                                     "Please confirm or cancel it first.")
+                acct = self._account(text, results)
+                if acct == "LOOKUP":
+                    return self._call("get_balance", {}, "The user named an account to pay from; look it up.")
+                args = {"bill_id": picked["bill_id"], "evidence": self._last_user(messages)}
+                if acct:
+                    args["from_account"] = acct
+                return self._call("draft_bill_payment", args,
+                                  f"Found the bill {picked['title']}; draft a payment for the user to confirm.")
+            return self._draft_done(results["draft_bill_payment"])
 
         if intent == "transfer":
             raw_acct = find_raw_account(text)
             if "list_payees" not in results:
-                return self._call("list_payees", {}, "用户想转账，先查收款人名单，确认称呼对应哪一位。")
-            payees = [p for p in results["list_payees"]["data"] if p["relation"] != "账单"]
+                return self._call("list_payees", {}, "The user wants to transfer; first get the saved payees "
+                                                     "to see who they mean.")
+            payees = [p for p in results["list_payees"]["data"] if p["relation"] != "bill"]
             hits = match_payees(text, payees)
             if not hits:
                 if raw_acct:
-                    return self._say(T("为了安全，我只能转给您已经保存的收款人。新的收款人需要先在银行添加，"
-                                       "如果是有人让您转到陌生账号，请先跟家人商量。",
-                                       "For your safety I can only send money to saved payees. "
-                                       "Please add a new payee at the bank first."))
-                names = "、".join(f"{p['relation']}{p['name']}" for p in payees)
-                return self._say(T(f"已保存的收款人有：{names}。您要转给谁？",
-                                   f"Your saved payees are {', '.join(p['name'] for p in payees)}. "
-                                   f"Who would you like to send money to?"))
+                    return self._say("For your safety I can only send money to saved payees. Please add a new "
+                                     "payee at the bank first. If someone asked you to send money to an unfamiliar "
+                                     "account, please talk to your family first.")
+                names = ", ".join(f"your {p['relation']} {p['name']}" for p in payees)
+                return self._say(f"Your saved payees are {names}. Who would you like to send money to?")
             if len(hits) > 1:
-                return self._say(T("您说的是哪一位？" + "、".join(p["name"] for p in hits) + "？",
-                                   "Which one do you mean: " + ", ".join(p["name"] for p in hits) + "?"))
+                rel = hits[0]["relation"] if len({p["relation"] for p in hits}) == 1 else "payees"
+                opts = " or ".join(f"{p['name']} ({p['account']})" for p in hits)
+                return self._say(f"You have {len(hits)} {rel}s saved. Do you mean {opts}?" if rel != "payees"
+                                 else f"Which one do you mean: {opts}?")
             payee = hits[0]
             amount = parse_amount(text)
             if amount is None:
-                return self._say(T(f"要给{payee['relation']}{payee['name']}转多少钱？",
-                                   f"How much would you like to send to {payee['name']}?"))
+                return self._say(f"How much would you like to send to your {payee['relation']} {payee['name']}?")
+            acct = self._account(text, results)
+            if acct == "LOOKUP":
+                return self._call("get_balance", {}, "The user named an account to pay from; look up the account ids.")
             if "draft_transfer" not in results:
                 if "draft_transfer" not in allowed:
-                    return self._say(T("为了您的安全，这次对话里暂时不能新建转账。如果有人自称警察或银行要您转钱，"
-                                       "请先挂断，拨打反诈热线 1799。",
-                                       "For your safety I can't set up a transfer in this conversation. "
-                                       "If someone asked you to send money, please call the ScamShield helpline 1799."))
-                return self._call("draft_transfer", {"payee_id": payee["payee_id"], "amount": amount},
-                                  f"“{payee['relation']}”对应 {payee['name']}（{payee['payee_id']}），金额 {amount:g}，起草转账。")
-            return self._draft_done(results["draft_transfer"], T)
+                    return self._say("For your safety I can't set up a transfer in this conversation. If someone "
+                                     "claiming to be the police or the bank asked you to send money, please hang up "
+                                     "and call the ScamShield helpline 1799.")
+                args = {"payee_id": payee["payee_id"], "amount": amount, "evidence": self._last_user(messages)}
+                if acct:
+                    args["from_account"] = acct
+                return self._call("draft_transfer", args,
+                                  f"\"{payee['relation']}\" is {payee['name']} ({payee['payee_id']}), amount "
+                                  f"{amount:g}{' from ' + acct if acct else ''}; draft the transfer.")
+            return self._draft_done(results["draft_transfer"])
 
-        return self._say(T("我可以帮您：查余额、查养老金到账、交水电费、给家人转账。您想做哪一样？",
-                           "I can check your balance, pay bills, or send money to family. What would you like to do?"))
+        if intent == "invest":
+            if "list_investments" not in results:
+                return self._call("list_investments", {}, "The user wants to invest; look up the products first.")
+            data = results["list_investments"]["data"]
+            hits = match_payees(text, data["products"])
+            if not hits and re.search(r"\b(stocks?|shares?|equit(y|ies))\b", text, re.I):
+                opts = ", ".join(re.sub(r"( Inc\.| Corp\.| Group Holdings)? shares$", "", p["name"])
+                                 for p in data["products"] if p["asset_class"].startswith("Shares"))
+                return self._say(f"I can buy shares in {opts}. Which company would you like, and how much?")
+            if len(hits) != 1:
+                opts = ", ".join(f"{p['name']} ({p['asset_class']})" for p in (hits or data["products"]))
+                return self._say(f"Which would you like to invest in: {opts}?")
+            prod = hits[0]
+            amount = parse_amount(text)
+            if amount is None:
+                return self._say(f"How much would you like to invest in the {prod['name']}?")
+            acct = self._account(text, results)
+            if acct == "LOOKUP":
+                return self._call("get_balance", {}, "The user named an account to pay from; look up the account ids.")
+            if "draft_investment" not in results:
+                if "draft_investment" not in allowed:
+                    return self._say("You still have a transaction waiting, or I can't prepare this one safely. "
+                                     "Please confirm or cancel it first.")
+                args = {"product_id": prod["product_id"], "amount": amount, "evidence": self._last_user(messages)}
+                if acct:
+                    args["from_account"] = acct
+                return self._call("draft_investment", args,
+                                  f"Product {prod['name']} ({prod['asset_class']}), amount {amount:g}; draft the investment.")
+            return self._draft_done(results["draft_investment"])
+
+        return self._say("I can check your balance, check if your pension has arrived, pay your bills, send "
+                         "money to family, or invest in a fund or bond. What would you like to do?")
 
     # ------------------------------------------------------------------ helpers
     @staticmethod
-    def _draft_done(res: dict, T) -> dict:
+    def _account(text: str, results: dict) -> str | None:
+        """account_id the user named ("from my current account"), "LOOKUP" if we still need get_balance, or None."""
+        phrase = find_account(text)
+        if not phrase:
+            return None
+        if "get_balance" not in results:
+            return "LOOKUP"
+        return account_id_for(phrase, results["get_balance"]["data"])
+
+    @staticmethod
+    def _draft_done(res: dict) -> dict:
         d = res["data"]
+        if d.get("frozen"):
+            return OfflineLLM._say("I've stopped this one: " + " ".join(d.get("mismatches", [])))
         if d["risk_level"] == "BLOCK":
             why = d["reasons"][0] if d["reasons"] else ""
-            return OfflineLLM._say(T(f"这笔不能办理：{why}", f"I can't process this one: {why}"))
-        return OfflineLLM._say(T(f"好的，请看确认卡：给 {d['payee']} {d['amount']}。核对没错的话，按指纹确认。",
-                                 f"Please check the card: {d['amount']} to {d['payee']}. Confirm with your fingerprint if it's right."))
+            return OfflineLLM._say(f"I can't process this one: {why}")
+        return OfflineLLM._say(f"Please check the card: {d['amount']} {'in' if d.get('kind') == 'investment' else 'to'} {d['payee']}. "
+                               f"If it's right, confirm with your fingerprint.")
 
     @staticmethod
     def _pick_bill(text: str, bills: list[dict]) -> dict | None:
-        rules = [(r"电|水|sp|utilit", "p_sp"), (r"杂费|s&cc|town|理事会", "p_tc")]
+        rules = [(r"electric|water|utilit|\bsp\b", "p_sp"), (r"s&cc|town council|conservancy", "p_tc")]
         for rx, pid in rules:
             if re.search(rx, text, re.I):
                 b = next((b for b in bills if b["payee_id"] == pid), None)
@@ -214,21 +319,25 @@ class OfflineLLM:
 
     @staticmethod
     def _effective_text(messages: list[dict]) -> str:
-        """多轮补槽：如果当前这句没有意图（比如只说了“两百”），而上一轮助手在提问，就和上一句合并理解。"""
+        """Multi-turn slot filling: while the user is answering the assistant's questions ("Chen Wei", then
+        "fifty dollars"), read those answers together with the request that started it ("Send money to my family")."""
         users = [i for i, m in enumerate(messages) if m["role"] == "user"]
         if not users:
             return ""
-        cur = messages[users[-1]]["content"]
-        if detect_intent(cur) == "unknown" and len(users) >= 2:
-            prev_asst = next((m for m in reversed(messages[:users[-1]]) if m["role"] == "assistant"
+        parts = [messages[users[-1]]["content"]]
+        k = len(users) - 1
+        while detect_intent(" ".join(parts)) == "unknown" and k >= 1 and len(parts) < 4:
+            prev_asst = next((m for m in reversed(messages[users[k - 1]:users[k]]) if m["role"] == "assistant"
                               and m.get("content")), None)
-            if prev_asst and re.search(r"[？?]\s*$", prev_asst["content"]):
-                return messages[users[-2]]["content"] + " " + cur
-        return cur
+            if not (prev_asst and re.search(r"\?\s*$", prev_asst["content"])):
+                break
+            k -= 1
+            parts.insert(0, messages[users[k]]["content"])
+        return " ".join(parts)
 
     @staticmethod
     def _turn_results(messages: list[dict]) -> dict:
-        """本轮（最后一条用户消息之后）各工具的返回结果。"""
+        """Results of each tool in this turn (after the last user message)."""
         last_user = max(i for i, m in enumerate(messages) if m["role"] == "user")
         names, out = {}, {}
         for m in messages[last_user:]:
@@ -237,6 +346,10 @@ class OfflineLLM:
             if m["role"] == "tool":
                 out[names.get(m["tool_call_id"], "?")] = json.loads(m["content"])
         return out
+
+    @staticmethod
+    def _last_user(messages: list[dict]) -> str:
+        return next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
 
     @staticmethod
     def _call(name: str, args: dict, thought: str) -> dict:
@@ -251,5 +364,6 @@ class OfflineLLM:
 
 def build_llm():
     if settings.llm_enabled:
-        return OpenAICompatLLM(settings.llm_base_url, settings.llm_api_key, settings.llm_model, settings.llm_timeout)
+        return OpenAICompatLLM(settings.llm_base_url, settings.llm_api_key, settings.llm_model, settings.llm_timeout,
+                               settings.llm_thinking)
     return OfflineLLM()

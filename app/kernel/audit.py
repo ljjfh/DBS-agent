@@ -1,6 +1,6 @@
-"""追加式哈希链审计日志：每条记录带上前一条的哈希，任何一条被改动都能被检测出来。
+"""Append-only hash-chained audit log: each record carries the previous record's hash, so any edit is detectable.
 
-同一份日志同时服务：调试 / 评测、合规取证、路演回放。
+The same log serves debugging / evaluation, compliance evidence, and demo replay.
 """
 from __future__ import annotations
 
@@ -45,7 +45,7 @@ class AuditLog:
             return body
 
     def verify(self) -> dict:
-        """重新计算整条链。返回是否完整、条数，以及第一处断裂的位置。"""
+        """Recompute the whole chain. Returns whether it is intact, the record count, and where it first breaks."""
         prev = GENESIS
         n = 0
         if not self.path.exists():

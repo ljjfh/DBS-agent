@@ -1,4 +1,4 @@
-"""安全内核的单元测试：规则、签名、状态机、执行器、审计链。运行：python -m unittest discover tests"""
+"""Unit tests for the safety kernel: rules, signing, state machine, executor, audit chain. Run: python -m unittest discover tests"""
 import os
 import tempfile
 import time
@@ -6,7 +6,8 @@ import unittest
 
 os.environ.setdefault("RULE_FIXED_HOUR", "14")
 
-from app.agent.textparse import amount_words_zh, parse_amount  # noqa: E402
+from app.agent.textparse import amount_words_en, parse_amount  # noqa: E402
+from app.agent.verifier import Verifier  # noqa: E402
 from app.bank.mock_bank import MockBank  # noqa: E402
 from app.kernel.audit import AuditLog  # noqa: E402
 from app.kernel.executor import Kernel, KernelError  # noqa: E402
@@ -20,13 +21,21 @@ class KernelTestBase(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.bank = MockBank()
         self.audit = AuditLog(os.path.join(self.tmp.name, "audit.jsonl"))
-        self.kernel = Kernel(self.bank, self.audit, TokenService(b"test-secret"))
+        self.kernel = Kernel(self.bank, self.audit, TokenService(b"test-secret"), allow_mock=True)
         self.s = Session(session_id="t")
 
     def tearDown(self):
         self.tmp.cleanup()
 
-    def draft(self, payee="p_daughter", cents=20000, **kw):
+    def say(self, text):
+        self.s.messages.append({"role": "user", "content": text})
+
+    def draft(self, payee="p_daughter", cents=20000, said=True, **kw):
+        # By default the user actually asked for this payment (evidence grounding needs the user's words)
+        p = self.bank.payee("u_chen", payee)
+        if said and p:
+            self.say(f"Send {cents / 100:g} to {p['name']}")
+        kw.setdefault("verification", Verifier(None, self.bank).verdict(self.s))   # the independent check
         return self.kernel.create_draft(self.s, kind="transfer", payee_id=payee, amount_cents=cents,
                                         local_hour=14, **kw)
 
@@ -99,7 +108,7 @@ class TestSigningAndExecution(KernelTestBase):
         self.assertTrue(ts.verify_and_consume(tok, "d1", "h")[0])
         ok, why = ts.verify_and_consume(tok, "d1", "h")
         self.assertFalse(ok)
-        self.assertIn("重放", why)
+        self.assertIn("replay", why)
 
     def test_forged_token_rejected(self):
         ts = TokenService(b"k")
@@ -134,6 +143,178 @@ class TestSigningAndExecution(KernelTestBase):
         self.assertEqual(e.exception.code, "PENDING_DRAFT")
 
 
+class TestEvidenceGrounding(KernelTestBase):
+    """The payee and amount must be backed by what the user actually said (kernel/evidence.py)."""
+
+    def test_grounded_payment_is_low(self):
+        self.say("Send two hundred to my daughter")
+        d = self.draft(said=False)
+        self.assertEqual(d.risk.level, RiskLevel.LOW)
+        self.assertEqual(d.you_said, "Send two hundred to my daughter")
+
+    def test_amount_not_said_is_medium_and_flagged(self):
+        self.say("Send money to my daughter, the usual amount")
+        d = self.draft(said=False)
+        self.assertEqual(d.risk.level, RiskLevel.MEDIUM)
+        self.assertIn("R50_AMOUNT_NOT_SAID", d.risk.rule_hits)
+        self.assertFalse(d.grounding["amount"])
+
+    def test_payee_not_said_is_high(self):
+        self.say("Send two hundred dollars please")
+        d = self.draft("p_son", said=False)
+        self.assertIn("R51_PAYEE_NOT_SAID", d.risk.rule_hits)
+        self.assertEqual(d.risk.level, RiskLevel.HIGH)
+
+    def test_nothing_said_is_blocked(self):
+        # e.g. the model was steered by text hidden in a bill: the user only asked about bills
+        self.say("What bills do I have?")
+        d = self.draft("p_son", 300000, said=False)
+        self.assertEqual(d.risk.level, RiskLevel.BLOCK)
+        self.assertIn("R52_NOT_REQUESTED", d.risk.rule_hits)
+
+    def test_bill_amount_comes_from_the_bill(self):
+        self.say("Pay my utilities bill")
+        d = self.kernel.create_draft(self.s, kind="bill", payee_id="p_sp", amount_cents=8640, bill_id="b_sp_oct",
+                                     local_hour=14)
+        self.assertEqual(d.grounding["amount_source"], "bill")
+        self.assertEqual(d.risk.level, RiskLevel.LOW)
+
+    def test_multi_turn_quote_joins_both_pieces(self):
+        self.say("Send money to my son")
+        self.say("three hundred")
+        d = self.draft("p_son", 30000, said=False, evidence="three hundred")
+        self.assertEqual(d.you_said, "Send money to my son … three hundred")
+
+    def test_quote_is_part_of_the_signed_digest(self):
+        from app.kernel.signing import compute_digest
+        d = self.draft()
+        before = compute_digest(d)
+        d.you_said = "something else"
+        self.assertNotEqual(before, compute_digest(d))
+
+    def test_amount_words_and_digits(self):
+        from app.kernel.evidence import amounts_in
+        self.assertTrue({20000, 5000} <= amounts_in("two hundred, or maybe $50"))
+        self.assertIn(2050, amounts_in("twenty dollars fifty"))
+        self.assertNotIn(1234567800, amounts_in("account 12345678"))
+
+
+class TestDeviceKeySigning(KernelTestBase):
+    """The real path: the browser's P-256 key signs the exact challenge; nothing else moves money."""
+
+    def setUp(self):
+        super().setUp()
+        from app.kernel import p256
+        self.p256 = p256
+        self.kernel.allow_mock = False
+        self.d_priv, self.jwk = p256.generate_keypair()
+        self.kernel.register_key(self.s, self.jwk)
+
+    def signed(self, d, priv=None, **kw):
+        import base64
+        payload = self.kernel.issue_challenge(self.s, d.draft_id, d.digest, **kw)
+        sig = base64.b64encode(self.p256.sign(priv or self.d_priv, payload.encode())).decode()
+        return {"payload": payload, "signature": sig}
+
+    def test_happy_path_and_verifiable_receipt(self):
+        import json, subprocess, sys, tempfile
+        d = self.draft()
+        tok = self.kernel.authorize(self.s, d.draft_id, d.digest, self.signed(d))
+        r = self.kernel.commit(self.s, d.draft_id, tok)
+        self.assertEqual(r["status"], "SUCCESS")
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+            json.dump(r["verifiable"], f)
+        out = subprocess.run([sys.executable, "scripts/verify_receipt.py", f.name], capture_output=True, text=True)
+        self.assertEqual(out.returncode, 0, out.stdout)
+        self.assertIn("VALID", out.stdout)
+
+    def test_edited_receipt_fails_offline_check(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("vr", "scripts/verify_receipt.py")
+        vr = importlib.util.module_from_spec(spec); spec.loader.exec_module(vr)
+        d = self.draft()
+        r = self.kernel.commit(self.s, d.draft_id, self.kernel.authorize(self.s, d.draft_id, d.digest, self.signed(d)))
+        rec = r["verifiable"]
+        rec["card"]["amount_cents"] = 2000000
+        self.assertFalse(all(ok for _, ok in vr.check(rec)))
+
+    def test_demo_string_rejected_when_mock_off(self):
+        d = self.draft()
+        with self.assertRaises(KernelError) as e:
+            self.kernel.authorize(self.s, d.draft_id, d.digest, "demo-fingerprint")
+        self.assertEqual(e.exception.code, "AUTH_FAILED")
+
+    def test_attacker_key_rejected(self):
+        d = self.draft()
+        attacker, _ = self.p256.generate_keypair()
+        with self.assertRaises(KernelError) as e:
+            self.kernel.authorize(self.s, d.draft_id, d.digest, self.signed(d, priv=attacker))
+        self.assertEqual(e.exception.code, "INVALID_SIGNATURE")
+        self.assertEqual(self.bank.executed, {})
+
+    def test_tampered_payload_rejected(self):
+        import json
+        d = self.draft()
+        a = self.signed(d)
+        body = json.loads(a["payload"]); body["amount_cents"] = 2000000
+        a["payload"] = json.dumps(body)
+        with self.assertRaises(KernelError) as e:
+            self.kernel.authorize(self.s, d.draft_id, d.digest, a)
+        self.assertEqual(e.exception.code, "PAYLOAD_MISMATCH")
+
+    def test_signature_is_single_use(self):
+        d = self.draft()
+        a = self.signed(d)
+        self.kernel.authorize(self.s, d.draft_id, d.digest, a)
+        with self.assertRaises(KernelError) as e:
+            self.kernel.authorize(self.s, d.draft_id, d.digest, a)
+        self.assertEqual(e.exception.code, "PAYLOAD_MISMATCH")
+
+    def test_new_challenge_invalidates_old_signature(self):
+        d = self.draft()
+        old = self.signed(d)
+        self.kernel.issue_challenge(self.s, d.draft_id, d.digest)
+        with self.assertRaises(KernelError):
+            self.kernel.authorize(self.s, d.draft_id, d.digest, old)
+
+    def test_expired_challenge_rejected(self):
+        import base64, json
+        from app.kernel import signing
+        d = self.draft()
+        payload = signing.build_challenge(self.s.session_id, d, ttl=-1)
+        self.s.challenges[d.draft_id] = payload
+        sig = base64.b64encode(self.p256.sign(self.d_priv, payload.encode())).decode()
+        with self.assertRaises(KernelError) as e:
+            self.kernel.authorize(self.s, d.draft_id, d.digest, {"payload": payload, "signature": sig})
+        self.assertEqual(e.exception.code, "EXPIRED")
+
+    def test_draft_changed_after_challenge_rejected(self):
+        d = self.draft()
+        a = self.signed(d)
+        d.amount_cents = 999900            # server-side tampering after the user was shown the card
+        with self.assertRaises(KernelError) as e:
+            self.kernel.authorize(self.s, d.draft_id, d.digest, a)
+        self.assertEqual(e.exception.code, "DIGEST_MISMATCH")
+
+    def test_verify_question_needed_before_challenge(self):
+        d = self.draft("p_son", 50000)
+        with self.assertRaises(KernelError) as e:
+            self.kernel.issue_challenge(self.s, d.draft_id, d.digest)
+        self.assertEqual(e.exception.code, "VERIFY_REQUIRED")
+        self.kernel.authorize(self.s, d.draft_id, d.digest, self.signed(d, verify_answer=True), verify_answer=True)
+
+    def test_key_cannot_be_swapped(self):
+        _, other = self.p256.generate_keypair()
+        with self.assertRaises(KernelError) as e:
+            self.kernel.register_key(self.s, other)
+        self.assertEqual(e.exception.code, "KEY_EXISTS")
+        self.kernel.register_key(self.s, self.jwk)          # same key again is fine (browser reload)
+
+    def test_private_key_never_accepted(self):
+        with self.assertRaises(KernelError):
+            self.kernel.register_key(Session(session_id="z"), {**self.jwk, "d": "AAAA"})
+
+
 class TestStateMachine(unittest.TestCase):
     def test_cannot_skip_to_executed(self):
         s = Session(session_id="x")
@@ -149,7 +330,7 @@ class TestAudit(KernelTestBase):
         self.assertTrue(self.audit.verify()["ok"])
         lines = self.audit.path.read_text(encoding="utf-8").splitlines()
         i = next(n for n, l in enumerate(lines) if '"amount_cents":20000' in l)
-        lines[i] = lines[i].replace('"amount_cents":20000', '"amount_cents":2000', 1)   # 偷偷改小金额
+        lines[i] = lines[i].replace('"amount_cents":20000', '"amount_cents":2000', 1)   # quietly lower the amount
         self.audit.path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         res = AuditLog(self.audit.path).verify()
         self.assertFalse(res["ok"])
@@ -158,14 +339,17 @@ class TestAudit(KernelTestBase):
 
 class TestTextParse(unittest.TestCase):
     def test_amounts(self):
-        cases = {"给女儿转两百": 200, "二十块五": 20.5, "一万二": 12000, "三千零五": 3005, "transfer $1,500": 1500,
-                 "两百五": 250, "转一下": None, "给女儿转两白": None, "账号12345678": None}
+        cases = {"send two hundred to my daughter": 200, "twenty dollars fifty": 20.5,
+                 "twenty dollars and fifty cents": 20.5, "twelve thousand": 12000,
+                 "three thousand and five": 3005, "transfer $1,500": 1500, "two hundred and fifty": 250,
+                 "a hundred dollars": 100, "1.5k": 1500, "send some money": None,
+                 "send two hundread to my daughter": None, "account 12345678": None}
         for text, want in cases.items():
             self.assertEqual(parse_amount(text), want, text)
 
     def test_words(self):
-        self.assertEqual(amount_words_zh(20000), "两百元")
-        self.assertEqual(amount_words_zh(8640), "八十六元四角")
+        self.assertEqual(amount_words_en(20000), "two hundred dollars")
+        self.assertEqual(amount_words_en(8640), "eighty-six dollars and forty cents")
 
 
 if __name__ == "__main__":

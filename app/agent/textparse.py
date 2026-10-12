@@ -1,75 +1,119 @@
-"""口语解析工具：中文数字金额、收款人别名匹配、金额转中文读法。
+"""Spoken-language parsing: amounts in digits or words, payee alias matching, amounts read back as words.
 
-既给离线模型用，也给输出校验器用（核对模型复述的金额是否与草稿一致）。
+Used by the offline model and by the output validator (to check that the amount the model repeats
+matches the draft).
 """
 from __future__ import annotations
 
 import re
 
-_DIGITS = {"零": 0, "〇": 0, "一": 1, "幺": 1, "二": 2, "两": 2, "俩": 2, "三": 3, "四": 4,
-           "五": 5, "六": 6, "七": 7, "八": 8, "九": 9}
-_UNITS = {"十": 10, "拾": 10, "百": 100, "佰": 100, "千": 1000, "仟": 1000}
-_BIG = {"万": 10000, "萬": 10000}
-_ZH_NUM_CHARS = "".join(_DIGITS) + "".join(_UNITS) + "".join(_BIG) + "点"
+_ONES = {"zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
+         "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15,
+         "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19}
+_TENS = {"twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70, "eighty": 80,
+         "ninety": 90}
+_SCALES = {"hundred": 100, "thousand": 1000, "k": 1000, "grand": 1000}
+_UNIT_WORDS = {"dollar", "dollars", "buck", "bucks", "sgd"}
+_NUM_WORDS = set(_ONES) | set(_TENS) | set(_SCALES)
 
 
-def zh_to_number(s: str) -> float | None:
-    """'两百五' -> 250, '一万二' -> 12000, '三千零五' -> 3005, '二十块五' 由调用方处理。"""
-    s = s.strip()
-    if not s or any(c not in _ZH_NUM_CHARS for c in s):
+def words_to_number(tokens: list[str]) -> float | None:
+    """['two', 'hundred', 'and', 'fifty'] -> 250, ['a', 'thousand'] -> 1000, ['twelve', 'point', 'five'] -> 12.5"""
+    if not tokens:
         return None
-    if "点" in s:
-        a, b = s.split("点", 1)
-        ia = zh_to_number(a) if a else 0
-        frac = "".join(str(_DIGITS[c]) for c in b if c in _DIGITS)
-        return None if ia is None else float(f"{int(ia)}.{frac or 0}")
-    total, section, num = 0, 0, 0
-    last_unit = 1
-    for c in s:
-        if c in _DIGITS:
-            num = _DIGITS[c]
-        elif c in _UNITS:
-            u = _UNITS[c]
-            section += (num if num else (1 if u == 10 else 0)) * u
-            num, last_unit = 0, u
-        elif c in _BIG:
-            total += (section + num) * _BIG[c]
-            section, num, last_unit = 0, 0, _BIG[c]
-    # “两百五”=250、“一万二”=12000：末尾单个数字按上一个单位的十分之一
-    if num and last_unit >= 100 and len(s) >= 2 and s[-1] in _DIGITS and s[-2] in {**_UNITS, **_BIG}:
-        num *= last_unit // 10
-    return float(total + section + num)
+    total, current, frac, seen = 0, 0, "", False
+    in_frac = False
+    for i, t in enumerate(tokens):
+        if in_frac:
+            if t in _ONES and _ONES[t] < 10:
+                frac += str(_ONES[t])
+                continue
+            return None
+        if t == "point":
+            in_frac = True
+        elif t == "and":
+            continue
+        elif t == "a" and i + 1 < len(tokens) and tokens[i + 1] in _SCALES:
+            current = 1
+        elif t in _ONES:
+            current += _ONES[t]
+            seen = True
+        elif t in _TENS:
+            current += _TENS[t]
+            seen = True
+        elif t == "hundred":
+            current = (current or 1) * 100
+            seen = True
+        elif t in ("thousand", "k", "grand"):
+            total += (current or 1) * 1000
+            current, seen = 0, True
+        else:
+            return None
+    if not seen:
+        return None
+    value = total + current
+    return float(f"{value}.{frac}") if frac else float(value)
 
 
 _MONEY_RE = re.compile(
-    r"(?:S?\$|sgd\s*)?\s*(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?\s*(k|千|万|块|元|新元|新币|dollars?|bucks?|sgd)?",
+    r"(?:S?\$|sgd\s*)?\s*(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?\s*(k\b|thousand|grand|dollars?|bucks?|sgd)?",
     re.I)
-_ZH_MONEY_RE = re.compile(rf"([{_ZH_NUM_CHARS}]+)\s*(块|元|新元|新币|蚊)?([一二两三四五六七八九])?")
+_TOKEN_RE = re.compile(r"[a-z]+")
+
+
+def _word_runs(text: str):
+    """Yield (tokens_of_number_run, token_after_run, tokens_after_that) for each run of number words."""
+    toks = _TOKEN_RE.findall(text.lower().replace("-", " "))
+    i = 0
+    while i < len(toks):
+        t = toks[i]
+        starts = t in _NUM_WORDS - {"k", "grand"} or (t == "a" and i + 1 < len(toks) and toks[i + 1] in _SCALES)
+        if not starts:
+            i += 1
+            continue
+        j = i
+        run = []
+        while j < len(toks) and (toks[j] in _NUM_WORDS or toks[j] == "point"
+                                 or (toks[j] == "a" and j + 1 < len(toks) and toks[j + 1] in _SCALES)
+                                 or (toks[j] == "and" and run and j + 1 < len(toks) and toks[j + 1] in _NUM_WORDS)
+                                 or (run and run[-1] == "point" and toks[j] in _ONES)):
+            run.append(toks[j])
+            j += 1
+        yield run, toks[j:]
+        i = j
 
 
 def parse_amount(text: str) -> float | None:
-    """从一句话里提取金额（新元）。找不到返回 None。不会猜。"""
-    t = text.replace("，", ",")
-    for m in _MONEY_RE.finditer(t):
+    """Extract an amount (SGD) from one sentence. Returns None if there isn't one. Never guesses."""
+    for m in _MONEY_RE.finditer(text):
         digits, cents, unit = m.group(1), m.group(2), (m.group(3) or "").lower()
-        # 排除像账号、电话、日期这样的长数字
+        # Skip long numbers that look like account numbers, phone numbers or dates
         raw = digits.replace(",", "")
         if len(raw) >= 7 and not unit:
             continue
         val = float(raw + (f".{cents}" if cents else ""))
-        if unit in ("k", "千"):
+        if unit in ("k", "thousand", "grand"):
             val *= 1000
-        elif unit == "万":
-            val *= 10000
         return val
-    for m in _ZH_MONEY_RE.finditer(t):
-        base = zh_to_number(m.group(1))
-        if base is None or base == 0 and m.group(1) in ("零", "〇"):
+    for run, rest in _word_runs(text):
+        base = words_to_number(run)
+        if base is None or base == 0:
             continue
-        if len(m.group(1)) == 1 and not m.group(2):    # 单个“一/两/五”且没有“块/元”：多半不是金额
-            continue                                    # （例如 ASR 把“两百”听成“两白”），宁可追问也不猜
-        if m.group(2) and m.group(3):                    # “二十块五” -> 20.5
-            base += _DIGITS[m.group(3)] / 10
+        has_unit = bool(rest) and rest[0] in _UNIT_WORDS
+        # A lone "two" / "five" with no "dollars" is probably not an amount
+        # (e.g. ASR heard "two hundred" as "two hundread") — better to ask than to guess
+        if len(run) == 1 and base < 10 and not has_unit:
+            continue
+        if has_unit:   # "twenty dollars fifty" / "twenty dollars and fifty cents" -> 20.5
+            after = rest[1:]
+            if after and after[0] == "and":
+                after = after[1:]
+            cents_run = []
+            while after and after[0] in set(_ONES) | set(_TENS):
+                cents_run.append(after.pop(0))
+            c = words_to_number(cents_run)
+            if c is not None and 0 < c < 100:
+                base += c / 100
         return base
     return None
 
@@ -82,68 +126,87 @@ def find_raw_account(text: str) -> str | None:
     return digits if len(digits) >= 7 else None
 
 
+_ACCOUNT_RE = re.compile(r"\b(current|savings?)\s+(account|acct|a/c)\b|\bfrom (?:my |the )?(current|savings?)\b", re.I)
+
+
+def find_account(text: str) -> str | None:
+    """Which of the customer's accounts they named ("from my current account"), as words; None if not said.
+    ("savings bonds" is a product, not the savings account.)"""
+    m = _ACCOUNT_RE.search(text)
+    if not m:
+        return None
+    word = (m.group(1) or m.group(3)).lower()
+    return "current account" if word == "current" else "savings account"
+
+
+def account_id_for(phrase: str | None, accounts: list[dict]) -> str | None:
+    if not phrase:
+        return None
+    first = phrase.split()[0].lower().rstrip("s")
+    return next((a["account_id"] for a in accounts if a["name"].lower().startswith(first)), None)
+
+
 def match_payees(text: str, payees: list[dict]) -> list[dict]:
-    """按别名在文本里找收款人；返回全部命中（多于一个时调用方必须追问）。"""
+    """Find payees by alias in the text; return every hit (the caller must ask if there's more than one)."""
     low = text.lower()
     hits = []
     for p in payees:
         names = [p["name"].lower(), *[a.lower() for a in p.get("aliases", [])]]
-        if any(n and n in low for n in names):
+        if any(n and re.search(rf"(?<![a-z]){re.escape(n)}(?![a-z])", low) for n in names):
             hits.append(p)
+    if len(hits) > 1:
+        # "my grandson ... Chen Wei": a name only one candidate has beats a word they all share
+        shared = set.intersection(*({p["name"].lower(), *map(str.lower, p.get("aliases", []))} for p in hits))
+        specific = [p for p in hits
+                    if any(n not in shared and re.search(rf"(?<![a-z]){re.escape(n)}(?![a-z])", low)
+                           for n in [p["name"].lower(), *map(str.lower, p.get("aliases", []))])]
+        if len(specific) == 1:
+            return specific
     return hits
 
 
-# ---------------------------------------------------------------- 金额读法
-_ZH_D = "零一二三四五六七八九"
+# ---------------------------------------------------------------- Amounts as words
+_ONES_W = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven",
+           "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"]
+_TENS_W = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
 
 
-def _int_to_zh(n: int) -> str:
-    if n == 0:
-        return "零"
-    if n >= 10000:
-        hi, lo = divmod(n, 10000)
-        rest = _int_to_zh(lo) if lo else ""
-        return _int_to_zh(hi) + "万" + (("零" if lo < 1000 else "") + rest if lo else "")
-    parts, zero = [], False
-    for unit_val, unit in ((1000, "千"), (100, "百"), (10, "十"), (1, "")):
-        d, n = divmod(n, unit_val)
-        if d:
-            if zero:
-                parts.append("零")
-                zero = False
-            ch = "两" if d == 2 and unit in ("千", "百") else _ZH_D[d]
-            parts.append(ch + unit)
-        elif parts:
-            zero = True
-    s = "".join(parts)
-    return s[1:] if s.startswith("一十") else s
+def _int_to_en(n: int) -> str:
+    if n < 20:
+        return _ONES_W[n]
+    if n < 100:
+        t, o = divmod(n, 10)
+        return _TENS_W[t] + (f"-{_ONES_W[o]}" if o else "")
+    if n < 1000:
+        h, r = divmod(n, 100)
+        return f"{_ONES_W[h]} hundred" + (f" and {_int_to_en(r)}" if r else "")
+    for scale, name in ((1_000_000, "million"), (1000, "thousand")):
+        if n >= scale:
+            hi, lo = divmod(n, scale)
+            rest = ("" if not lo else (" and " if lo < 100 else " ") + _int_to_en(lo))
+            return f"{_int_to_en(hi)} {name}{rest}"
+    return str(n)
 
 
-def amount_words_zh(cents: int) -> str:
-    """20000 -> '两百元'；8640 -> '八十六元四角'。用于确认卡与语音复述。"""
-    yuan, rem = divmod(cents, 100)
-    jiao, fen = divmod(rem, 10)
-    s = _int_to_zh(yuan).replace("两十", "二十") + "元" if yuan else ""
-    if jiao:
-        s += _ZH_D[jiao] + "角"
-    if fen:
-        s += _ZH_D[fen] + "分"
-    return s or "零元"
+def amount_words_en(cents: int) -> str:
+    """20000 -> 'two hundred dollars'; 8640 -> 'eighty-six dollars and forty cents'. For the card and read-back."""
+    dollars, rem = divmod(cents, 100)
+    parts = []
+    if dollars:
+        parts.append(f"{_int_to_en(dollars)} dollar{'s' if dollars != 1 else ''}")
+    if rem:
+        parts.append(f"{_int_to_en(rem)} cent{'s' if rem != 1 else ''}")
+    return " and ".join(parts) or "zero dollars"
 
 
 def amount_digits_spoken(cents: int) -> str:
-    """逐位读，防止听错：20000 -> '二、零、零'。"""
-    yuan = str(cents // 100)
-    return "、".join(_ZH_D[int(c)] for c in yuan)
+    """Read digit by digit so it can't be misheard: 20000 -> 'two, zero, zero'."""
+    return ", ".join(_ONES_W[int(c)] for c in str(cents // 100))
 
 
 def money_mentions(text: str) -> list[float]:
-    """提取文本中所有像金额的数字（给输出校验器用）。"""
+    """Extract every number that looks like an amount (for the output validator)."""
     vals = []
     for m in re.finditer(r"(?:S?\$)\s*(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?", text):
         vals.append(float(m.group(1).replace(",", "") + (f".{m.group(2)}" if m.group(2) else "")))
     return vals
-
-
-def is_english(text: str) -> bool:
-    return not re.search(r"[一-鿿]", text)

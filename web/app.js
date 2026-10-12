@@ -1,0 +1,776 @@
+// Star · DBS digibank concept — frontend
+// Layout and visual language from the team's Aegis prototype; agent, kernel, signing and Senior mode from Star.
+// No inline script or style anywhere, so the server's strict Content-Security-Policy applies.
+
+const $ = (sel, el = document) => el.querySelector(sel);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch{ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} },
+};
+
+const state = {
+  sid: store.get('sid', null), page: 'overview', data: null, health: {},
+  senior: store.get('senior', false), large: store.get('large', false), readAloud: store.get('readAloud', null),
+  messages: [], check: null, card: null, verify: null, coolTimer: null, busy: false,
+};
+
+// ---------------------------------------------------------------- Icons (generic, project-native)
+const P = {
+  home:'M3 10 12 3l9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z',
+  transfer:'M4 7h15m-4-4 4 4-4 4M20 17H5m4-4-4 4 4 4',
+  users:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-3.87M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8m8-7.87a4 4 0 0 1 0 7.75',
+  shield:'m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6zM8 12l3 3 5-6',
+  audit:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zm0 0v6h6M8 13h8m-8 4h6',
+  lab:'M9 3h6m-5 0v7L4 20h16l-6-10V3M7 15h10',
+  settings:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2',
+  spark:'m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z',
+  mic:'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8',
+  send:'M12 19V5m-6 6 6-6 6 6',
+  lock:'M6 10h12v11H6zm2 0V6a4 4 0 0 1 8 0v4m-4 5v2',
+  wallet:'M3 7h18v14H3zm0 0V4h15v3m-1 6h4v4h-4z',
+  bolt:'m13 2-9 12h7l-1 8 10-13h-7z',
+  coin:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18m0-14v10m-3-7.5c0-1 1.3-1.8 3-1.8s3 .8 3 1.8-1.3 1.7-3 1.7-3 .8-3 1.8 1.3 1.8 3 1.8 3-.8 3-1.8',
+  phone:'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2',
+  alert:'M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0',
+  family:'M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6m8 1a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5M3 20v-1a6 6 0 0 1 12 0v1m1-6.5a4.5 4.5 0 0 1 5 4.5v1',
+  trace:'M4 6h16M4 12h10M4 18h7',
+  download:'M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4',
+  refresh:'M3 5v5h5m13 9v-5h-5M4 10a8 8 0 0 1 13-6l4 4M3 16l4 4a8 8 0 0 0 13-6',
+  senior:'M12 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6m-4 16 1-9-3 3m9 6-1-9 3 3M9 14l3-5 3 5',
+  chart:'M4 20V10m6 10V4m6 16v-7m4 7H2',
+  fingerprint:'M7 11c0-3 2.2-5 5-5s5 2 5 5v2M9.5 11c0-1.4 1.1-2.5 2.5-2.5s2.5 1.1 2.5 2.5v3c0 2-1 4-2 5M12 11v3c0 1.5-.5 3-1.5 4.5M7 14c0 2 .5 3.5 1.5 5M17 16c-.2 1.3-.6 2.5-1.2 3.5',
+};
+const icon = (n, cls = '') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${P[n] || P.spark}"/></svg>`;
+
+const NAV = [
+  ['overview', 'Overview', 'home', 'Your workspace'], ['activity', 'Transactions', 'transfer'], ['contacts', 'Payees', 'users'],
+  ['audit', 'Audit trail', 'audit', 'Trust & transparency'], ['lab', 'Security lab', 'lab'], ['settings', 'Settings', 'settings'],
+];
+const KIND = {user:'User', thought:'Thought', action:'Action', observation:'Observe', rule:'Rule', guard:'Guard', judge:'Judge',
+  state:'State', sign:'Sign', exec:'Execute', plan:'Plan', asr:'ASR', fallback:'Fallback', handoff:'Handoff', evidence:'Evidence', ui:'UI',
+  verify:'Verifier', gateway:'Gateway'};
+
+// ---------------------------------------------------------------- Basics
+async function api(path, body){
+  const opt = body ? {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)} : {};
+  const r = await fetch(path, opt);
+  const data = await r.json().catch(() => ({}));
+  if(!r.ok) throw Object.assign(new Error(data.error || r.statusText), {data, status: r.status});
+  return data;
+}
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
+function download(name, obj){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'}));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+}
+const today = () => new Date().toLocaleDateString('en-SG', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+const greeting = () => { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'; };
+const readAloudOn = () => state.readAloud === null ? state.senior : state.readAloud;
+const live = () => state.health.llm && !String(state.health.llm).startsWith('offline');
+const protLevel = () => state.data?.protection?.level || 'enhanced';
+
+async function refresh(){
+  try{
+    const d = await api('/api/state' + (state.sid ? `?session_id=${encodeURIComponent(state.sid)}` : ''));
+    state.data = d; state.sid = d.session_id; store.set('sid', d.session_id);
+    renderAccounts(); renderBills(); renderHoldings();
+    const pill = $('#prot-pill'); if(pill){ pill.className = `pill prot ${protLevel()}`; pill.lastChild.textContent = protLevel() === 'enhanced' ? 'Enhanced protection' : 'Standard protection'; }
+    if(['activity', 'contacts', 'settings'].includes(state.page)) renderPage();
+  }catch(e){ console.error(e); }
+}
+
+// ---------------------------------------------------------------- Read aloud (browser TTS; slower in Senior mode)
+const VOICE_PREFS = ['Samantha','Google US English','Microsoft Aria','Microsoft Jenny','Karen','Moira','Tessa','Serena','Google UK English Female','Victoria'];
+let voiceCache = null;
+function pickVoice(){
+  if(voiceCache) return voiceCache;
+  const en = speechSynthesis.getVoices().filter(v => /^en[-_]/i.test(v.lang));
+  voiceCache = VOICE_PREFS.map(n => en.find(v => v.name.startsWith(n))).find(Boolean) || en.find(v => /female/i.test(v.name)) || null;
+  return voiceCache;
+}
+if('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => { voiceCache = null; };
+// Spoken question -> spoken answer, in every mode. Typed questions follow the "Read every answer aloud" setting.
+function speak(text, force = false){
+  const want = force || readAloudOn() || state.voiceTurn;
+  if(!want || !('speechSynthesis' in window) || !text) return;
+  if(!state.queueSpeech) speechSynthesis.cancel();
+  state.queueSpeech = false;
+  const u = new SpeechSynthesisUtterance(text); const v = pickVoice();
+  if(v){ u.voice = v; u.lang = v.lang; } else u.lang = 'en-US';
+  u.rate = state.senior ? 0.82 : 0.95;
+  speechSynthesis.speak(u);
+}
+
+// ---------------------------------------------------------------- Shell
+function render(){
+  document.body.classList.toggle('senior', state.senior);
+  document.body.classList.toggle('large', state.large && !state.senior);
+  const navHtml = NAV.map(([id, label, ic, group]) => (group ? `<div class="nav-label">${group}</div>` : '') +
+    `<button class="nav-btn ${state.page === id ? 'active' : ''}" data-page="${id}" ${state.page === id ? 'aria-current="page"' : ''}>${icon(ic)}<span class="nav-text">${label}</span></button>`).join('');
+  const current = NAV.find(n => n[0] === state.page)?.[1] || 'Overview';
+  $('#app').innerHTML = `
+  <div class="layout">
+    <nav class="sidebar" aria-label="Main">
+      <div class="brand"><img src="/dbs-logo.svg" alt="DBS"><span>digibank</span></div>
+      <div class="brand-note">Star · concept prototype</div>
+      <div class="nav">${navHtml}</div>
+      <div class="side-bottom">
+        <div class="trust-mini">${icon('shield')}<div><b>Your money. Your decision.</b><p>Star can only prepare payments. Your phone signs every one.</p></div></div>
+        <div class="profile"><span class="avatar">MC</span><div>Mdm Chen<small>Personal · demo account</small></div></div>
+      </div>
+    </nav>
+    <div class="workspace">
+      <header class="topbar">
+        <div class="breadcrumb">
+          <span class="mobile-brand"><img src="/dbs-logo.svg" alt="DBS"><span>digibank</span></span>
+          <span class="crumbs">digibank</span><span class="crumbs" aria-hidden="true">›</span><strong class="crumbs">${state.senior ? 'Senior mode' : current}</strong>
+        </div>
+        <div class="top-actions">
+          <span class="pill ${live() ? 'live' : ''}" title="Language model"><span class="dot"></span>${live() ? 'Live model' : 'Offline rules'}</span>
+          <span class="pill" title="Speech recognition"><span class="dot"></span>${state.health.asr === 'tencent' ? 'Tencent ASR' : 'Browser voice'}</span>
+          <button class="pill prot ${protLevel()}" id="prot-pill" title="Account protection level (a bank setting, not a screen setting)" aria-label="${protLevel() === 'enhanced' ? 'Enhanced protection' : 'Standard protection'}">${icon('shield')}${protLevel() === 'enhanced' ? 'Enhanced protection' : 'Standard protection'}</button>
+          <button class="icon-btn" id="trace-toggle" aria-pressed="${$('#trace').classList.contains('open')}">${icon('trace')}<span class="label">Agent trace</span></button>
+          <button class="senior-toggle" id="senior-toggle" aria-pressed="${state.senior}">${icon('senior')}${state.senior ? 'Standard view' : 'Senior mode'}</button>
+        </div>
+      </header>
+      <main id="main" tabindex="-1"></main>
+    </div>
+  </div>`;
+  $('#app').querySelectorAll('.nav-btn').forEach(b => b.onclick = () => go(b.dataset.page));
+  $('#senior-toggle').onclick = () => setSenior(!state.senior);
+  $('#trace-toggle').onclick = () => toggleTrace();
+  $('#prot-pill').onclick = () => go('settings');
+  renderPage();
+}
+function go(page){ state.page = page; render(); $('#main')?.focus({preventScroll:true}); window.scrollTo(0, 0); }
+function setSenior(on){
+  state.senior = on; store.set('senior', on);
+  if(on) state.page = 'overview';
+  render(); toast(on ? 'Senior mode on: bigger text, one thing at a time, read aloud.' : 'Standard view');
+}
+function toggleTrace(force){
+  const t = $('#trace'); const open = force ?? !t.classList.contains('open');
+  t.classList.toggle('open', open); t.setAttribute('aria-hidden', String(!open));
+  $('#trace-toggle')?.setAttribute('aria-pressed', String(open));
+}
+$('#trace-close').onclick = () => toggleTrace(false);
+
+function renderPage(){
+  const m = $('#main'); if(!m) return;
+  if(state.page === 'overview') return state.senior ? seniorHome(m) : overview(m);
+  ({activity, contacts, audit: auditPage, lab: labPage, settings: settingsPage}[state.page] || overview)(m);
+}
+
+// ---------------------------------------------------------------- Overview (standard)
+function overview(m){
+  m.innerHTML = `
+    <section class="hero">
+      <div><div class="eyebrow">DBS digibank · Star assistant</div><h1>${greeting()}, Mdm Chen.</h1>
+        <p>Your accounts at a glance. Your next payment, in your own words.</p></div>
+      <div class="date">${today()}</div>
+    </section>
+    <section class="accounts" id="accounts" aria-label="Accounts"></section>
+    <div class="main-grid">
+      ${assistantHtml()}
+      <div class="side-stack"><section class="card safety" id="safety" aria-live="polite"></section><section class="card bills" id="bills"></section>
+        <section class="card bills" id="holdings"></section><section class="card bills" id="cards"></section></div>
+    </div>`;
+  bindAssistant(); renderAccounts(); renderSafety(); renderBills(); renderHoldings();
+}
+function seniorHome(m){
+  const sav = state.data?.accounts?.[0];
+  m.innerHTML = `
+    <div class="senior-hello"><h1>Hello, Mdm Chen</h1>
+      <div class="bal">Savings <b>${esc(sav ? sav.balance : '…')}</b></div></div>
+    ${assistantHtml()}`;
+  bindAssistant();
+}
+function renderAccounts(){
+  const el = $('#accounts'); const d = state.data;
+  if(state.senior && state.page === 'overview'){ const b = $('.senior-hello .bal b'); if(b && d) b.textContent = d.accounts[0].balance; return; }
+  if(!el || !d) return;
+  const split = s => { const [cur, num] = [s.slice(0, 2), s.slice(2)]; return `<span>${esc(cur)}</span>${esc(num)}`; };
+  el.innerHTML = `
+    <div class="balance"><div class="label">Total available balance</div><div class="value">${split(d.total_balance)}</div>
+      <div class="foot"><span class="dot"></span>Across ${d.accounts.length} accounts · updated just now</div></div>` +
+    d.accounts.map(a => `<div class="card acct"><div class="top"><span class="ico">${icon('wallet')}</span><span>•• ${esc(a.account_id.slice(-3))}</span></div>
+      <div><div class="value">${split(a.balance)}</div><div class="name">${esc(a.name)}</div></div></div>`).join('');
+}
+function renderBills(){
+  const el = $('#bills'); const d = state.data; if(!el || !d) return;
+  const unpaid = d.bills.filter(b => b.status === 'unpaid').length;
+  el.innerHTML = `<h3>Upcoming bills <small>${unpaid} due</small></h3>` + d.bills.map(b => `
+    <div class="bill"><span class="ico">${icon('bolt')}</span><div>${esc(b.title)}<small>Due ${esc(b.due)}</small></div>
+      <div>${esc(b.amount)} ${b.status === 'unpaid' ? `<button class="pay" data-bill="${esc(b.title)}">Pay</button>` : '<span class="paid">Paid</span>'}</div></div>`).join('');
+  el.querySelectorAll('.pay').forEach(b => b.onclick = () => send(`Pay the ${b.dataset.bill}`));
+}
+
+function renderHoldings(){
+  const el = $('#holdings'); const d = state.data; if(!el || !d) return;
+  el.innerHTML = `<h3>Investments <small>${esc(d.risk_profile)} profile</small></h3>` + (d.holdings.length ? d.holdings.map(h => `
+    <div class="bill"><span class="ico">${icon('chart')}</span><div>${esc(h.name)}<small>${esc(h.asset_class)} · ${esc(h.units)} units</small></div>
+      <div class="hold-val">${esc(h.value)}<small class="${h.gain_cents > 0 ? 'up' : h.gain_cents < 0 ? 'down' : ''}">${esc(h.gain)}</small></div></div>`).join('')
+    : '<p class="footnote">No investments yet.</p>') +
+    `<p class="footnote">Demo prices. Ask "How are my investments doing?"</p>`;
+  const cards = $('#cards');
+  if(cards) cards.innerHTML = `<h3>Cards</h3>` + (d.cards || []).map(c => `
+    <div class="bill"><span class="ico">${icon('wallet')}</span><div>${esc(c.name)}<small>${esc(c.masked)}</small></div>
+      <div>${c.status === 'locked' ? '<span class="locked">Locked</span>' : `<button class="pay lock" data-card="${esc(c.name)}">Lock</button>`}</div></div>`).join('') +
+    `<p class="footnote">Locking is instant. Unlock in the DBS app or call 1800 111 1111.</p>`;
+  cards?.querySelectorAll('.lock').forEach(b => b.onclick = () => send(`Lock my ${b.dataset.card}`));
+}
+
+// "Behind your request": the checks behind the latest request, in plain words
+function renderSafety(){
+  const el = $('#safety'); if(!el) return;
+  const c = state.check;
+  const row = (st, title, detail) => `<div class="check ${st}"><span class="s">${{pass:'✓', warn:'!', pending:'…', fail:'✕', idle:'·'}[st]}</span><div>${esc(title)}<small>${esc(detail)}</small></div></div>`;
+  const rows = c ? c.rows.map(r => row(...r)).join('') : [
+    row('idle', 'Star prepares, never pays', 'The assistant can only draft. It has no tool that moves money.'),
+    row('idle', 'Checked against what you said', 'The payee and amount must come from your own words.'),
+    row('idle', 'A second, independent check', 'A separate reader re-reads only your words. If anything differs, the payment is frozen.'),
+    row('idle', 'Bank safety rules', 'Limits, new payees, unusual amounts, scam signs.'),
+    row('idle', 'Your fingerprint signs', 'Your device checks your fingerprint or face and signs the exact payment.'),
+  ].join('');
+  el.innerHTML = `<div class="safety-head"><span class="shield">${icon('shield')}</span><div><h3>Behind your request</h3>
+      <div class="sub">${c ? esc(c.title) : 'What happens before any money moves'}</div></div></div>
+    <div class="checks">${rows}</div>
+    <button class="text-btn" id="open-trace">Open the full agent trace ›</button>`;
+  $('#open-trace').onclick = () => toggleTrace(true);
+}
+function checksFromCard(card, phase, method){
+  const v = card.verification || {};
+  const FIELD = {payee: 'who', amount: 'amount', from_account: 'account', asset_class: 'asset', type: 'type'};
+  const matched = Object.entries(v.fields || {}).filter(([, st]) => st === 'match').map(([k]) => FIELD[k] || k);
+  const ver = v.status === 'mismatch' ? ['fail', 'Independent check: does not match', (v.mismatches || []).join(' ')]
+    : v.status === 'match' ? ['pass', 'Independent check matched', `A separate reader heard the same ${matched.join(', ') || 'request'}.`]
+    : ['warn', 'Independent check unavailable', 'Without it, this payment cannot be signed.'];
+  const ev = card.payee_from_user === false ? ['warn', 'Check who this is for', "You didn't mention this person."]
+    : card.amount_from_user === false ? ['warn', 'Check the amount', "You didn't say this amount, so it was filled in."]
+    : ['pass', 'Matches what you said', card.you_said ? `“${card.you_said}”` : 'Payee and amount come from your words.'];
+  const lvl = card.risk_level;
+  const rules = lvl === 'LOW' ? ['pass', 'Bank safety rules passed', 'Known payee, usual amount, within limits.']
+    : lvl === 'MEDIUM' ? ['warn', 'Please take a second look', card.reasons.join(' ')]
+    : lvl === 'HIGH' ? (phase === 'done' ? ['pass', 'Cooling-off completed', card.reasons.join(' ')]
+      : ['pending', 'Cooling-off before you can confirm', card.reasons.join(' ')])
+    : ['fail', 'Stopped by the rules', card.reasons.join(' ')];
+  const auth = phase === 'done' ? ['pass', method === 'passkey' ? 'Signed with your fingerprint / face' : 'Signed on this device',
+      'Checked by the bank, then checked again by the payment gateway before the money moved.']
+    : phase === 'cancelled' ? ['idle', 'Cancelled', 'No money moved.']
+    : phase === 'frozen' ? ['idle', 'Frozen', 'This draft can never be signed. Nothing moved.']
+    : lvl === 'BLOCK' ? ['idle', 'Nothing to sign', 'This payment will not be made.']
+    : ['pending', 'Waiting for you', 'Nothing moves until you check the card and sign.'];
+  const prep = card.kind === 'investment' ? 'in' : 'to';
+  return {title: `${card.amount} ${prep} ${card.payee_name}`, rows: [['pass', 'Request understood', `${card.title}: ${card.amount} ${prep} ${card.payee_name}`], ev, ver, rules, auth]};
+}
+
+// ---------------------------------------------------------------- Assistant
+function assistantHtml(){
+  return `<section class="card assistant" aria-label="Star assistant">
+    <div class="section-top"><h2>${icon('spark')}Star · your banking assistant</h2>
+      <span class="tiny-badge ${live() ? 'live' : ''}">${live() ? 'Live model' : 'Offline rules'}</span></div>
+    <div class="stage" id="stage" aria-live="polite"></div>
+    <div class="composer-wrap">
+      <form class="composer" id="composer">
+        <button type="button" class="mic" id="mic" aria-label="Tap to speak, tap again to stop">${icon('mic')}<span>${state.senior ? 'Tap to speak' : 'Speak'}</span></button>
+        <label class="sr" for="text">Type your request</label>
+        <textarea id="text" rows="1" placeholder="${state.senior ? 'Or type here' : 'e.g. Send 200 to my daughter'}"></textarea>
+        <button class="send" type="submit" aria-label="Send">${icon('send')}<span class="label">Send</span></button>
+      </form>
+      <div class="hint" id="hint"></div>
+      <div class="composer-foot">${icon('lock')}Star prepares · you check · your phone signs. No money moves without you.</div>
+    </div></section>`;
+}
+function bindAssistant(){
+  const ta = $('#text');
+  $('#composer').onsubmit = e => { e.preventDefault(); send(ta.value); };
+  ta.onkeydown = e => { if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); send(ta.value); } };
+  $('#mic').onclick = micToggle;
+  renderStage();
+}
+const SUGGEST = [
+  ['coin', 'Has my pension come in?'], ['family', 'Send 200 to my daughter from my current account'],
+  ['users', 'Send 50 to my grandson'], ['chart', 'Invest 1000 in savings bonds'],
+  ['chart', 'Buy 300 dollars of Apple shares'], ['transfer', 'Send 350 to my son and invest 1000 in a fixed deposit'],
+  ['lock', 'I lost my wallet, lock my cards'],
+  ['alert', 'The police say I must move my savings to a safe account', 'danger'],
+];
+const SUGGEST_SENIOR = [['coin', 'Has my pension come in?'], ['bolt', 'Pay my bills'], ['family', 'Send money to my family'], ['phone', 'Talk to a real person']];
+function renderStage(){
+  const st = $('#stage'); if(!st) return;
+  if(!state.messages.length){
+    const list = state.senior ? SUGGEST_SENIOR : SUGGEST;
+    st.innerHTML = `<div class="welcome"><span class="spark">${icon('spark')}</span><div>
+        <h3>${state.senior ? 'What would you like to do?' : 'What can I help you with today?'}</h3>
+        <p>${state.senior ? 'Tap a button, or tap the red button and just say it.' : 'Say it or type it the way you would tell a person. I will prepare it, and you confirm.'}</p></div></div>
+      <div class="suggest-label">Try</div>
+      <div class="suggestions">${list.map(([ic, t, cls]) => `<button class="suggestion ${cls || ''}" data-say="${esc(t)}">${icon(ic)}${esc(t)}</button>`).join('')}</div>`;
+    st.querySelectorAll('.suggestion').forEach(b => b.onclick = () => send(b.dataset.say));
+    return;
+  }
+  st.innerHTML = state.messages.map((m, i) => {
+    if(m.role === 'user') return `<div class="msg user">${esc(m.text)}</div>`;
+    if(m.type === 'typing') return `<div class="typing">Star is preparing…</div>`;
+    if(m.type === 'choices') return m.done ? '' : `<div class="choices" role="group" aria-label="Choose one">${m.options.map((o, j) =>
+      `<button class="choice" data-i="${i}" data-j="${j}"><span>${esc(o.label)}</span><small>${esc(o.detail || '')}</small></button>`).join('')}</div>`;
+    if(m.type === 'plan') return `<div class="plan" role="note"><b>I'll do this in ${m.items.length} steps. You check and confirm each one.</b>
+      <ol>${m.items.map(x => `<li>${esc(x)}</li>`).join('')}</ol></div>`;
+    if(m.type === 'frozen') return `<div class="alert-block frozen" role="alert"><b>Frozen: this didn't match what you said</b>
+      <ul>${m.items.map(x => `<li>${esc(x)}</li>`).join('')}</ul><small>A second, independent check re-read your own words. Nothing was sent.</small>
+      <div class="acts"><button class="again" type="button">Say it again</button></div></div>`;
+    if(m.type === 'blocked') return `<div class="alert-block" role="alert"><b>I've stopped this for you</b>${esc(m.text)}
+      <div class="acts"><a href="tel:1799">Call ScamShield 1799</a><button class="notify" type="button">Tell my family</button></div></div>`;
+    if(m.type === 'next') return m.done ? '' : `<div class="next-chips"><button class="nx-go" data-i="${i}">Continue: ${esc(m.task)}</button><button class="nx-no" data-i="${i}">Not now</button></div>`;
+    return `<div class="msg bot ${m.ok ? 'ok' : ''}"><span class="who">Star</span>${esc(m.text)}<button class="replay" data-i="${i}" aria-label="Read this aloud">🔊</button>${m.receipt ? `<button class="receipt" data-i="${i}">${icon('download')} Download signed receipt</button>` : ''}</div>`;
+  }).join('');
+  st.querySelectorAll('.choice').forEach(b => b.onclick = () => { const m = state.messages[b.dataset.i]; m.done = true; send(m.options[b.dataset.j].send); });
+  st.querySelectorAll('.replay').forEach(b => b.onclick = () => speak(state.messages[b.dataset.i].text, true));
+  st.querySelectorAll('.receipt').forEach(b => b.onclick = () => { const r = state.messages[b.dataset.i].receipt; download(`receipt-${r.txn_id}.json`, r); });
+  st.querySelectorAll('.again').forEach(b => b.onclick = () => { $('#text')?.focus(); if(state.senior) micToggle(); });
+  st.querySelectorAll('.notify').forEach(b => b.onclick = () => push({role:'bot', text:'(Demo) I have sent an alert to your family contact, Chen Mei Ling.'}));
+  st.querySelectorAll('.nx-go').forEach(b => b.onclick = () => { const m = state.messages[b.dataset.i]; m.done = true; send(m.task); });
+  st.querySelectorAll('.nx-no').forEach(b => b.onclick = () => { state.messages[b.dataset.i].done = true; push({role:'bot', text:'OK. Just call me whenever you need me.'}); });
+  st.scrollTop = st.scrollHeight;
+  st.lastElementChild?.scrollIntoView({block:'nearest'});
+}
+function push(m){ state.messages.push(m); renderStage(); }
+// After a payment is confirmed, the next step of the user's own plan is prepared right away (it still needs its own
+// confirmation). After a cancel we ask instead, because the user may have changed their mind.
+function continueWith(task){
+  setTimeout(() => {
+    push({role:'bot', text:`Next step: “${task}”. I'm preparing it now — you'll check and confirm it the same way.`});
+    state.queueSpeech = true;                        // don't cut off the "Done" read-out; queue after it
+    send(task, '/api/chat', state.voiceTurn, true);
+  }, 700);
+}
+function offerNext(task){
+  setTimeout(() => { push({role:'bot', text:`You also asked: “${task}”. Shall we do that now?`}); push({type:'next', task}); }, 500);
+}
+// After a page refresh the server may still hold a payment waiting for the fingerprint: bring its card back.
+async function restorePending(){
+  if(!['AWAITING_AUTH', 'COOLING'].includes(state.data?.phase)) return;
+  try{
+    const r = await api('/api/card/' + encodeURIComponent(state.sid));
+    if(!r.card) return;
+    state.check = checksFromCard(r.card, 'pending'); renderSafety();
+    push({role:'bot', text:`You have a payment waiting: ${r.card.amount} ${r.card.kind === 'investment' ? 'in' : 'to'} ${r.card.payee_name}. Please check it and confirm, or cancel it.`});
+    openConfirm(r.card);
+  }catch{}
+}
+
+function stopSpeaking(){ try{ speechSynthesis?.cancel(); }catch{} }
+async function send(text, endpoint = '/api/chat', voice = false, auto = false){
+  text = String(text || '').trim(); if(!text || state.busy) return;
+  if(!auto) stopSpeaking();                         // a new question interrupts the previous answer
+  state.voiceTurn = voice;
+  if(state.page !== 'overview') go('overview');
+  state.busy = true; $('#text') && ($('#text').value = '');
+  state.messages = state.messages.filter(m => m.type !== 'choices' || m.done);
+  push({role:'user', text}); push({type:'typing'});
+  try{
+    const r = await api(endpoint, {session_id: state.sid, text});
+    state.sid = r.session_id; store.set('sid', r.session_id);
+    state.messages = state.messages.filter(m => m.type !== 'typing');
+    addTrace(r.trace); handleTurn(r);
+  }catch(e){
+    state.messages = state.messages.filter(m => m.type !== 'typing');
+    push({role:'bot', text: e.status === 403 ? e.message : 'There was a connection problem. Please try again.'}); console.error(e);
+  }finally{ state.busy = false; }
+}
+function handleTurn(r){
+  const ui = r.ui || {type:'text'};
+  if(ui.plan?.length > 1) push({type:'plan', items: ui.plan});
+  if(ui.type === 'blocked' && !ui.card){
+    push({type:'blocked', text:r.reply}); speak(r.speak);
+    state.check = {title:'Stopped before reaching the payment step', rows:[
+      ['pass', 'Request heard', 'We listened to everything you said.'],
+      ['fail', 'Looks like a scam', (ui.reasons || []).join(' ') || 'This matches common scam patterns.'],
+      ['idle', 'No payment prepared', 'Star did not draft anything.'], ['idle', 'Nothing to sign', 'Your money stays where it is.']]};
+    renderSafety(); return;
+  }
+  push({role:'bot', text:r.reply}); speak(r.speak);
+  if(ui.card){ state.check = checksFromCard(ui.card, ui.type === 'blocked' ? 'blocked' : ui.type === 'frozen' ? 'frozen' : 'pending'); renderSafety();
+    if(ui.type === 'blocked') push({type:'blocked', text: ui.card.reasons.join(' ')});
+    else if(ui.type === 'frozen') push({type:'frozen', items: ui.card.verification.mismatches});
+    else openConfirm(ui.card); }
+  if(ui.type === 'choose') push({type:'choices', options: ui.options});
+  refresh();
+}
+
+// ---------------------------------------------------------------- Confirmation card
+function openConfirm(c){
+  state.card = c; state.verify = null; clearInterval(state.coolTimer);
+  renderConfirm(); const dlg = $('#confirm'); if(!dlg.open) dlg.showModal();
+  setTimeout(() => $('#c-go')?.focus(), 50);
+  if(c.cooldown_left > 0){
+    state.coolTimer = setInterval(async () => {
+      state.card.cooldown_left = Math.max(0, state.card.cooldown_left - 1);
+      if(state.card.cooldown_left === 0){
+        clearInterval(state.coolTimer);
+        try{ const r = await api('/api/card/' + state.sid); if(r.card) state.card = r.card; }catch{}
+      }
+      renderConfirm();
+    }, 1000);
+  }
+}
+function renderConfirm(){
+  const c = state.card; if(!c) return;
+  const needVerify = !!c.verify_question, cooling = c.cooldown_left > 0;
+  const canGo = c.can_confirm && !cooling && (!needVerify || state.verify === true);
+  const rel = c.payee_relation ? ` (${esc(c.payee_relation)})` : '';
+  $('#confirm').innerHTML = `
+    <div class="cbody">
+      <h2 id="c-title">${esc(c.title)}</h2>
+      ${c.you_said ? `<div class="said"><span class="k">Based on what you said</span><q>${esc(c.you_said)}</q></div>` : ''}
+      <div class="crow ${c.payee_from_user === false ? 'unsaid' : ''}"><span class="k">${c.kind === 'investment' ? 'Invest in' : 'To'}</span><span class="v">${esc(c.payee_name)}${rel}<small>${esc(c.payee_account)}</small>
+        ${c.payee_from_user === false ? `<span class="flag">You didn't mention this ${c.kind === 'investment' ? 'product' : 'person'}</span>` : ''}</span></div>
+      ${c.kind === 'investment' ? `<div class="crow"><span class="k">Asset</span><span class="v">${esc(c.asset_class)}</span></div>` : ''}
+      <div class="crow amount ${c.amount_from_user === false ? 'unsaid' : ''}"><span class="k">Amount</span>
+        <div class="amt">${esc(c.amount)}</div><div class="words">${esc(c.amount_words)}${c.amount_source === 'bill' ? ' · exact amount from your bill' : ''}</div>
+        ${c.amount_from_user === false ? '<span class="flag">You didn\'t say this amount — please check it</span>' : ''}</div>
+      <div class="crow"><span class="k">From</span><span class="v">${esc(c.from_account)}</span></div>
+      ${c.verification?.status === 'match' ? `<div class="vcheck">${icon('shield')}<span>A second, independent check re-read your words and found the same ${esc(Object.entries(c.verification.fields).filter(([, v]) => v === 'match').map(([k]) => ({payee:'payee', amount:'amount', from_account:'account', asset_class:'asset', type:'type'}[k] || k)).join(', '))}.</span></div>` : ''}
+      ${c.risk_level !== 'LOW' ? `<div class="risk ${esc(c.risk_level)}"><b>${c.risk_level === 'MEDIUM' ? 'Please take a second look' : "For your safety, let's wait a little"}</b><ul>${c.reasons.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
+      ${needVerify ? `<div class="verify"><div class="q">${esc(c.verify_question)}</div><div class="yesno">
+        <button type="button" data-v="yes" aria-pressed="${state.verify === true}">Yes</button>
+        <button type="button" data-v="no" aria-pressed="${state.verify === false}">No / Not sure</button></div></div>` : ''}
+      ${cooling ? `<div class="cool">Please wait ${c.cooldown_left} more second${c.cooldown_left === 1 ? '' : 's'}<small>A good moment to call your family and check.</small></div>` : ''}
+    </div>
+    <div class="cfoot">
+      <button type="button" class="btn secondary" id="c-cancel">Cancel</button>
+      <button type="button" class="btn primary" id="c-go" ${canGo ? '' : 'disabled'}>${icon('fingerprint')}${state.signMode === 'device' ? 'Confirm on this device' : 'Confirm with fingerprint'}</button>
+    </div>
+    <div class="signnote">Confirmation code ${esc(c.digest.slice(0, 8))}…${esc(c.digest.slice(-4))} · ${state.signMode === 'device'
+      ? "this browser signs exactly this card with a key that never leaves it. (This device has no fingerprint or face sensor available here, so no biometric check.)"
+      : "your device checks your fingerprint or face, then signs exactly this card. The bank and its payment gateway each verify the signature."}</div>`;
+  $('#confirm').querySelectorAll('.yesno button').forEach(b => b.onclick = () => {
+    state.verify = b.dataset.v === 'yes';
+    if(state.verify === false){ const t = "That's OK. If you're not sure, let's not send it yet. You can check with your family first."; push({role:'bot', text:t}); speak(t); }
+    renderConfirm();
+  });
+  $('#c-cancel').onclick = cancelCard;
+  $('#c-go').onclick = () => { stopSpeaking(); confirmCard(); };
+}
+$('#confirm').addEventListener('cancel', e => { e.preventDefault(); cancelCard(); });
+function closeConfirm(){ clearInterval(state.coolTimer); const d = $('#confirm'); if(d.open) d.close(); state.card = null; }
+async function cancelCard(){
+  const c = state.card; if(!c) return; closeConfirm();
+  try{
+    const r = await api('/api/cancel', {session_id: state.sid, draft_id: c.draft_id}); push({role:'bot', text:r.reply}); speak(r.speak);
+    if(r.next_task) offerNext(r.next_task);
+  }catch(e){ push({role:'bot', text:e.message}); }
+  state.check = checksFromCard(c, 'cancelled'); renderSafety();
+}
+async function confirmCard(){
+  const c = state.card; const btn = $('#c-go');
+  btn.disabled = true; btn.textContent = state.signMode === 'device' ? 'Signing on this device…' : 'Touch the sensor…';
+  const verify_answer = c.verify_question ? state.verify : null;
+  try{
+    await ensureSigner();
+    const ch = await api('/api/challenge', {session_id: state.sid, draft_id: c.draft_id, digest: c.digest, verify_answer});
+    const assertion = await signPayload(ch.payload, ch.passkey);
+    const r = await api('/api/confirm', {session_id: state.sid, draft_id: c.draft_id, digest: c.digest, assertion, verify_answer});
+    closeConfirm(); addTrace(r.trace);
+    push({role:'bot', text: r.reply, ok: true, receipt: r.receipt?.verifiable}); speak(r.speak);
+    state.check = checksFromCard(c, 'done', r.receipt?.verifiable?.authorization?.method); renderSafety();
+    if(r.next_task) continueWith(r.next_task);      // multi-step request: go straight on to the next step
+    refresh();
+  }catch(e){
+    const msg = e.name === 'NotAllowedError' ? 'The fingerprint check was cancelled or timed out. Nothing was sent.'
+      : e.name === 'SecurityError' ? `Fingerprint signing needs a website name, not an address like ${location.hostname}. Please open http://localhost:${location.port || 80} and try again. Nothing was sent.`
+      : e.message;
+    addTrace(e.data?.trace); push({role:'bot', text:msg}); speak(msg);
+    if(['NOT_AWAITING_AUTH', 'RECHECK_BLOCKED'].includes(e.data?.code) || String(e.data?.code || '').startsWith('GW_')) closeConfirm(); else renderConfirm();
+  }
+}
+
+// ---------------------------------------------------------------- Signing: passkey (real fingerprint / face) first
+// A passkey lives in the device's secure hardware and is unlocked by the OS's own biometric prompt (Touch ID,
+// Face ID, Windows Hello). We ask for userVerification "required" and sign SHA-256 of the exact payment payload.
+// Devices without one fall back to a non-extractable browser key (no biometric; the UI says so).
+const b64u = buf => b64(buf).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), ch => ch.charCodeAt(0));
+const IP_HOST = /^(\d{1,3}(\.\d{1,3}){3}|\[.*\])$/;
+async function detectSignMode(){
+  if(IP_HOST.test(location.hostname)) return 'device';     // passkeys need a domain name, not an IP address
+  try{
+    if(window.PublicKeyCredential && window.isSecureContext && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()) return 'passkey';
+  }catch{}
+  return 'device';
+}
+async function ensureSigner(){
+  if(state.signMode === 'passkey'){
+    if(!state.data?.passkey?.enrolled){ toast('First time: your device will ask you to save a passkey for Star.'); await enrolPasskey(); }
+  }else if(!state.data?.passkey?.enrolled){
+    await ensureDeviceKey();
+  }
+}
+async function enrolPasskey(){
+  const o = await api('/api/passkey/options', {session_id: state.sid});
+  const cred = await navigator.credentials.create({publicKey: {
+    challenge: unb64u(o.challenge), rp: {id: o.rp_id, name: o.rp_name},
+    user: {id: unb64u(o.user_id), name: o.user_name, displayName: o.display_name},
+    pubKeyCredParams: [{type: 'public-key', alg: -7}, {type: 'public-key', alg: -257}],   // ES256 (Mac, phones) or RS256 (some Windows Hello) timeout: 60000, attestation: 'none',
+    authenticatorSelection: {authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged'},
+    excludeCredentials: o.exclude.map(id => ({type: 'public-key', id: unb64u(id)})),
+  }});
+  const r = await api('/api/passkey/register', {session_id: state.sid, credential_id: b64u(cred.rawId),
+    client_data_json: b64u(cred.response.clientDataJSON), attestation_object: b64u(cred.response.attestationObject)});
+  addTrace([{kind:'sign', label:`Passkey ${r.key_id} enrolled: your device's fingerprint / face check now signs your payments`}]);
+  await refresh(); return r;
+}
+async function signPayload(payload, passkey){
+  if(passkey?.enrolled && state.signMode !== 'passkey')
+    throw new Error('Your account signs payments with the fingerprint or face check on the device where you set it up. ' +
+      'Please use that device (or remove the passkey in Settings for this demo).');
+  if(passkey?.enrolled){
+    const challenge = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload));
+    const a = await navigator.credentials.get({publicKey: {challenge, rpId: location.hostname, userVerification: 'required', timeout: 60000,
+      allowCredentials: passkey.credential_ids.map(id => ({type: 'public-key', id: unb64u(id)}))}});
+    addTrace([{kind:'sign', label:'Your device checked your fingerprint / face and signed the exact card (passkey, ES256)', detail: JSON.parse(payload)}]);
+    return {type: 'webauthn', payload, credential_id: b64u(a.rawId), authenticator_data: b64u(a.response.authenticatorData),
+      client_data_json: b64u(a.response.clientDataJSON), signature: b64u(a.response.signature)};
+  }
+  const keyId = await ensureDeviceKey();
+  const signature = await deviceSign(payload);
+  addTrace([{kind:'sign', label:`Browser key ${keyId} signed the exact card (ECDSA P-256, no biometric on this device)`, detail: JSON.parse(payload)}]);
+  return {payload, signature};
+}
+
+// Fallback: a non-extractable ECDSA P-256 key in this browser (IndexedDB). The server only sees the public half.
+const KEYDB = {name:'star-device', store:'keys', id:'device-key'};
+const idb = () => new Promise((ok, no) => { const r = indexedDB.open(KEYDB.name, 1);
+  r.onupgradeneeded = () => r.result.createObjectStore(KEYDB.store); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
+async function idbGet(){ const db = await idb(); return new Promise((ok, no) => { const t = db.transaction(KEYDB.store).objectStore(KEYDB.store).get(KEYDB.id); t.onsuccess = () => ok(t.result); t.onerror = () => no(t.error); }); }
+async function idbPut(v){ const db = await idb(); return new Promise((ok, no) => { const t = db.transaction(KEYDB.store, 'readwrite').objectStore(KEYDB.store).put(v, KEYDB.id); t.onsuccess = () => ok(); t.onerror = () => no(t.error); }); }
+let deviceKey = null;
+async function ensureDeviceKey(){
+  if(!window.crypto?.subtle) throw new Error('This browser cannot create a secure signing key. Please open the app via localhost or HTTPS.');
+  if(!deviceKey) deviceKey = await idbGet().catch(() => null);
+  if(!deviceKey){
+    const pair = await crypto.subtle.generateKey({name:'ECDSA', namedCurve:'P-256'}, false, ['sign', 'verify']);
+    deviceKey = {privateKey: pair.privateKey, publicJwk: await crypto.subtle.exportKey('jwk', pair.publicKey)};
+    await idbPut(deviceKey).catch(() => {});
+  }
+  const {kty, crv, x, y} = deviceKey.publicJwk;
+  const r = await api('/api/key', {session_id: state.sid, public_key: {kty, crv, x, y}});
+  state.keyId = r.key_id; return r.key_id;
+}
+async function deviceSign(payload){
+  const sig = await crypto.subtle.sign({name:'ECDSA', hash:'SHA-256'}, deviceKey.privateKey, new TextEncoder().encode(payload));
+  return b64(sig);
+}
+
+// ---------------------------------------------------------------- Agent trace
+function addTrace(items){
+  const list = $('#tlist');
+  (items || []).forEach(it => {
+    const el = document.createElement('div');
+    el.className = 'ti' + (it.kind === 'user' ? ' turn' : '');
+    el.innerHTML = `<div class="k k-${esc(it.kind)}">${esc(KIND[it.kind] || it.kind)}</div><div class="l">${esc(it.label)}</div>` +
+      (it.detail !== undefined ? `<details><summary>Details</summary><pre>${esc(JSON.stringify(it.detail, null, 2))}</pre></details>` : '');
+    list.appendChild(el);
+  });
+  list.scrollTop = list.scrollHeight;
+}
+
+// ---------------------------------------------------------------- Other pages
+function head(eyebrow, title, sub){ return `<div class="page-head"><div class="eyebrow">${eyebrow}</div><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</div>`; }
+function activity(m){
+  const d = state.data;
+  m.innerHTML = head('Your workspace', 'Transactions', 'Recent activity on your accounts. Payments made with Star come with a signed receipt.') + `
+    <section class="card"><div class="table-scroll"><table class="table"><thead><tr><th>Date</th><th>Description</th><th class="num">Amount</th></tr></thead>
+      <tbody>${(d?.transactions || []).map(t => `<tr><td>${esc(t.date)}</td><td>${esc(t.desc)}</td><td class="num ${t.amount_cents > 0 ? 'in' : ''}">${esc(t.amount)}</td></tr>`).join('')}</tbody></table></div></section>
+    <section class="card panel page-gap"><h2>Signed receipts</h2>
+      ${(d?.receipts || []).length ? `<table class="table"><tbody>${d.receipts.map((r, i) => `<tr><td>${esc(r.txn_id)}</td><td>${esc(r.card.payee_name)}<small class="method">${r.authorization?.method === 'passkey' ? 'Fingerprint / face (passkey)' : 'Browser key'}</small></td>
+        <td class="num">S$${(r.card.amount_cents / 100).toFixed(2)}</td><td class="num"><button class="btn secondary dl" data-i="${i}">${icon('download')}Download</button></td></tr>`).join('')}</tbody></table>
+        <p class="footnote">Anyone can check a receipt offline: <code class="k">python scripts/verify_receipt.py receipt.json</code></p>`
+      : '<p class="footnote">No payments in this session yet.</p>'}</section>`;
+  m.querySelectorAll('.dl').forEach(b => b.onclick = () => { const r = d.receipts[b.dataset.i]; download(`receipt-${r.txn_id}.json`, r); });
+}
+function contacts(m){
+  const d = state.data;
+  const people = (d?.payees || []).filter(p => p.type === 'person'), billers = (d?.payees || []).filter(p => p.type !== 'person');
+  const card = p => `<div class="card contact"><span class="avatar">${esc(p.name.split(' ').map(w => w[0]).join('').slice(0, 2))}</span><div><b>${esc(p.name)}</b><small>${esc(p.relation)} · ${esc(p.masked_account)}</small></div></div>`;
+  m.innerHTML = head('Your workspace', 'Payees', 'Star can only send money to people saved here. Adding a new payee needs the bank app or a branch.') +
+    `<div class="contacts">${people.map(card).join('')}</div><h2 class="sub-head">Billers</h2><div class="contacts">${billers.map(card).join('')}</div>`;
+}
+async function auditPage(m){
+  m.innerHTML = head('Trust & transparency', 'Audit trail', 'Every step is appended to a hash chain: each record carries the hash of the one before, so edits are detectable.') +
+    `<section class="card panel"><div class="row-actions"><span id="integrity" class="status ok">Checking…</span>
+      <button class="btn secondary" id="a-refresh">${icon('refresh')}Refresh</button><button class="btn secondary" id="a-export">${icon('download')}Export JSON</button></div>
+      <div id="entries" class="lab-list"></div></section>`;
+  const load = async () => {
+    const a = await api(`/api/audit/session/${encodeURIComponent(state.sid)}`);
+    $('#integrity').className = 'status ' + (a.integrity.ok ? 'ok' : 'bad');
+    $('#integrity').textContent = a.integrity.ok ? `✓ Chain intact · ${a.integrity.records} records` : `✕ Chain broken at line ${a.integrity.broken_at_line}`;
+    $('#entries').innerHTML = a.entries.length ? a.entries.slice().reverse().map(e => `<div class="audit-entry"><b>${esc(e.event)}</b>
+      <div class="meta">${new Date(e.ts * 1000).toLocaleTimeString()} · ${esc(e.hash.slice(0, 16))}…</div>
+      <details><summary>Details</summary><pre>${esc(JSON.stringify(e.data, null, 2))}</pre></details></div>`).join('') : '<p class="footnote">No activity in this session yet.</p>';
+    $('#a-export').onclick = () => download(`audit-${state.sid}.json`, a);
+  };
+  $('#a-refresh').onclick = load; load().catch(e => toast(e.message));
+}
+function labPage(m){
+  m.innerHTML = head('Trust & transparency', 'Security lab', 'Real attacks against the real kernel, each in a fresh sandbox. Your session is never touched.') + `
+    <section class="card panel">
+      <div class="arch"><span>You speak</span><i>→</i><span>Agent drafts</span><i>‖</i><span class="edge">Verifier re-reads your words</span><i>→</i><span class="edge">Evidence + rules</span><i>→</i><span>You check the card</span><i>→</i><span class="edge">Fingerprint signs</span><i>→</i><span class="edge">Kernel verifies</span><i>→</i><span class="edge">Gateway re-verifies</span><i>→</i><span>Ledger</span></div>
+      <p class="footnote">The model lives left of the red boxes. It has no tool that can sign, authorize or pay, and the ledger only accepts instructions carrying your device's signature.</p>
+      <div class="row-actions"><button class="btn primary" id="lab-run">${icon('lab')}Run all attacks</button>
+        <button class="btn secondary" id="lab-mistake">${icon('alert')}Simulate a model mistake</button></div>
+      <p class="footnote">"Simulate a model mistake" sends “Send 50 to my daughter” to a deliberately faulty model that drafts S$500. The independent verifier, the kernel and the gateway are the real ones.</p>
+      <div id="lab-out"></div></section>`;
+  $('#lab-mistake').onclick = () => send('Send 50 to my daughter', '/api/demo/model-mistake');
+  $('#lab-run').onclick = async () => {
+    $('#lab-out').innerHTML = '<p class="footnote">Running…</p>';
+    try{
+      const {results} = await api('/api/lab', {});
+      const ok = results.filter(r => r.blocked).length;
+      $('#lab-out').innerHTML = `<div class="lab-score">${ok} / ${results.length} attacks blocked</div><div class="lab-list">${results.map(r =>
+        `<div class="lab-item ${r.blocked ? 'pass' : 'fail'}"><span class="s">${r.blocked ? '✓' : '✕'}</span><div><b>${esc(r.name)}</b> <code>${esc(r.code)}</code><small>${esc(r.detail)}</small></div></div>`).join('')}</div>
+        <p class="footnote">A fixed set of checks, not a penetration test. See docs/SECURITY.md for what is simulated.</p>`;
+      addTrace([{kind:'guard', label:`Security lab: ${ok}/${results.length} attacks blocked`, detail: results}]);
+    }catch(e){ $('#lab-out').innerHTML = `<p class="footnote">Could not run the lab: ${esc(e.message)}</p>`; }
+  };
+}
+function settingsPage(m){
+  const sw = (id, on, title, sub) => `<div class="setting"><div>${title}<small>${sub}</small></div><button class="switch" role="switch" id="${id}" aria-checked="${on}" aria-label="${esc(title)}"></button></div>`;
+  const pr = state.data?.protection || {level: 'enhanced'}, pk = state.data?.passkey || {};
+  const when = t => new Date(t * 1000).toLocaleString('en-SG', {weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
+  const delay = Math.round((pr.delay_seconds || 86400) / 3600);
+  m.innerHTML = head('Your workspace', 'Settings') + `
+    <section class="card settings protection">
+      <div class="setting"><div>Account protection<small>This is a bank setting, not a screen setting: switching to Standard view doesn't change it.
+        Raising it is instant. Lowering it needs your fingerprint and only starts ${delay >= 1 ? `${delay} hours` : `${pr.delay_seconds} seconds`} later, so nobody can rush you into it on the phone.</small></div></div>
+      <div class="levels" role="radiogroup" aria-label="Protection level">
+        <button role="radio" class="level ${pr.level === 'enhanced' ? 'on' : ''}" data-to="enhanced" aria-checked="${pr.level === 'enhanced'}"><b>Enhanced</b><small>Recommended for seniors. Waits before payments over S$1,000, stops scam-like requests, double-checks late at night and for risky investments.</small></button>
+        <button role="radio" class="level ${pr.level === 'standard' ? 'on' : ''}" data-to="standard" aria-checked="${pr.level === 'standard'}"><b>Standard</b><small>Fewer interruptions: waits only over S$3,000, scam-like requests get a warning instead of a stop. "Safe account" requests are always stopped.</small></button>
+      </div>
+      ${pr.pending ? `<div class="pending">Standard protection starts ${esc(when(pr.pending.effective_at))}. <button class="btn secondary" id="p-cancel">Keep Enhanced</button></div>` : ''}
+      <p class="footnote">Always on for everyone: Star only drafts, every draft is checked against your words by two separate engines, your device signs every payment, and the payment gateway refuses anything unsigned.</p>
+    </section>
+    <section class="card settings page-gap">
+      <div class="setting"><div>Fingerprint / face signing (passkey)<small>${state.signMode === 'passkey'
+        ? (pk.enrolled ? `Set up for this site. Key ${esc((pk.key_ids || [])[0] || '')}. Your device's own fingerprint or face check signs every payment.` : 'Available on this device. Set it up now, or the first time you confirm a payment.')
+        : "This browser can't use a fingerprint or face sensor here. Payments are signed with a browser key instead (no biometric check)."}</small></div>
+        ${state.signMode === 'passkey' && !pk.enrolled ? `<button class="btn primary" id="pk-setup">${icon('fingerprint')}Set up</button>` : ''}
+        ${pk.enrolled ? `<button class="btn secondary" id="pk-remove">Remove (demo)</button>` : ''}</div>
+    </section>
+    <section class="card settings page-gap">
+      ${sw('s-senior', state.senior, 'Senior mode', 'Bigger text, one thing at a time, big voice button, answers read aloud.')}
+      ${sw('s-large', state.large, 'Larger text in standard view', 'Makes the normal dashboard easier to read.')}
+      ${sw('s-read', readAloudOn(), 'Read every answer aloud', 'Answers to questions you speak are always read aloud. Tap the microphone to stop one.')}
+      <div class="setting"><div>Language model<small>${esc(state.health.model || '')}</small></div><code class="k">${live() ? 'live' : 'offline rules'}</code></div>
+      <div class="setting"><div>Speech recognition<small>Without Tencent Cloud keys the browser's own recognition is used.</small></div><code class="k">${esc(state.health.asr || '')}</code></div>
+      <div class="setting"><div>Independent verifier<small>The second engine that re-reads only your words and can freeze a payment.</small></div><code class="k">${esc(state.health.verifier || '')}</code></div>
+      <div class="setting"><div>Browser signing key (fallback)<small>Only used on devices without a fingerprint or face sensor.</small></div><code class="k">${esc(state.keyId || 'not created')}</code></div>
+      <div class="setting"><div>Reset demo<small>New session, balances and bills restored. Old audit records are kept.</small></div><button class="btn secondary" id="s-reset">${icon('refresh')}Reset</button></div>
+    </section>`;
+  $('#s-senior').onclick = () => setSenior(!state.senior);
+  $('#s-large').onclick = () => { state.large = !state.large; store.set('large', state.large); render(); };
+  $('#s-read').onclick = () => { state.readAloud = !readAloudOn(); store.set('readAloud', state.readAloud); if(!state.readAloud) speechSynthesis?.cancel(); renderPage(); };
+  $('#s-reset').onclick = resetDemo;
+  m.querySelectorAll('.level').forEach(b => b.onclick = () => setProtection(b.dataset.to));
+  $('#p-cancel') && ($('#p-cancel').onclick = () => setProtection('enhanced'));
+  $('#pk-setup') && ($('#pk-setup').onclick = async () => { try{ await enrolPasskey(); toast('Fingerprint signing is set up.'); renderPage(); }catch(e){ toast(e.name === 'NotAllowedError' ? 'Set-up cancelled.' : e.message); } });
+  $('#pk-remove') && ($('#pk-remove').onclick = async () => { await api('/api/passkey/remove', {session_id: state.sid}); await refresh(); toast('Passkey removed from this demo. (A real bank would verify your identity first.)'); });
+}
+async function setProtection(to){
+  const cur = state.data?.protection;
+  if(to === cur?.level && !cur?.pending) return;
+  try{
+    if(to === 'enhanced'){
+      await api('/api/protection', {session_id: state.sid, to}); toast('Enhanced protection is on.');
+    }else{
+      await ensureSigner();
+      const ch = await api('/api/protection/challenge', {session_id: state.sid, to});
+      const assertion = await signPayload(ch.payload, ch.passkey);
+      const st = await api('/api/protection', {session_id: state.sid, to, assertion});
+      toast(`Standard protection will start ${new Date(st.pending.effective_at * 1000).toLocaleString('en-SG')}. You can cancel before then.`);
+    }
+  }catch(e){ toast(e.name === 'NotAllowedError' ? 'Cancelled. Nothing changed.' : e.message); }
+  await refresh();
+}
+async function resetDemo(){
+  const r = await api('/api/reset', {session_id: state.sid, world: true});
+  state.sid = r.session_id; store.set('sid', r.session_id);
+  state.messages = []; state.check = null; $('#tlist').innerHTML = ''; closeConfirm();
+  await refresh(); go('overview'); toast('Demo reset');
+}
+
+// ---------------------------------------------------------------- Voice input
+// Preferred: record 16 kHz mono WAV -> Tencent Cloud SentenceRecognition on the server (with payee hotwords).
+// Fallback: the browser's own speech recognition when the server has no ASR keys.
+const rec = {ctx:null, stream:null, node:null, chunks:[], rate:48000, on:false, timer:null, sr:null};
+const MAX_SEC = 15;
+const hint = t => { const h = $('#hint'); if(h) h.textContent = t; };
+async function micToggle(){
+  if(rec.on) return stopRec();
+  stopSpeaking();                                   // barge-in: tapping the mic cuts the answer off at once
+  if(state.health.asr === 'tencent') return startWavRec();
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ push({role:'bot', text:"This browser doesn't support voice input. Please use Chrome, or type instead."}); return; }
+  rec.sr = new SR(); rec.sr.lang = 'en-SG'; rec.sr.interimResults = false;
+  rec.sr.onresult = e => { const t = e.results[0][0].transcript; addTrace([{kind:'asr', label:'Browser speech recognition: ' + t}]); send(t, undefined, true); };
+  rec.sr.onend = () => setRec(false);
+  rec.sr.onerror = e => { setRec(false); hint(`Didn't catch that, please try again (${e.error})`); };
+  rec.sr.start(); setRec(true);
+}
+async function startWavRec(){
+  try{ rec.stream = await navigator.mediaDevices.getUserMedia({audio:{channelCount:1, echoCancellation:true, noiseSuppression:true}}); }
+  catch{ push({role:'bot', text:'No microphone permission. You can type instead.'}); return; }
+  rec.ctx = new (window.AudioContext || window.webkitAudioContext)(); rec.rate = rec.ctx.sampleRate; rec.chunks = [];
+  const src = rec.ctx.createMediaStreamSource(rec.stream);
+  rec.node = rec.ctx.createScriptProcessor(4096, 1, 1);
+  rec.node.onaudioprocess = e => rec.chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+  src.connect(rec.node); rec.node.connect(rec.ctx.destination);
+  setRec(true); rec.timer = setTimeout(stopRec, MAX_SEC * 1000);
+}
+async function stopRec(){
+  clearTimeout(rec.timer);
+  if(rec.sr){ rec.sr.stop(); rec.sr = null; return; }
+  setRec(false);
+  rec.node?.disconnect(); rec.stream?.getTracks().forEach(t => t.stop()); await rec.ctx?.close();
+  const wav = encodeWav(downsample(flatten(rec.chunks), rec.rate, 16000), 16000);
+  if(wav.byteLength < 16000){ hint('Too short, please speak a little longer'); return; }
+  hint('Recognizing…');
+  try{
+    const r = await api('/api/asr', {session_id: state.sid, audio_b64: b64(wav)});
+    hint(''); addTrace([{kind:'asr', label:`Tencent Cloud ASR (${r.engine}, ${r.latency_ms}ms): ${r.text}`}]);
+    if(r.text) send(r.text, undefined, true); else hint("Didn't catch that, please say it again");
+  }catch(e){ hint('Recognition failed: ' + e.message); }
+}
+function setRec(on){
+  rec.on = on; $('#mic')?.classList.toggle('rec', on);
+  const label = $('#mic span'); if(label) label.textContent = on ? 'Listening… tap to stop' : (state.senior ? 'Tap to speak' : 'Speak');
+  hint(on ? "I'm listening. Tap again when you're done." : '');
+}
+function flatten(chunks){ const n = chunks.reduce((a, c) => a + c.length, 0), out = new Float32Array(n); let o = 0; chunks.forEach(c => { out.set(c, o); o += c.length; }); return out; }
+function downsample(buf, from, to){
+  if(from === to) return buf;
+  const ratio = from / to, len = Math.floor(buf.length / ratio), out = new Float32Array(len);
+  for(let i = 0; i < len; i++){ const s = Math.floor(i * ratio), e = Math.min(buf.length, Math.floor((i + 1) * ratio)); let sum = 0; for(let j = s; j < e; j++) sum += buf[j]; out[i] = sum / Math.max(1, e - s); }
+  return out;
+}
+function encodeWav(samples, rate){
+  const buf = new ArrayBuffer(44 + samples.length * 2), v = new DataView(buf);
+  const w = (o, s) => { for(let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + samples.length * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, rate, true);
+  v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, samples.length * 2, true);
+  for(let i = 0; i < samples.length; i++){ const s = Math.max(-1, Math.min(1, samples[i])); v.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true); }
+  return buf;
+}
+function b64(buf){ let s = ''; const b = new Uint8Array(buf); for(let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(s); }
+
+// ---------------------------------------------------------------- Start
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && $('#trace').classList.contains('open') && !$('#confirm').open) toggleTrace(false); });
+(async function init(){
+  try{ state.health = await api('/api/health'); }catch{}
+  state.signMode = await detectSignMode();
+  await refresh();
+  render();
+  restorePending();
+})();

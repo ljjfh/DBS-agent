@@ -1,6 +1,6 @@
-"""确定性规则引擎：同一输入永远得到同一结果。模型无法调用或绕过这里。
+"""Deterministic rule engine: the same input always gives the same result. The model cannot call or bypass it.
 
-每条规则都有编号（给审计）和白话理由（给老人）。
+Every rule has a code (for the audit log) and a plain-language reason (for the elderly user).
 """
 from __future__ import annotations
 
@@ -9,17 +9,20 @@ from dataclasses import dataclass, field
 
 from app.bank.mock_bank import MockBank
 from app.config import settings
+from app.kernel import protection as prot
 from app.models import Draft, RiskDecision, RiskLevel, fmt_money
 
-RULESET_VERSION = "rules-2026.10.11-v1"
+RULESET_VERSION = "rules-2026.10.12-v3"
 
 
 @dataclass
 class RuleContext:
     now: float = field(default_factory=time.time)
-    scam_level: RiskLevel = RiskLevel.LOW          # 来自诈骗研判（只能调高）
+    scam_level: RiskLevel = RiskLevel.LOW          # from the scam assessment (can only go up)
     scam_reasons: list[str] = field(default_factory=list)
-    local_hour: int | None = None                  # 测试时可注入
+    local_hour: int | None = None                  # can be injected in tests
+    grounding: object | None = None                # evidence.Grounding: is the draft backed by the user's words
+    protection: str = "enhanced"                   # account protection level (kernel/protection.py)
 
 
 def evaluate(draft: Draft, bank: MockBank, ctx: RuleContext | None = None) -> RiskDecision:
@@ -35,65 +38,103 @@ def evaluate(draft: Draft, bank: MockBank, ctx: RuleContext | None = None) -> Ri
         hits.append(code)
         reasons.append(why)
 
-    payee = bank.payee(draft.user_id, draft.payee_id)
+    invest = draft.kind == "investment"
+    payee = bank.product(draft.payee_id) if invest else bank.payee(draft.user_id, draft.payee_id)
     acct = bank.account(draft.user_id, draft.from_account)
+    enhanced = ctx.protection == "enhanced"
+    threshold = prot.high_threshold(ctx.protection)
 
-    # ---- 硬性校验（BLOCK）----
-    if payee is None:
-        raise_to(RiskLevel.BLOCK, "R00_UNKNOWN_PAYEE", "这个收款人不在您已保存的名单里，不能直接转账。")
+    # ---- Hard checks (BLOCK) ----
+    if payee is None and invest:
+        raise_to(RiskLevel.BLOCK, "R06_UNKNOWN_PRODUCT", "I can't find this investment product.")
+    elif payee is None:
+        raise_to(RiskLevel.BLOCK, "R00_UNKNOWN_PAYEE", "This person is not in your saved payees, so I can't send money to them directly.")
     if acct is None:
-        raise_to(RiskLevel.BLOCK, "R01_UNKNOWN_ACCOUNT", "找不到这个扣款账户。")
+        raise_to(RiskLevel.BLOCK, "R01_UNKNOWN_ACCOUNT", "I can't find the account to pay from.")
     if draft.amount_cents <= 0:
-        raise_to(RiskLevel.BLOCK, "R02_BAD_AMOUNT", "金额必须大于 0。")
+        raise_to(RiskLevel.BLOCK, "R02_BAD_AMOUNT", "The amount must be more than zero.")
     if acct and draft.amount_cents > acct["balance_cents"]:
         raise_to(RiskLevel.BLOCK, "R03_INSUFFICIENT",
-                 f"余额不够，账户里只有 {fmt_money(acct['balance_cents'])}。")
+                 f"Not enough money — your account only has {fmt_money(acct['balance_cents'])}.")
     if draft.amount_cents > settings.single_txn_hard_limit * 100:
         raise_to(RiskLevel.BLOCK, "R04_HARD_LIMIT",
-                 f"单笔超过 {fmt_money(int(settings.single_txn_hard_limit * 100))}，需要到柜台或联系客服办理。")
+                 f"Payments over {fmt_money(int(settings.single_txn_hard_limit * 100))} must be done at a branch or with customer service.")
     if draft.expires_at < ctx.now:
-        raise_to(RiskLevel.BLOCK, "R05_EXPIRED", "这张单子已经过期，请重新说一次。")
+        raise_to(RiskLevel.BLOCK, "R05_EXPIRED", "This request has expired. Please say it again.")
 
     if payee is not None and draft.kind == "transfer":
         history = bank.payee_history(draft.user_id, draft.payee_id)
-        # ---- 新收款人（HIGH）----
+        # ---- New payee (HIGH) ----
         if not history:
-            raise_to(RiskLevel.HIGH, "R10_NEW_PAYEE", "这是第一次转给这个人，为了安全，我们等一会儿再确认。")
+            raise_to(RiskLevel.HIGH, "R10_NEW_PAYEE", "This is your first transfer to this person, so for safety we'll wait a little before confirming.")
         else:
             typical = max(history)
             if draft.amount_cents > typical * 2:
                 raise_to(RiskLevel.MEDIUM, "R11_ABOVE_USUAL",
-                         f"这次金额比您平时转给 {payee['name']} 的（{fmt_money(typical)}）多不少。")
-        # ---- 大额（HIGH）----
-        if draft.amount_cents > settings.user_high_threshold * 100:
+                         f"This is quite a bit more than you usually send to {payee['name']} ({fmt_money(typical)}).")
+        # ---- Large amount (HIGH) ----
+        if draft.amount_cents > threshold * 100:
             raise_to(RiskLevel.HIGH, "R12_ABOVE_THRESHOLD",
-                     f"金额超过您设定的 {fmt_money(int(settings.user_high_threshold * 100))}，需要多等一会儿再确认。")
+                     f"This is more than your limit of {fmt_money(int(threshold * 100))}, so we'll wait a little before confirming.")
 
-    # ---- 时间与频率（MEDIUM）----
+    # ---- Investments: minimum, suitability (MAS-style), size ----
+    if invest and payee is not None:
+        if draft.amount_cents < payee["min_cents"]:
+            raise_to(RiskLevel.BLOCK, "R71_BELOW_MINIMUM",
+                     f"The minimum for {payee['name']} is {fmt_money(payee['min_cents'])}.")
+        profile = bank.risk_profile(draft.user_id)
+        if payee["risk"] > profile["max_product_risk"]:
+            raise_to(RiskLevel.HIGH if enhanced else RiskLevel.MEDIUM, "R70_ABOVE_RISK_PROFILE",
+                     (f"These shares have risk rating {payee['risk']} of 5, above your " if payee["asset_class"].startswith("Shares")
+                      else f"This {payee['asset_class'] if payee['asset_class'].isupper() else payee['asset_class'].lower()} "
+                           f"has risk rating {payee['risk']} of 5, above your ") +
+                     f"{profile['label'].lower()} risk profile. The value can go down as well as up.")
+        if draft.amount_cents > threshold * 100:
+            raise_to(RiskLevel.HIGH, "R72_LARGE_INVESTMENT",
+                     f"This is more than {fmt_money(int(threshold * 100))}, so we'll wait a little before confirming.")
+
+    # ---- Time and frequency (MEDIUM) ----
     if ctx.local_hour is not None:
         hour = ctx.local_hour
     elif settings.fixed_hour is not None:
         hour = settings.fixed_hour
     else:
         hour = time.localtime(ctx.now).tm_hour
-    if hour >= settings.night_start or hour < settings.night_end:
-        raise_to(RiskLevel.MEDIUM, "R20_NIGHT", "现在是深夜，我们多确认一次。")
+    if enhanced and (hour >= settings.night_start or hour < settings.night_end):
+        raise_to(RiskLevel.MEDIUM, "R20_NIGHT", "It's late at night, so let's double-check.")
     recent = bank.recent_exec_count(draft.user_id, settings.velocity_window_min * 60)
     if recent >= settings.velocity_max:
-        raise_to(RiskLevel.MEDIUM, "R21_VELOCITY", "短时间内已经转了好几笔，我们多确认一次。")
+        raise_to(RiskLevel.MEDIUM, "R21_VELOCITY", "You've made several payments in a short time, so let's double-check.")
 
-    # ---- 不可信来源字段（MEDIUM）----
+    # ---- Fields from untrusted sources (MEDIUM) ----
     if draft.taint:
-        raise_to(RiskLevel.MEDIUM, "R30_TAINTED", "部分信息来自图片或短信，请您逐项核对。")
+        raise_to(RiskLevel.MEDIUM, "R30_TAINTED", "Some details came from a picture or a text message. Please check each one.")
 
-    # ---- 诈骗研判结果：单向升级，只会更严 ----
+    # ---- Scam assessment: one-way escalation, can only get stricter ----
     if ctx.scam_level.rank > RiskLevel.LOW.rank:
         level = RiskLevel.max(level, ctx.scam_level)
         hits.append(f"R40_SCAM_{ctx.scam_level.value}")
         reasons.extend(ctx.scam_reasons)
 
-    if level == RiskLevel.MEDIUM:
-        question = "这个人您认识、并且是您自己想转的吗？"
+    # ---- Evidence grounding: the model must not be the only source of the payee / amount ----
+    g = ctx.grounding
+    if g is not None and payee is not None:
+        if not g.payee and not g.amount:
+            raise_to(RiskLevel.BLOCK, "R52_NOT_REQUESTED",
+                     "I can't find this payment in anything you said, so I won't prepare it.")
+        elif not g.payee:
+            raise_to(RiskLevel.HIGH, "R51_PAYEE_NOT_SAID",
+                     f"You didn't mention {payee['name']}. Please check who this money is going to.")
+        elif not g.amount:
+            raise_to(RiskLevel.MEDIUM, "R50_AMOUNT_NOT_SAID",
+                     f"You didn't say the amount, so I filled in {fmt_money(draft.amount_cents)}. Please check it.")
+
+    if level == RiskLevel.MEDIUM and set(hits) <= {"R50_AMOUNT_NOT_SAID"}:
+        question = f"Is {fmt_money(draft.amount_cents)} the right amount?"
+    elif level == RiskLevel.MEDIUM and set(hits) <= {"R70_ABOVE_RISK_PROFILE", "R50_AMOUNT_NOT_SAID"}:
+        question = "Do you understand this investment can lose value, and do you still want it?"
+    elif level == RiskLevel.MEDIUM:
+        question = "Do you know this person, and is this payment your own idea?"
     cooldown = settings.cooldown_seconds if level == RiskLevel.HIGH else 0
     return RiskDecision(level=level, reasons=reasons, rule_hits=hits,
                         verify_question=question, cooldown_seconds=cooldown)

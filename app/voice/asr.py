@@ -1,10 +1,11 @@
-"""腾讯云一句话识别（SentenceRecognition，60 秒内短音频）。
+"""Tencent Cloud SentenceRecognition (short audio, under 60 seconds).
 
-直接实现 TC3-HMAC-SHA256 签名，避免国内版/国际版 SDK 的差异。
-我们改不了 ASR 的识别能力，但能调的有：
-  * 引擎 EngSerViceType：16k_zh_large（普通话+方言+英语）、16k_zh-PY（中英粤）、16k_en、16k_ms 等
-  * 临时热词表 HotwordList：收款人称呼、产品名，权重 1-11（11 为超级热词）
-  * 识别后处理：低置信度字段一律回读确认（在 Agent 侧完成）
+Implements TC3-HMAC-SHA256 signing directly to avoid differences between the China and international SDKs.
+We can't change how well the ASR recognizes speech, but we can tune:
+  * Engine EngSerViceType: 16k_en (English), 16k_zh (Mandarin), 16k_zh-PY (Mandarin/English/Cantonese), 16k_ms, etc.
+    Note: the international endpoint (asr.intl) does not support 16k_zh_large.
+  * Temporary hotword list HotwordList: payee names and product names, weight 1-11 (11 = super hotword)
+  * Post-processing: low-confidence fields are always read back for confirmation (done on the Agent side)
 """
 from __future__ import annotations
 
@@ -53,11 +54,12 @@ def tc3_headers(payload: str, host: str, secret_id: str, secret_key: str, region
 
 
 def build_hotwords(payees: list[dict]) -> str:
-    """把收款人称呼和常用词做成临时热词表，例如 '阿囡|10,PayNow|10'。
+    """Build a temporary hotword list from payee names and common words, e.g. 'daughter|10,PayNow|10'.
 
-    权重 11 是“超级热词”，官方建议只给极少数必须生效的词，设太多会降低整体字准率，所以这里不用。
+    Weight 11 is a "super hotword"; Tencent recommends it only for a very few must-hit words, as too many lower
+    overall accuracy, so it isn't used here.
     """
-    words: list[tuple[str, int]] = [("PayNow", 10), ("养老金", 10), ("水电费", 10), ("杂费", 8), ("CPF", 10)]
+    words: list[tuple[str, int]] = [("PayNow", 10), ("pension", 10), ("utilities", 10), ("S&CC", 8), ("CPF", 10)]
     for p in payees:
         for a in [p["name"], *p.get("aliases", [])]:
             if 1 <= len(a) <= 10:
@@ -72,7 +74,7 @@ def build_hotwords(payees: list[dict]) -> str:
 
 def recognize(wav_bytes: bytes, engine: str | None = None, hotwords: str = "") -> dict:
     if not settings.asr_enabled:
-        raise ASRError("未配置 TENCENTCLOUD_SECRET_ID / TENCENTCLOUD_SECRET_KEY")
+        raise ASRError("TENCENTCLOUD_SECRET_ID / TENCENTCLOUD_SECRET_KEY are not set")
     body = {"EngSerViceType": engine or settings.asr_engine, "SourceType": 1, "VoiceFormat": "wav",
             "Data": base64.b64encode(wav_bytes).decode(), "DataLen": len(wav_bytes),
             "WordInfo": 0, "FilterModal": 1, "ConvertNumMode": 1}
@@ -85,7 +87,7 @@ def recognize(wav_bytes: bytes, engine: str | None = None, hotwords: str = "") -
     try:
         r = requests.post(f"https://{host}", data=payload.encode(), headers=headers, timeout=20)
     except requests.RequestException as e:
-        raise ASRError(f"网络错误：{e}") from e
+        raise ASRError(f"Network error: {e}") from e
     resp = r.json().get("Response", {})
     if "Error" in resp:
         raise ASRError(f"{resp['Error'].get('Code')}: {resp['Error'].get('Message')}")
