@@ -13,6 +13,14 @@ from app.models import RiskLevel
 
 # (category, weight, regex, plain-language explanation for the elderly user)
 PATTERNS = [
+    ("bank_impersonation", 3, r"(?:from|claims?.{0,15}) the bank.{0,20}(?:fraud|security) team|bank's (?:fraud|security) team",
+     "A caller claiming to be bank staff and asking you to move money may be a scammer. Verify through your bank's official contact channel."),
+    ("social_emergency", 3, r"(?:met on|on) (?:facebook|instagram|telegram|whatsapp).{0,100}(?:stuck|fees|emergency|needs)",
+     "An online contact asking for emergency fees is a scam warning. Verify their identity before sending money."),
+    ("relative_new_number", 3, r"(?:nephew|niece|son|daughter|relative).{0,60}new (?:number|phone).{0,100}(?:account|money|needs)",
+     "A relative using a new number and another person's account may be an impersonator. Call their known number first."),
+    ("verification_payment", 5, r"(?:transfer|send|pay).{0,100}(?:verify|verification|validate).{0,20}(?:account|identity)",
+     "A message asking you to transfer money to verify an account is a scam warning. Do not follow the message's payment instructions."),
     ("safe_account", 5, r"safe(ty)? account|secure account|holding account|protected account|safekeeping account",
      "Real police, government and bank staff will never ask you to move money into a so-called \"safe account\"."),
     ("authority", 3, r"police|\bica\b|ministry of manpower|\bmom officer|\biras\b|\bmas\b|bank (officer|staff)|"
@@ -43,11 +51,13 @@ PATTERNS = [
 ]
 _COMPILED = [(c, w, re.compile(p, re.I), why) for c, w, p, why in PATTERNS]
 
-MONEY_MOVE = re.compile(r"\b(transfer|send|pay|wire|give|buy|move|put|invest|top up|deposit)\b|money to", re.I)
+MONEY_MOVE = re.compile(r"\b(transfer|send|sent|pay|wire|give|buy|move|put|invest|top up|deposit)\b|money to", re.I)
 
 
 def scan(text: str) -> tuple[RiskLevel, list[str], list[str]]:
     """Returns (risk level, plain-language reasons, matched categories)."""
+    text = text.lower().replace("p0lice", "police")
+    text = re.sub(r"\bs[\s-]*a[\s-]*f[\s-]*e\b", "safe", text)
     score, reasons, cats = 0, [], []
     for cat, w, rx, why in _COMPILED:
         if rx.search(text):

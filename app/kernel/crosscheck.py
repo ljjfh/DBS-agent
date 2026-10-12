@@ -12,6 +12,7 @@ evidence.py and the rules handle that, e.g. "the usual amount").
 from __future__ import annotations
 
 import re
+from decimal import Decimal, InvalidOperation
 
 from app.models import Draft, fmt_money
 
@@ -72,12 +73,12 @@ def _asset(s: str | None) -> str | None:
 def compare(draft: Draft, extracted: dict, bank) -> dict:
     fields: dict[str, str] = {}
     why: list[str] = []
-    ex = extracted or {}
+    ex = extracted if isinstance(extracted, dict) else {}
     intent = str(ex.get("intent") or "none").lower()
     said_payee, said_amount = ex.get("payee"), ex.get("amount")
 
     # ---- Is there a request at all, and of the same type?
-    if intent in ("none", "", "null", "unknown") and not said_payee and said_amount in (None, ""):
+    if intent not in ("transfer", "bill", "bill_pay", "bill_payment", "payment", "invest", "investment") or (not said_payee and said_amount in (None, "")):
         fields["request"] = "mismatch"
         why.append("The independent check found no payment request in what you said.")
     else:
@@ -90,7 +91,10 @@ def compare(draft: Draft, extracted: dict, bank) -> dict:
             fields["type"] = "match"
 
     # ---- Who / what
-    if said_payee:
+    if said_payee is not None and not isinstance(said_payee, str):
+        fields["payee"] = "mismatch"
+        why.append("The independent check returned an invalid recipient.")
+    elif said_payee:
         targets = resolve_targets(str(said_payee), draft, bank)
         ok = draft.payee_id in targets
         fields["payee"] = "match" if ok else "mismatch"
@@ -102,19 +106,33 @@ def compare(draft: Draft, extracted: dict, bank) -> dict:
                     label = f"your {p['relation']} {p['name']}"
             why.append(f"Who: you asked for {label}, but this is for {draft.payee_name}.")
     else:
-        fields["payee"] = "not stated"
+        fields["payee"] = "mismatch"
+        why.append("The independent check could not confirm the recipient or product.")
 
     # ---- How much
-    try:
-        cents = round(float(str(said_amount).replace(",", "").replace("S$", "").replace("$", "")) * 100) \
-            if said_amount not in (None, "") else None
-    except ValueError:
-        cents = None
-    if cents is not None and cents > 0:
-        ok = abs(cents - draft.amount_cents) <= 1
+    cents = None
+    invalid = False
+    if said_amount not in (None, ""):
+        try:
+            if isinstance(said_amount, bool) or not isinstance(said_amount, (int, float, str)):
+                raise ValueError("Invalid amount type")
+            amount = Decimal(str(said_amount).replace(",", "").replace("S$", "").replace("$", ""))
+            if not amount.is_finite() or amount <= 0 or amount * 100 != (amount * 100).to_integral_value():
+                raise ValueError("Invalid amount")
+            cents = int(amount * 100)
+        except (ValueError, InvalidOperation):
+            invalid = True
+    if invalid:
+        fields["amount"] = "mismatch"
+        why.append("The independent check returned an invalid amount; please say the amount again.")
+    elif cents is not None:
+        ok = cents == draft.amount_cents
         fields["amount"] = "match" if ok else "mismatch"
         if not ok:
             why.append(f"Amount: you said {fmt_money(cents)}, but this is for {fmt_money(draft.amount_cents)}.")
+    elif draft.grounding.get("amount_source") == "user":
+        fields["amount"] = "mismatch"
+        why.append("The independent check could not confirm the amount you stated.")
     else:
         fields["amount"] = "not stated"
 

@@ -113,7 +113,7 @@ def apply_setup(setup: dict):
 def run_case(case: dict, stats: dict, verbose: bool = False) -> dict:
     runtime.bank.reset()
     apply_setup(case.get("setup"))
-    s = runtime.sessions.reset(f"eval-{case['id']}")
+    s = runtime.sessions.get(None)
     for k in list(stats):
         stats[k] = 0
     turn_latency, replies, result, error = [], [], None, None

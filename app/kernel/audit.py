@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import threading
 import time
 from pathlib import Path
@@ -31,16 +32,24 @@ class AuditLog:
         with self.path.open(encoding="utf-8") as f:
             for line in f:
                 if line.strip():
-                    last = json.loads(line)["hash"]
+                    try:
+                        last = json.loads(line)["hash"]
+                    except (ValueError, KeyError, TypeError):
+                        self._corrupt = True
+                        return last
         return last
 
     def append(self, event: str, session_id: str, data: dict) -> dict:
         with self._lock:
+            if getattr(self, "_corrupt", False):
+                raise OSError("Audit log is damaged; restore it before appending")
             body = {"ts": round(time.time(), 3), "event": event, "session_id": session_id,
                     "data": data, "prev_hash": self._last_hash}
             body["hash"] = hashlib.sha256(_canon(body).encode()).hexdigest()
             with self.path.open("a", encoding="utf-8") as f:
                 f.write(_canon(body) + "\n")
+                f.flush()
+                os.fsync(f.fileno())
             self._last_hash = body["hash"]
             return body
 
@@ -54,8 +63,14 @@ class AuditLog:
             for i, line in enumerate(f):
                 if not line.strip():
                     continue
-                rec = json.loads(line)
-                claimed = rec.pop("hash")
+                try:
+                    rec = json.loads(line)
+                    claimed = rec.pop("hash")
+                    if "prev_hash" not in rec:
+                        raise ValueError("Missing previous hash")
+                except (ValueError, KeyError, TypeError, AttributeError):
+                    return {"ok": False, "records": n, "broken_at_line": i + 1}
+
                 if rec["prev_hash"] != prev or hashlib.sha256(_canon(rec).encode()).hexdigest() != claimed:
                     return {"ok": False, "records": n, "broken_at_line": i + 1}
                 prev = claimed
@@ -66,4 +81,12 @@ class AuditLog:
         if not self.path.exists():
             return []
         with self.path.open(encoding="utf-8") as f:
-            return [r for r in (json.loads(l) for l in f if l.strip()) if r["session_id"] == session_id]
+            out = []
+            for line in f:
+                try:
+                    r = json.loads(line)
+                    if r.get("session_id") == session_id:
+                        out.append(r)
+                except (ValueError, AttributeError):
+                    break
+            return out

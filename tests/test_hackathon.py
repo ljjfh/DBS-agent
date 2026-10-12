@@ -523,8 +523,10 @@ class TestVerifier(Base):
         self.assertEqual(e.exception.code, "NOT_VERIFIED")
 
     def test_not_stated_is_not_a_mismatch(self):
-        ex = extract_offline(["Send money to my daughter", "the usual amount"], catalog(self.bank, "u_chen"))
+        ex = extract_offline(["Send money to my daughter"], catalog(self.bank, "u_chen"))
         self.assertIsNone(ex["amount"])
+        usual = extract_offline(["Send money to my daughter", "the usual amount"], catalog(self.bank, "u_chen"))
+        self.assertEqual(usual["amount"], 200)  # explicit reference resolved against bank history
 
     def test_model_verifier_parses_json_and_runs_in_parallel(self):
         seen = {}

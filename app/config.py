@@ -27,6 +27,7 @@ def _hosts() -> list[str]:
 
 
 class Settings:
+    ledger_path = Path(_f("LEDGER_PATH", str(ROOT / "data" / "ledger.sqlite3")))
     # ---- Model (OpenAI-compatible API, defaults to Tencent Hunyuan) ----
     # offline = built-in rule "model": needs no key, and is the fallback when the online model is unavailable
     llm_provider = _f("LLM_PROVIDER", "offline")          # offline | openai_compat

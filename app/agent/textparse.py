@@ -85,6 +85,19 @@ def _word_runs(text: str):
 
 def parse_amount(text: str) -> float | None:
     """Extract an amount (SGD) from one sentence. Returns None if there isn't one. Never guesses."""
+    # An explicit self-correction supersedes the earlier amount.
+    fixed = re.search(r"\b(?:change|correct|revise)\s+(?:the\s+)?amount\s+to\s+(.+)|\bmake\s+(?:it|that)\s+(.+)|\b(?:no|sorry|actually|I mean)\s*[,;]?\s+(.+)", text, re.I)
+    if fixed:
+        text = next(g for g in fixed.groups() if g)
+    text = re.sub(r"\ba couple of hundred\b", "two hundred", text, flags=re.I)
+    fraction = re.search(r"\b(half|a quarter)\s+(?:of\s+)?(.+)", text, re.I)
+    if fraction:
+        base = parse_amount(fraction[2])
+        if base is None:
+            return None
+        from decimal import Decimal
+        cents = Decimal(str(base)) * 100 / (2 if fraction[1].lower() == "half" else 4)
+        return float(cents / 100) if cents == cents.to_integral_value() else None
     for m in _MONEY_RE.finditer(text):
         digits, cents, unit = m.group(1), m.group(2), (m.group(3) or "").lower()
         # Skip long numbers that look like account numbers, phone numbers or dates
@@ -132,6 +145,11 @@ _ACCOUNT_RE = re.compile(r"\b(current|savings?)\s+(account|acct|a/c)\b|\bfrom (?
 def find_account(text: str) -> str | None:
     """Which of the customer's accounts they named ("from my current account"), as words; None if not said.
     ("savings bonds" is a product, not the savings account.)"""
+    source = re.search(r"\bfrom (?:my |the )?(current|savings?|joint)(?:\s+account)?\b", text, re.I)
+    if source:
+        return source[1].lower().rstrip('s') + ('s account' if source[1].lower().startswith('saving') else ' account')
+    if re.search(r"\bto (?:my |the )?(current|savings?|joint)\s+account\b", text, re.I):
+        return None
     m = _ACCOUNT_RE.search(text)
     if not m:
         return None
@@ -148,7 +166,9 @@ def account_id_for(phrase: str | None, accounts: list[dict]) -> str | None:
 
 def match_payees(text: str, payees: list[dict]) -> list[dict]:
     """Find payees by alias in the text; return every hit (the caller must ask if there's more than one)."""
-    low = text.lower()
+    low = re.sub(r"\bd\s+b\s+s\b", "dbs", text.lower())
+    # Source accounts are not recipients of an internal transfer.
+    low = re.sub(r"\bfrom (?:my |the )?(?:savings?|current|joint)(?:\s+account)?\b", "", low)
     hits = []
     for p in payees:
         names = [p["name"].lower(), *[a.lower() for a in p.get("aliases", [])]]

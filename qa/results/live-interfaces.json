@@ -1,0 +1,683 @@
+{
+  "mode": "live API + synthetic bank + generated English speech",
+  "results": [
+    {
+      "name": "service_health",
+      "status": "PASS",
+      "seconds": 0.02,
+      "observed": [
+        200,
+        {
+          "llm": "openai_compat",
+          "model": "qwen3.8:27b",
+          "asr": "tencent",
+          "verifier": "model (qwen3.8:27b)",
+          "public_demo": false,
+          "browser_key": true
+        }
+      ]
+    },
+    {
+      "name": "model_text",
+      "status": "PASS",
+      "seconds": 0.65,
+      "observed": {
+        "role": "assistant",
+        "content": "API_OK",
+        "tool_calls": []
+      }
+    },
+    {
+      "name": "model_tools",
+      "status": "PASS",
+      "seconds": 0.77,
+      "observed": {
+        "role": "assistant",
+        "content": "",
+        "tool_calls": [
+          {
+            "id": "chatcmpl-tool-884a08c9762a9e6f",
+            "type": "function",
+            "function": {
+              "name": "get_balance",
+              "arguments": "{}"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "model_json",
+      "status": "PASS",
+      "seconds": 0.0,
+      "observed": {
+        "extracted": {
+          "intent": "send_money",
+          "payee": "my daughter",
+          "amount": 50
+        },
+        "raw": "```json\n{\n  \"intent\": \"send_money\",\n  \"payee\": \"my daughter\",\n  \"amount\": 50\n}\n```"
+      }
+    },
+    {
+      "name": "asr_english_sample",
+      "status": "PASS",
+      "seconds": 1.23,
+      "observed": [
+        200,
+        {
+          "text": "Send 50 dollars to my daughter.",
+          "audio_ms": 2675,
+          "latency_ms": 1215,
+          "engine": "16k_en"
+        }
+      ]
+    },
+    {
+      "name": "/",
+      "status": "PASS",
+      "seconds": 0.0,
+      "observed": {
+        "http": 200
+      }
+    },
+    {
+      "name": "/app.js",
+      "status": "PASS",
+      "seconds": 0.0,
+      "observed": {
+        "http": 200
+      }
+    },
+    {
+      "name": "/styles.css",
+      "status": "PASS",
+      "seconds": 0.0,
+      "observed": {
+        "http": 200
+      }
+    },
+    {
+      "name": "/dbs-logo.svg",
+      "status": "PASS",
+      "seconds": 0.02,
+      "observed": {
+        "http": 200
+      }
+    },
+    {
+      "name": "/favicon.svg",
+      "status": "PASS",
+      "seconds": 0.0,
+      "observed": {
+        "http": 200
+      }
+    },
+    {
+      "name": "/api/state",
+      "status": "PASS",
+      "seconds": 0.0,
+      "observed": {
+        "http": 200
+      }
+    },
+    {
+      "name": "/api/world",
+      "status": "PASS",
+      "seconds": 0.0,
+      "observed": {
+        "http": 200
+      }
+    },
+    {
+      "name": "/api/card/4df050a5619d45a8a3bf3ff0e18a7707",
+      "status": "PASS",
+      "seconds": 0.0,
+      "observed": {
+        "http": 200
+      }
+    },
+    {
+      "name": "/api/trace/4df050a5619d45a8a3bf3ff0e18a7707",
+      "status": "PASS",
+      "seconds": 0.0,
+      "observed": {
+        "http": 200
+      }
+    },
+    {
+      "name": "/api/audit/session/4df050a5619d45a8a3bf3ff0e18a7707",
+      "status": "PASS",
+      "seconds": 0.02,
+      "observed": {
+        "http": 200
+      }
+    },
+    {
+      "name": "/api/audit/verify",
+      "status": "PASS",
+      "seconds": 0.01,
+      "observed": {
+        "http": 200
+      }
+    },
+    {
+      "name": "live_agent_balance",
+      "status": "PASS",
+      "seconds": 1.77,
+      "observed": {
+        "http": 200,
+        "session_id": "a932ab49ab7a4466a95c11012bfd9538",
+        "reply": "You have three thousand two hundred fifty dollars (S$3,250.00) in your Savings Account, and eight hundred twenty dollars (S$820.00) in your Current Account. Would you like help with anything else?",
+        "llm": "openai_compat",
+        "phase": "IDLE",
+        "card": null,
+        "fallback": [],
+        "verification": {},
+        "turns": [
+          {
+            "text": "What is my balance?",
+            "reply": "You have three thousand two hundred fifty dollars (S$3,250.00) in your Savings Account, and eight hundred twenty dollars (S$820.00) in your Current Account. Would you like help with anything else?",
+            "phase": "IDLE"
+          }
+        ]
+      }
+    },
+    {
+      "name": "live_agent_transfer",
+      "status": "PASS",
+      "seconds": 5.33,
+      "observed": {
+        "http": 200,
+        "session_id": "1814631939054a4385585eda63ee9b1d",
+        "reply": "I've prepared a transfer of fifty dollars (S$50.00) to your daughter Chen Mei Ling from your savings account. Please check the confirmation card and approve it with your fingerprint or face when you're ready.",
+        "llm": "openai_compat",
+        "phase": "AWAITING_AUTH",
+        "card": {
+          "draft_id": "d_2f6537879a",
+          "digest": "04c866ad792e4be6ce87abed335e0a2f39089b281746e6dc6fda38d14f2aa7e5",
+          "kind": "transfer",
+          "title": "Confirm transfer",
+          "payee_name": "Chen Mei Ling",
+          "payee_relation": "daughter",
+          "payee_account": "DBS ••••4821",
+          "asset_class": "Cash",
+          "from_account_id": "SAV-001",
+          "verification": {
+            "status": "match",
+            "fields": {
+              "type": "match",
+              "payee": "match",
+              "amount": "match",
+              "asset_class": "not stated",
+              "from_account": "not stated"
+            },
+            "mismatches": [],
+            "engine": "model (qwen3.8:27b)"
+          },
+          "amount": "S$50.00",
+          "amount_words": "fifty dollars",
+          "amount_spoken_digits": "five, zero",
+          "from_account": "Savings Account (SAV-001)",
+          "risk_level": "MEDIUM",
+          "reasons": [
+            "It's late at night, so let's double-check."
+          ],
+          "verify_question": "Do you know this person, and is this payment your own idea?",
+          "cooldown_left": 0,
+          "can_confirm": true,
+          "readback": "You want to send fifty dollars (S$50.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
+          "expires_at": 1791824034,
+          "you_said": "Send 50 to my daughter",
+          "amount_from_user": true,
+          "amount_source": "user",
+          "payee_from_user": true
+        },
+        "fallback": [],
+        "verification": {
+          "status": "match",
+          "fields": {
+            "type": "match",
+            "payee": "match",
+            "amount": "match",
+            "asset_class": "not stated",
+            "from_account": "not stated"
+          },
+          "mismatches": [],
+          "engine": "model (qwen3.8:27b)"
+        },
+        "turns": [
+          {
+            "text": "Send 50 to my daughter",
+            "reply": "I've prepared a transfer of fifty dollars (S$50.00) to your daughter Chen Mei Ling from your savings account. Please check the confirmation card and approve it with your fingerprint or face when you're ready.",
+            "phase": "AWAITING_AUTH"
+          }
+        ]
+      }
+    },
+    {
+      "name": "live_agent_bill",
+      "status": "PASS",
+      "seconds": 4.91,
+      "observed": {
+        "http": 200,
+        "session_id": "cda19905498d4a258940402a7dfd656f",
+        "reply": "I've prepared the payment of eighty-six dollars and forty cents (S$86.40) to SP Group Utilities from your savings account. Please check the confirmation card and approve it with your fingerprint or face when ready.",
+        "llm": "openai_compat",
+        "phase": "AWAITING_AUTH",
+        "card": {
+          "draft_id": "d_39e09bad03",
+          "digest": "46a0a0fafeb2a4cb729e42758bae6f0f52f9a6cf0822806a264c4f4af2e6e829",
+          "kind": "bill",
+          "title": "Confirm bill payment",
+          "payee_name": "SP Group Utilities",
+          "payee_relation": "",
+          "payee_account": "Bill no. ••••5502",
+          "asset_class": "Cash",
+          "from_account_id": "SAV-001",
+          "verification": {
+            "status": "match",
+            "fields": {
+              "type": "match",
+              "payee": "match",
+              "amount": "not stated",
+              "asset_class": "not stated",
+              "from_account": "not stated"
+            },
+            "mismatches": [],
+            "engine": "model (qwen3.8:27b)"
+          },
+          "amount": "S$86.40",
+          "amount_words": "eighty-six dollars and forty cents",
+          "amount_spoken_digits": "eight, six",
+          "from_account": "Savings Account (SAV-001)",
+          "risk_level": "MEDIUM",
+          "reasons": [
+            "It's late at night, so let's double-check."
+          ],
+          "verify_question": "Do you know this person, and is this payment your own idea?",
+          "cooldown_left": 0,
+          "can_confirm": true,
+          "readback": "You want to pay eighty-six dollars and forty cents (S$86.40) to SP Group Utilities, from your Savings Account. Is that right?",
+          "expires_at": 1791824039,
+          "you_said": "Please pay the October utilities bill to SP Group Utilities.",
+          "amount_from_user": true,
+          "amount_source": "bill",
+          "payee_from_user": true
+        },
+        "fallback": [],
+        "verification": {
+          "status": "match",
+          "fields": {
+            "type": "match",
+            "payee": "match",
+            "amount": "not stated",
+            "asset_class": "not stated",
+            "from_account": "not stated"
+          },
+          "mismatches": [],
+          "engine": "model (qwen3.8:27b)"
+        },
+        "turns": [
+          {
+            "text": "Pay the electricity bill",
+            "reply": "I see two unpaid bills, but neither is clearly labelled as electricity. Do you mean the October utilities bill (S$86.40) or the town council charges (S$42.00)?",
+            "phase": "IDLE"
+          },
+          {
+            "text": "Please pay the October utilities bill to SP Group Utilities.",
+            "reply": "I've prepared the payment of eighty-six dollars and forty cents (S$86.40) to SP Group Utilities from your savings account. Please check the confirmation card and approve it with your fingerprint or face when ready.",
+            "phase": "AWAITING_AUTH"
+          }
+        ]
+      }
+    },
+    {
+      "name": "live_agent_investment",
+      "status": "PASS",
+      "seconds": 4.67,
+      "observed": {
+        "http": 200,
+        "session_id": "62cfa18bf9fb415f95bea10fce5b584b",
+        "reply": "I've prepared a draft to invest two hundred dollars (S$200.00) in the DBS Income Fund from your savings account. Please check the confirmation card and approve it with your fingerprint or face when you're ready.",
+        "llm": "openai_compat",
+        "phase": "AWAITING_AUTH",
+        "card": {
+          "draft_id": "d_9a4ff75d5d",
+          "digest": "690cbd5dc77bedd9754030c5a073beea3948b5c72bb7b329e14bdf1878ff34c5",
+          "kind": "investment",
+          "title": "Confirm investment",
+          "payee_name": "DBS Income Fund",
+          "payee_relation": "",
+          "payee_account": "about 196.08 units at S$1.023 (demo price) · risk 2 of 5, can lose value",
+          "asset_class": "Unit trust",
+          "from_account_id": "SAV-001",
+          "verification": {
+            "status": "match",
+            "fields": {
+              "type": "match",
+              "payee": "match",
+              "amount": "match",
+              "asset_class": "match",
+              "from_account": "not stated"
+            },
+            "mismatches": [],
+            "engine": "model (qwen3.8:27b)"
+          },
+          "amount": "S$200.00",
+          "amount_words": "two hundred dollars",
+          "amount_spoken_digits": "two, zero, zero",
+          "from_account": "Savings Account (SAV-001)",
+          "risk_level": "MEDIUM",
+          "reasons": [
+            "It's late at night, so let's double-check."
+          ],
+          "verify_question": "Do you know this person, and is this payment your own idea?",
+          "cooldown_left": 0,
+          "can_confirm": true,
+          "readback": "You want to invest two hundred dollars (S$200.00) in the DBS Income Fund, a unit trust, from your Savings Account. Is that right?",
+          "expires_at": 1791824043,
+          "you_said": "Invest 200 in income fund",
+          "amount_from_user": true,
+          "amount_source": "user",
+          "payee_from_user": true
+        },
+        "fallback": [],
+        "verification": {
+          "status": "match",
+          "fields": {
+            "type": "match",
+            "payee": "match",
+            "amount": "match",
+            "asset_class": "match",
+            "from_account": "not stated"
+          },
+          "mismatches": [],
+          "engine": "model (qwen3.8:27b)"
+        },
+        "turns": [
+          {
+            "text": "Invest 200 in income fund",
+            "reply": "I've prepared a draft to invest two hundred dollars (S$200.00) in the DBS Income Fund from your savings account. Please check the confirmation card and approve it with your fingerprint or face when you're ready.",
+            "phase": "AWAITING_AUTH"
+          }
+        ]
+      }
+    },
+    {
+      "name": "model_mistake_freezes",
+      "status": "PASS",
+      "seconds": 1.56,
+      "observed": {
+        "http": 200,
+        "phase": "FROZEN",
+        "can_confirm": false,
+        "verification": {
+          "status": "mismatch",
+          "fields": {
+            "type": "match",
+            "payee": "match",
+            "amount": "mismatch",
+            "asset_class": "not stated",
+            "from_account": "not stated"
+          },
+          "mismatches": [
+            "Amount: you said S$50.00, but this is for S$500.00."
+          ],
+          "engine": "model (qwen3.8:27b)"
+        },
+        "receipts": 0
+      }
+    },
+    {
+      "name": "signature_missing_rejected",
+      "status": "PASS",
+      "seconds": 0.0,
+      "observed": [
+        400,
+        {
+          "error": "I can't find this pending payment.",
+          "code": "NO_SUCH_DRAFT",
+          "trace": []
+        }
+      ]
+    },
+    {
+      "name": "passkey_options_register_remove",
+      "status": "PASS",
+      "seconds": 0.08,
+      "observed": {
+        "register": {
+          "key_id": "8d1d75c28b5f5d44",
+          "enrolled": true,
+          "credential_ids": [
+            "x6CoAw21VRQ1_TAKiu9XRg"
+          ],
+          "key_ids": [
+            "8d1d75c28b5f5d44"
+          ]
+        },
+        "unsigned_remove": [
+          400,
+          {
+            "error": "Verify your identity before removing a passkey.",
+            "code": "AUTH_REQUIRED"
+          }
+        ],
+        "remove": [
+          200,
+          {
+            "removed": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "register_browser_key",
+      "status": "PASS",
+      "seconds": 0.0,
+      "observed": [
+        200,
+        {
+          "key_id": "7b59b5ce2faa16c9"
+        }
+      ]
+    },
+    {
+      "name": "challenge_confirm_receipt",
+      "status": "PASS",
+      "seconds": 0.04,
+      "observed": {
+        "http": 200,
+        "receipt_checks": [
+          [
+            "Receipt not edited",
+            true
+          ],
+          [
+            "Card matches its digest",
+            true
+          ],
+          [
+            "Signed payload is for this exact card",
+            true
+          ],
+          [
+            "Signature valid for the device key",
+            true
+          ],
+          [
+            "Key id 7b59b5ce2faa16c9 matches",
+            true
+          ]
+        ],
+        "result": {
+          "txn_id": "TXN-DCAF6F63EF",
+          "status": "SUCCESS",
+          "amount_cents": 5000,
+          "payee_id": "p_daughter",
+          "balance_after_cents": 320000,
+          "executed_at": 1791823446.7049289,
+          "user_id": "u_chen~63d4a651401144fba7272cc88aa376af",
+          "draft_id": "d_2f6537879a",
+          "verifiable": {
+            "receipt_version": 2,
+            "txn_id": "TXN-DCAF6F63EF",
+            "status": "SUCCESS",
+            "executed_at": 1791823446,
+            "session_id": "1814631939054a4385585eda63ee9b1d",
+            "verification": {
+              "status": "match",
+              "fields": {
+                "type": "match",
+                "payee": "match",
+                "amount": "match",
+                "asset_class": "not stated",
+                "from_account": "not stated"
+              },
+              "engine": "model (qwen3.8:27b)"
+            },
+            "card": {
+              "draft_id": "d_2f6537879a",
+              "user_id": "u_chen~63d4a651401144fba7272cc88aa376af",
+              "kind": "transfer",
+              "from_account": "SAV-001",
+              "payee_id": "p_daughter",
+              "payee_name": "Chen Mei Ling",
+              "amount_cents": 5000,
+              "currency": "SGD",
+              "bill_id": null,
+              "asset_class": "Cash",
+              "you_said": "Send 50 to my daughter",
+              "nonce": "f35e07f0de21",
+              "expires_at": 1791824034
+            },
+            "digest": "04c866ad792e4be6ce87abed335e0a2f39089b281746e6dc6fda38d14f2aa7e5",
+            "authorization": {
+              "method": "device_key",
+              "alg": "ECDSA P-256 / SHA-256 (browser key, unlocked by the demo's simulated fingerprint)",
+              "payload": "{\"amount_cents\":5000,\"asset_class\":\"Cash\",\"currency\":\"SGD\",\"digest\":\"04c866ad792e4be6ce87abed335e0a2f39089b281746e6dc6fda38d14f2aa7e5\",\"domain\":\"STAR-DCTA-AUTH-V1\",\"draft_id\":\"d_2f6537879a\",\"expires_at\":1791823566,\"from_account\":\"SAV-001\",\"kind\":\"transfer\",\"nonce\":\"9ef0bf6ba254ce713b87aaf2\",\"payee\":\"Chen Mei Ling\",\"session_id\":\"1814631939054a4385585eda63ee9b1d\",\"you_said\":\"Send 50 to my daughter\"}",
+              "signature": "26M7SDlsBcjL+3g6r4IG6rvvwytHXG4uI5EOGbl9YoUxwW7NSMJBzlrBAYqtjF1+dfNVe3tmCWx+7sOyPI+ysg==",
+              "public_key": {
+                "kty": "EC",
+                "crv": "P-256",
+                "x": "aPq40zNxGyi5pLDYH8QF5jDLaqHtSv2mMQRgkrF6QRU",
+                "y": "lAeUhpY52sIk8Rf4ipvCWPE29O2xxvbmBnJjg6b78Mo"
+              },
+              "key_id": "7b59b5ce2faa16c9"
+            },
+            "receipt_sha256": "18dffc898f789a641ceee7583669848ab59c1c9747e679c77768c72ece2518fe"
+          }
+        }
+      }
+    },
+    {
+      "name": "cancel_settled_draft",
+      "status": "PASS",
+      "seconds": 0.0,
+      "observed": [
+        400,
+        {
+          "error": "I can't find this pending payment.",
+          "code": "NO_SUCH_DRAFT"
+        }
+      ]
+    },
+    {
+      "name": "protection_challenge",
+      "status": "PASS",
+      "seconds": 0.02,
+      "observed": [
+        200,
+        {
+          "payload_present": true
+        }
+      ]
+    },
+    {
+      "name": "protection_raise",
+      "status": "PASS",
+      "seconds": 0.02,
+      "observed": [
+        200,
+        {
+          "level": "enhanced",
+          "pending": null,
+          "delay_seconds": 86400,
+          "high_threshold": 1000.0
+        }
+      ]
+    },
+    {
+      "name": "security_lab",
+      "status": "PASS",
+      "seconds": 0.3,
+      "observed": {
+        "http": 200,
+        "blocked": 22,
+        "total": 22
+      }
+    },
+    {
+      "name": "protection_signed_lower_and_restore",
+      "status": "PASS",
+      "seconds": 0.08,
+      "observed": {
+        "scheduled": {
+          "level": "enhanced",
+          "pending": {
+            "to": "standard",
+            "effective_at": 1791909847,
+            "requested_at": 1791823447
+          },
+          "delay_seconds": 86400,
+          "high_threshold": 1000.0
+        },
+        "restored": [
+          200,
+          {
+            "level": "enhanced",
+            "pending": null,
+            "delay_seconds": 86400,
+            "high_threshold": 1000.0
+          }
+        ]
+      }
+    },
+    {
+      "name": "unsigned_live_draft_refused",
+      "status": "PASS",
+      "seconds": 0.01,
+      "observed": [
+        400,
+        {
+          "error": "A valid signature from your device is required.",
+          "code": "AUTH_FAILED",
+          "trace": []
+        }
+      ]
+    },
+    {
+      "name": "cancel_live_investment",
+      "status": "PASS",
+      "seconds": 0.0,
+      "observed": [
+        200,
+        {
+          "reply": "OK, it's cancelled. No money was sent.",
+          "speak": "OK, it's cancelled. No money was sent.",
+          "phase": "IDLE",
+          "next_task": null
+        }
+      ]
+    },
+    {
+      "name": "secret_file_not_served",
+      "status": "PASS",
+      "seconds": 0.0,
+      "observed": {
+        "http": 404
+      }
+    }
+  ]
+}

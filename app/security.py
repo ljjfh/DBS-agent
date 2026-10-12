@@ -40,8 +40,10 @@ _hits_lock = threading.Lock()
 
 
 def _client(scope, headers) -> str:
-    fwd = headers.get("x-forwarded-for", "")            # behind the platform's proxy, the first hop is the device
-    return fwd.split(",")[0].strip() or (scope.get("client") or ("?",))[0]
+    # Never let arbitrary forwarded headers create a fresh rate-limit identity.
+    # The ASGI server must run with proxy_headers=False (see app/serve.py).
+    return (scope.get("client") or ("?",))[0]
+
 
 
 def _allow(client: str, path: str) -> bool:
@@ -84,11 +86,34 @@ class SecurityMiddleware:
                 length = int(headers.get("content-length", "0"))
             except ValueError:
                 length = limit + 1
-            if length > limit:
+            if length < 0 or length > limit:
                 return await self._deny(send, 413, "TOO_LARGE", "Request is too large.")
             if settings.public_demo and path in COSTLY and not _allow(_client(scope, headers), path):
                 return await self._deny(send, 429, "RATE_LIMITED",
                                         "Too many requests from this device. Please wait a minute and try again.")
+
+        if method == "POST":
+            chunks, size = [], 0
+            while True:
+                message = await receive()
+                if message["type"] == "http.disconnect":
+                    return
+                chunk = message.get("body", b"")
+                size += len(chunk)
+                if size > limit:
+                    return await self._deny(send, 413, "TOO_LARGE", "Request is too large.")
+                chunks.append(chunk)
+                if not message.get("more_body", False):
+                    break
+            original_receive = receive
+            delivered = False
+            async def buffered_receive():
+                nonlocal delivered
+                if delivered:
+                    return await original_receive()
+                delivered = True
+                return {"type": "http.request", "body": b"".join(chunks), "more_body": False}
+            receive = buffered_receive
 
         async def send_with_headers(message):
             if message["type"] == "http.response.start":

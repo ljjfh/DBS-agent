@@ -43,20 +43,24 @@ class ExecutionGateway:
         self._lock = threading.Lock()
 
     def execute(self, *, user_id: str, session_id: str, card: dict, digest: str, auth: dict | None,
-                idempotency_key: str) -> dict:
+                idempotency_key: str, verification: dict | None = None) -> dict:
         try:
             method = self._check(user_id, session_id, card, digest, auth)
         except GatewayError as e:
             self._log("gateway.rejected", session_id, {"draft_id": card.get("draft_id"), "reason": e.code})
             raise
-        if card["kind"] == "investment":
-            receipt = self._bank.execute_investment(user_id, card["from_account"], card["payee_id"],
-                                                    card["amount_cents"], idempotency_key=idempotency_key)
-        else:
-            receipt = self._bank.execute_payment(user_id, card["from_account"], card["payee_id"], card["amount_cents"],
-                                                 idempotency_key=idempotency_key, bill_id=card.get("bill_id"))
-        self._log("gateway.posted", session_id, {"draft_id": card.get("draft_id"), "method": method,
-                                                 "txn_id": receipt["txn_id"]})
+        metadata = {"session_id": session_id, "verification": verification or {}, "card": card, "digest": digest, "authorization": auth or {"method": "demo authenticator (unsigned)"}}
+        try:
+            if card["kind"] == "investment":
+                receipt = self._bank.execute_investment(user_id, card["from_account"], card["payee_id"],
+                    card["amount_cents"], idempotency_key=idempotency_key, metadata=metadata)
+            else:
+                receipt = self._bank.execute_payment(user_id, card["from_account"], card["payee_id"], card["amount_cents"],
+                    idempotency_key=idempotency_key, bill_id=card.get("bill_id"), metadata=metadata)
+        except (ValueError, OSError) as e:
+            raise GatewayError(str(e), "GW_LEDGER_REJECTED") from e
+        if self.audit:
+            self._bank.flush_audit(self.audit)
         return receipt
 
     # ------------------------------------------------------------------ checks

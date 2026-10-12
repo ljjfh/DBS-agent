@@ -6,6 +6,9 @@ The state machine is the outer skeleton: it decides what is allowed in each phas
 from __future__ import annotations
 
 import re
+import sqlite3
+from contextlib import closing
+from pathlib import Path
 import threading
 import time
 import uuid
@@ -42,6 +45,7 @@ class Session:
     scam_level: RiskLevel = RiskLevel.LOW                   # only goes up, valid for the session
     scam_reasons: list[str] = field(default_factory=list)
     plan: list[str] = field(default_factory=list)           # follow-up tasks split out of a compound request
+    plan_references: dict[str, str] = field(default_factory=dict)  # raw child request -> parent draft id
     trace: list[dict] = field(default_factory=list)
     public_key: dict | None = None                          # the user's device signing key (JWK, public half only)
     challenges: dict[str, str] = field(default_factory=dict) # draft_id -> exact payload bytes the device must sign
@@ -108,10 +112,21 @@ def valid_visitor(v) -> str | None:
     return v if _VISITOR.match(v) else None
 
 
+class UnknownSession(Exception):
+    pass
+
+
 class SessionStore:
     MAX_SESSIONS = 5000
 
-    def __init__(self):
+    def __init__(self, path=None):
+        self.path = path
+        self._bindings = {}
+        if path:
+            Path(path).parent.mkdir(parents=True, exist_ok=True)
+            with closing(sqlite3.connect(path)) as db, db:
+                db.execute("CREATE TABLE IF NOT EXISTS sessions (sid TEXT PRIMARY KEY, uid TEXT NOT NULL)")
+                self._bindings.update(db.execute("SELECT sid, uid FROM sessions"))
         self._s: dict[str, Session] = {}
         self._lock = threading.Lock()
 
@@ -125,21 +140,36 @@ class SessionStore:
         for old in list(self._s)[:max(0, len(self._s) - self.MAX_SESSIONS)]:
             self._s.pop(old, None)
 
+    def _create(self, sid, uid):
+        self._bindings[sid] = uid
+        if self.path:
+            with closing(sqlite3.connect(self.path)) as db, db:
+                db.execute("INSERT OR REPLACE INTO sessions VALUES (?, ?)", (sid, uid))
+        self._s[sid] = Session(session_id=sid, user_id=uid)
+        self._trim()
+        return self._s[sid]
+
     def get(self, session_id: str | None) -> Session:
         with self._lock:
-            if not session_id or session_id not in self._s:
-                session_id = session_id or uuid.uuid4().hex[:12]
-                self._s[session_id] = self._new(session_id)
-                self._trim()
+            if session_id is None:
+                return self._create(uuid.uuid4().hex, "u_chen")
+            if not isinstance(session_id, str) or not session_id:
+                raise ValueError("session_id must be a non-empty string")
+            if session_id not in self._s:
+                if session_id not in self._bindings:
+                    raise UnknownSession("Session not found. Please start a new demo session.")
+                self._s[session_id] = Session(session_id=session_id, user_id=self._bindings[session_id])
             return self._s[session_id]
 
     def reset(self, session_id: str) -> Session:
+        old = self.get(session_id)
         with self._lock:
-            self._s[session_id] = self._new(session_id)
-            return self._s[session_id]
+            return self._create(uuid.uuid4().hex, old.user_id)
 
     def new_for_visitor(self, visitor: str) -> Session:
-        return self.reset(f"{visitor}.{uuid.uuid4().hex[:12]}")
+        # A client-chosen visitor label is not an identity or a credential.
+        with self._lock:
+            return self._create(uuid.uuid4().hex, "u_chen~" + uuid.uuid4().hex)
 
 
 sessions = SessionStore()

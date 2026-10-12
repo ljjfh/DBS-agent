@@ -38,7 +38,8 @@ class Kernel:
     def __init__(self, bank: MockBank, audit: AuditLog, tokens: TokenService | None = None,
                  authenticator: MockAuthenticator | None = None, allow_mock: bool | None = None,
                  registry: CredentialRegistry | None = None, gateway: ExecutionGateway | None = None,
-                 require_verification: bool = True):
+                 require_verification: bool = True, risk_hour: int | None = None):
+        self.risk_hour = risk_hour  # injectable clock hour for isolated lab fixtures only
         self.bank = bank
         self.audit = audit
         self.tokens = tokens or TokenService()
@@ -75,6 +76,8 @@ class Kernel:
                 "key_ids": [webauthn.key_id(k["public_key"]) for k in keys]}
 
     def passkey_options(self, s: Session, site: Site) -> dict:
+        if self.registry.has_passkey(s.user_id):
+            raise KernelError("Verify and remove your existing passkey before replacing it.", "PASSKEY_EXISTS")
         challenge = secrets.token_bytes(32)
         s.passkey_reg = {"challenge": webauthn.b64u(challenge), "expires_at": time.time() + settings.challenge_ttl,
                          "rp_id": site.rp_id}
@@ -86,6 +89,8 @@ class Kernel:
 
     def passkey_register(self, s: Session, site: Site, credential_id: str, client_data_json: str,
                          attestation_object: str) -> str:
+        if self.registry.has_passkey(s.user_id):
+            raise KernelError("An existing passkey cannot be replaced without verification.", "PASSKEY_EXISTS")
         reg = s.passkey_reg
         if not reg or reg["expires_at"] < time.time() or reg["rp_id"] != site.rp_id:
             raise KernelError("The fingerprint set-up expired. Please try again.", "EXPIRED")
@@ -102,7 +107,21 @@ class Kernel:
                                                                      "alg": f"WebAuthn {cred['public_key'].get('alg', 'ES256')}, user verification required"})
         return key_id
 
-    def passkey_remove(self, s: Session, site: Site) -> int:
+    def passkey_remove_challenge(self, s: Session, site: Site) -> str:
+        payload = build_settings_challenge(s.session_id, s.user_id, {"remove_passkeys": site.rp_id})
+        s.setting_challenges["remove_passkeys"] = payload
+        return payload
+
+    def passkey_remove(self, s: Session, site: Site, assertion: dict | None = None) -> int:
+        issued = s.setting_challenges.get("remove_passkeys")
+        if not issued or not isinstance(assertion, dict) or assertion.get("payload") != issued:
+            raise KernelError("Verify your identity before removing a passkey.", "AUTH_REQUIRED")
+        if json.loads(issued)["expires_at"] < time.time():
+            raise KernelError("This confirmation expired.", "EXPIRED")
+        rec = self._signature(s, issued, assertion, site)
+        if rec["method"] != "passkey":
+            raise KernelError("An enrolled passkey is required.", "AUTH_REQUIRED")
+        s.setting_challenges.pop("remove_passkeys", None)
         n = self.registry.remove_passkeys(s.user_id, site.rp_id)
         self.audit.append("device.passkey_removed", s.session_id, {"rp_id": site.rp_id, "count": n})
         return n
@@ -125,6 +144,11 @@ class Kernel:
         s.settle()
         if s.phase != Phase.IDLE:
             raise KernelError("There is already a payment waiting for confirmation. Please confirm or cancel it first.", "PENDING_DRAFT")
+        from app.agent.request_guard import problem
+        for utterance in s.task_utterances():
+            error = problem(utterance)
+            if error:
+                raise KernelError(error, "REQUEST_UNSUPPORTED")
         accounts = self.bank.accounts(s.user_id)
         from_account = from_account or accounts[0]["account_id"]
         if kind == "investment":
@@ -145,7 +169,7 @@ class Kernel:
         draft.digest = compute_digest(draft)
         level = prot.effective(self.bank, s.user_id, now)
         ctx = rules.RuleContext(now=now, scam_level=s.scam_level, scam_reasons=list(s.scam_reasons),
-                                local_hour=local_hour, grounding=g, protection=level)
+                                local_hour=local_hour if local_hour is not None else self.risk_hour, grounding=g, protection=level)
         draft.risk = rules.evaluate(draft, self.bank, ctx)
 
         # Dual-engine audit: compare with what the independent verifier heard (deterministic comparison)
@@ -211,6 +235,7 @@ class Kernel:
         if shown_digest != draft.digest or compute_digest(draft) != draft.digest:
             self.audit.append("auth.rejected", s.session_id, {"draft_id": draft.draft_id, "reason": "digest_mismatch"})
             raise KernelError("The confirmation card doesn't match the transaction. Rejected.", "DIGEST_MISMATCH")
+        self._recheck_risk(s, draft)
         if self.require_verification and draft.verification.get("status") != "match":
             raise KernelError("The independent check hasn't confirmed this payment, so it can't be signed.",
                               "NOT_VERIFIED")
@@ -275,30 +300,42 @@ class Kernel:
             self.audit.append("commit.rejected", s.session_id, {"draft_id": draft_id, "reason": why})
             raise KernelError(why, "TOKEN_INVALID")
         # Re-run the rules before executing (the balance may have changed; prevents time-of-check vs time-of-use gaps)
-        recheck = rules.evaluate(draft, self.bank, rules.RuleContext(
-            scam_level=s.scam_level, protection=prot.effective(self.bank, s.user_id)))
-        if recheck.level == RiskLevel.BLOCK:
-            s.transition(Phase.CANCELLED)
-            self.audit.append("commit.rejected", s.session_id, {"draft_id": draft_id, "reason": recheck.rule_hits})
-            raise KernelError(" ".join(recheck.reasons), "RECHECK_BLOCKED")
+        self._recheck_risk(s, draft)
         # The ledger is behind a zero-trust gateway that re-verifies the device signature itself
         try:
             receipt = self.gateway.execute(user_id=s.user_id, session_id=s.session_id, card=draft.card_fields(),
                                            digest=recomputed, auth=s.signatures.get(draft_id),
-                                           idempotency_key=draft.draft_id)
+                                           idempotency_key=draft.draft_id,
+                                           verification={k: draft.verification.get(k) for k in ("status", "fields", "engine")})
         except GatewayError as e:
             s.transition(Phase.CANCELLED)
             raise KernelError(str(e), e.code) from e
         receipt = dict(receipt)
-        receipt["verifiable"] = self._verifiable_receipt(s, draft, receipt)
+        receipt.setdefault("verifiable", self._verifiable_receipt(s, draft, receipt))
         s.transition(Phase.EXECUTED)
         s.add_trace("gateway", "Execution gateway re-verified the device signature on its own, then posted to the ledger",
                     {"txn_id": receipt["txn_id"]})
         s.add_trace("exec", f"Executed {fmt_money(draft.amount_cents)} → {draft.payee_name}",
                     {"txn_id": receipt["txn_id"]})
-        self.audit.append("commit.executed", s.session_id, {"draft_id": draft_id, "digest": recomputed,
-                                                            "receipt": receipt})
+        # The signed ledger receipt and audit outbox were committed atomically with the debit.
+        if not any(r["txn_id"] == receipt["txn_id"] for r in s.receipts):
+            s.receipts.insert(0, receipt["verifiable"])
+
         return receipt
+
+    def _recheck_risk(self, s: Session, draft: Draft) -> None:
+        current = rules.evaluate(draft, self.bank, rules.RuleContext(
+            scam_level=s.scam_level, scam_reasons=list(s.scam_reasons), local_hour=self.risk_hour,
+            protection=prot.effective(self.bank, s.user_id)))
+        old_hits = set(draft.risk.rule_hits if draft.risk else [])
+        new_risk = current.level.rank > draft.risk.level.rank or bool(set(current.rule_hits) - old_hits)
+        if current.level == RiskLevel.BLOCK or new_risk:
+            s.challenges.pop(draft.draft_id, None)
+            s.signatures.pop(draft.draft_id, None)
+            s.transition(Phase.CANCELLED)
+            self.audit.append("commit.rejected", s.session_id,
+                              {"draft_id": draft.draft_id, "reason": current.rule_hits})
+            raise KernelError("The payment conditions changed. Please prepare and review a new payment.", "RECHECK_BLOCKED")
 
     def _verifiable_receipt(self, s: Session, draft: Draft, receipt: dict) -> dict:
         """A receipt anyone can check offline (scripts/verify_receipt.py): card -> digest -> signed payload -> key."""

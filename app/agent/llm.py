@@ -73,8 +73,8 @@ _RX = {
               r"\b(top up|put)\b.*\b(fund|etf|bonds?|deposit)\b|fixed deposit|time deposit|"
               r"\b(buy|put|top up)\b.{0,30}\b(apple|microsoft|singtel|dbs shares|dbs stock)\b",
     "bill": r"\bbills?\b|utilit|electric|water|s&cc|town council|conservancy",
-    "pay": r"\bpay",
-    "transfer": r"\b(transfer|send|wire)\b|\bgive\b(?! me\b)",
+    "pay": r"\b(?:pay|settle)\b",
+    "transfer": r"\b(transfer|send|wire|remit|move|paynow)\b|\bgive\b(?! me\b)",
     "income": r"pension|\bcpf\b|payout|(come|came|gone) in|arrived|received",
     "balance": r"balance|how much (money )?(do i have|have i got|is (there )?in|is left|left)",
     "spending": r"\bspen[dt]|spending|expenses|transactions|history",
@@ -86,6 +86,8 @@ def _has(key: str, text: str) -> bool:
 
 
 def detect_intent(text: str) -> str:
+    if re.search(r"\bhow much did I (?:send|pay|transfer)\b", text, re.I) and not re.search(r"\b(?:same again|usual amount)\b", text, re.I):
+        return "spending"
     if _has("handoff", text):
         return "handoff"
     if _has("card", text):
@@ -136,7 +138,7 @@ class OfflineLLM:
             if "handoff_to_human" not in results:
                 return self._call("handoff_to_human", {"reason": "User asked for a human"},
                                   "The user wants a real person; hand off.")
-            return self._say("Sure, connecting you to a staff member now. You won't need to repeat yourself.")
+            return self._say("This demo has no live staff service. Please use the official banking app or your bank contact channel to speak with a person.")
 
         if intent == "card":
             if "get_cards" not in results:
@@ -235,6 +237,13 @@ class OfflineLLM:
                                  else f"Which one do you mean: {opts}?")
             payee = hits[0]
             amount = parse_amount(text)
+            if amount is None and re.search(r"\b(?:usual amount|same again)\b", text, re.I):
+                if "get_recent_transactions" not in results:
+                    return self._call("get_recent_transactions", {}, "Read the previous payment before reusing its amount.")
+                previous = next((t for t in results["get_recent_transactions"]["data"]
+                                 if t.get("payee_id") == payee["payee_id"] and t.get("amount_cents", 0) < 0), None)
+                if previous:
+                    amount = -previous["amount_cents"] / 100
             if amount is None:
                 return self._say(f"How much would you like to send to your {payee['relation']} {payee['name']}?")
             acct = self._account(text, results)
@@ -328,6 +337,8 @@ class OfflineLLM:
             return ""
         parts = [messages[users[-1]]["content"]]
         k = len(users) - 1
+        if k >= 1 and re.search(r"\b(?:her|him|them)\b.{0,20}\b(?:same|again)\b", parts[0], re.I):
+            parts.insert(0, messages[users[k - 1]]["content"])
         while detect_intent(" ".join(parts)) == "unknown" and k >= 1 and len(parts) < 4:
             prev_asst = next((m for m in reversed(messages[users[k - 1]:users[k]]) if m["role"] == "assistant"
                               and m.get("content")), None)

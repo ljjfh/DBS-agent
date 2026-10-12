@@ -6,6 +6,10 @@ gateway (app/bank/gateway.py), which re-verifies the customer's signature before
 from __future__ import annotations
 
 import copy
+import hashlib
+import json
+
+from app.bank.storage import LedgerStorage, atomic_write
 import threading
 import time
 import uuid
@@ -113,17 +117,23 @@ def price_sgd_cents(prod: dict) -> int:
     return round(prod["price"] * (USD_SGD if prod.get("currency") == "USD" else 1) * 100)
 
 
-class MockBank:
-    def __init__(self):
-        self._lock = threading.Lock()
+class MockBank(LedgerStorage):
+    def __init__(self, path=None):
+        self._lock = threading.RLock()
+        self.path = None
+        self.world, self.executed, self.recent_exec_times, self.outbox = {}, {}, {}, []
         self.reset()
+        self.path = path
+        self._load()
 
+    @atomic_write
     def reset(self):
         with self._lock:
             self.world = copy.deepcopy(_WORLD)
             self.products = copy.deepcopy(_PRODUCTS)
             self.executed: dict[str, dict] = {}   # idempotency key -> receipt
             self.recent_exec_times: dict[str, list[float]] = {}
+            self.outbox = []
 
     # ---------- Demo customers per visitor ----------
     # On a shared online demo every browser gets its own copy of Mdm Chen ("u_chen~<visitor id>"), so one tester's
@@ -145,11 +155,13 @@ class MockBank:
                     users.pop(old, None)
                 users[user_id] = copy.deepcopy(_WORLD["users"][DEMO_USER])
 
+    @atomic_write
     def reset_user(self, user_id: str) -> None:
         """Reset one demo customer's accounts, payees, bills, holdings and cards (nobody else's)."""
         with self._lock:
             self.world["users"][user_id] = copy.deepcopy(_WORLD["users"][DEMO_USER])
             self.recent_exec_times.pop(user_id, None)
+            self.executed = {k: r for k, r in self.executed.items() if r.get("user_id") != user_id}
 
     # ---------- Read-only ----------
     def user(self, user_id: str) -> dict:
@@ -157,13 +169,21 @@ class MockBank:
         return self.world["users"][user_id]
 
     def accounts(self, user_id: str) -> list[dict]:
-        return self.user(user_id)["accounts"]
+        accounts = self.user(user_id)["accounts"]
+        # Synthetic, single-signatory joint account for the competition example.
+        # This does not implement a real bank's joint-account mandate.
+        if not any(a["account_id"] == "JNT-003" for a in accounts):
+            accounts.append({"account_id": "JNT-003", "name": "Joint Account", "balance_cents": 0, "currency": "SGD"})
+        return accounts
 
     def account(self, user_id: str, account_id: str) -> dict | None:
         return next((a for a in self.accounts(user_id) if a["account_id"] == account_id), None)
 
     def payees(self, user_id: str) -> list[dict]:
-        return self.user(user_id)["payees"]
+        return self.user(user_id)["payees"] + [
+            {"payee_id": "own:" + a["account_id"], "name": a["name"], "relation": "own account",
+             "type": "own_account", "aliases": [a["name"].lower()], "masked_account": a["account_id"],
+             "to_account": a["account_id"]} for a in self.accounts(user_id)]
 
     def payee(self, user_id: str, payee_id: str) -> dict | None:
         return next((p for p in self.payees(user_id) if p["payee_id"] == payee_id), None)
@@ -206,6 +226,7 @@ class MockBank:
         return next((c for c in self.cards(user_id) if c["card_id"] == card_id), None)
 
     # Locking a card is a protective action: allowed straight away (unlocking is not offered through Star)
+    @atomic_write
     def lock_card(self, user_id: str, card_id: str) -> dict:
         with self._lock:
             c = self.card(user_id, card_id)
@@ -220,16 +241,31 @@ class MockBank:
     def protection(self, user_id: str) -> dict:
         return self.user(user_id)["protection"]
 
+    @atomic_write
+    def update_protection(self, user_id: str, level=None, pending=None):
+        p = self.protection(user_id)
+        if level is not None:
+            p["level"] = level
+        p["pending"] = pending
+        return copy.deepcopy(p)
+
     def recent_exec_count(self, user_id: str, window_sec: int) -> int:
         now = time.time()
         return sum(1 for t in self.recent_exec_times.get(user_id, []) if now - t <= window_sec)
 
     # ---------- Write: only the execution gateway may call these ----------
+    @atomic_write
     def execute_investment(self, user_id: str, from_account: str, product_id: str, amount_cents: int,
-                           idempotency_key: str) -> dict:
+                           idempotency_key: str, metadata: dict | None = None) -> dict:
         with self._lock:
+            if type(amount_cents) is not int or amount_cents <= 0:
+                raise ValueError("Amount must be a positive integer number of cents")
             if idempotency_key in self.executed:
-                return {**self.executed[idempotency_key], "idempotent_replay": True}
+                previous = self.executed[idempotency_key]
+                if previous.get("user_id") != user_id or previous["amount_cents"] != amount_cents or (metadata and
+                    previous.get("verifiable", {}).get("digest") != metadata.get("digest")):
+                    raise ValueError("Idempotency key belongs to a different instruction")
+                return {**copy.deepcopy(previous), "idempotent_replay": True}
             acct, prod = self.account(user_id, from_account), self.product(product_id)
             if acct is None or prod is None:
                 raise ValueError("Account or product not found")
@@ -249,22 +285,57 @@ class MockBank:
             receipt = {"txn_id": "TXN-" + uuid.uuid4().hex[:10].upper(), "status": "SUCCESS",
                        "amount_cents": amount_cents, "product_id": product_id, "units": units,
                        "balance_after_cents": acct["balance_cents"], "executed_at": time.time()}
+            receipt.update(user_id=user_id, draft_id=idempotency_key)
+            if metadata:
+                body = {"receipt_version": 2, "txn_id": receipt["txn_id"], "status": receipt["status"],
+                        "executed_at": int(receipt["executed_at"]), **metadata}
+                body["receipt_sha256"] = hashlib.sha256(json.dumps(body, ensure_ascii=False,
+                    sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+                receipt["verifiable"] = body
+                for event in ("gateway.posted", "commit.executed"):
+                    self.outbox.append({"event": event, "session_id": metadata.get("session_id", ""),
+                        "data": {"draft_id": idempotency_key, "txn_id": receipt["txn_id"], "receipt": body}})
             self.executed[idempotency_key] = receipt
             self.recent_exec_times.setdefault(user_id, []).append(time.time())
             return receipt
 
+    @atomic_write
     def execute_payment(self, user_id: str, from_account: str, payee_id: str,
-                        amount_cents: int, idempotency_key: str, bill_id: str | None = None) -> dict:
+                        amount_cents: int, idempotency_key: str, bill_id: str | None = None, metadata: dict | None = None) -> dict:
         with self._lock:
+            if type(amount_cents) is not int or amount_cents <= 0:
+                raise ValueError("Amount must be a positive integer number of cents")
             if idempotency_key in self.executed:          # idempotent: a retry never debits twice
-                return {**self.executed[idempotency_key], "idempotent_replay": True}
+                previous = self.executed[idempotency_key]
+                if previous.get("user_id") != user_id or previous["amount_cents"] != amount_cents or (metadata and
+                    previous.get("verifiable", {}).get("digest") != metadata.get("digest")):
+                    raise ValueError("Idempotency key belongs to a different instruction")
+                return {**copy.deepcopy(previous), "idempotent_replay": True}
             acct = self.account(user_id, from_account)
             if acct is None:
                 raise ValueError("Account not found")
             if acct["balance_cents"] < amount_cents:
                 raise ValueError("Insufficient balance")
             payee = self.payee(user_id, payee_id)
+            if payee is None:
+                raise ValueError("Payee not found")
+            destination = None
+            if payee.get("type") == "own_account":
+                destination = self.account(user_id, payee["to_account"])
+                if destination is None or destination["account_id"] == from_account or bill_id:
+                    raise ValueError("Own-account transfer needs two different owned accounts and no bill")
+            if bill_id:
+                bill = self.bill(user_id, bill_id)
+                if not bill or bill["status"] != "unpaid":
+                    raise ValueError("This bill is already paid or unavailable")
+                if bill["payee_id"] != payee_id or bill["amount_cents"] != amount_cents:
+                    raise ValueError("Bill details changed; please prepare a new payment")
             acct["balance_cents"] -= amount_cents
+            if destination is not None:
+                destination["balance_cents"] += amount_cents
+                self.user(user_id)["transactions"].insert(0, {
+                    "date": time.strftime("%Y-%m-%d"), "desc": f"Internal credit to {destination['name']}",
+                    "amount_cents": amount_cents, "payee_id": payee_id})
             self.user(user_id)["transactions"].insert(0, {
                 "date": time.strftime("%Y-%m-%d"), "desc": f"Transfer to {payee['name']}" if payee["type"] == "person"
                 else payee["name"], "amount_cents": -amount_cents, "payee_id": payee_id})
@@ -275,6 +346,16 @@ class MockBank:
             receipt = {"txn_id": "TXN-" + uuid.uuid4().hex[:10].upper(), "status": "SUCCESS",
                        "amount_cents": amount_cents, "payee_id": payee_id,
                        "balance_after_cents": acct["balance_cents"], "executed_at": time.time()}
+            receipt.update(user_id=user_id, draft_id=idempotency_key)
+            if metadata:
+                body = {"receipt_version": 2, "txn_id": receipt["txn_id"], "status": receipt["status"],
+                        "executed_at": int(receipt["executed_at"]), **metadata}
+                body["receipt_sha256"] = hashlib.sha256(json.dumps(body, ensure_ascii=False,
+                    sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+                receipt["verifiable"] = body
+                for event in ("gateway.posted", "commit.executed"):
+                    self.outbox.append({"event": event, "session_id": metadata.get("session_id", ""),
+                        "data": {"draft_id": idempotency_key, "txn_id": receipt["txn_id"], "receipt": body}})
             self.executed[idempotency_key] = receipt
             self.recent_exec_times.setdefault(user_id, []).append(time.time())
             return receipt

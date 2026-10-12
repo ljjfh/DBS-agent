@@ -7,7 +7,7 @@ services:
     region: singapore
     plan: free                      # free instances sleep after ~15 min idle; pick "starter" for judging week
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.server:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
+    startCommand: uvicorn app.server:app --host 0.0.0.0 --port $PORT --no-proxy-headers
     autoDeploy: true                # every push to main redeploys
     envVars:
       - key: PYTHON_VERSION

@@ -1,0 +1,45 @@
+{
+  "session_id": "84c80e85178a469a9c3b72f86107fd9e",
+  "integrity": {
+    "ok": true,
+    "records": 130,
+    "head": "4621feeef35e09fe2864d4f2abce8e3c9e03f8961b05ad1b1d0be87efb40771d"
+  },
+  "entries": [
+    {
+      "data": {
+        "text": "What is my balance?"
+      },
+      "event": "user.utterance",
+      "hash": "93b62b180236dd82d80a74148239564ba0c6bc8794dfc60b6e1dbccf481129cb",
+      "prev_hash": "c341d4d789cbb977a0ea4396eb2651239a9db6ee3bab0a6ca0cdcf3e9bd33cfa",
+      "session_id": "84c80e85178a469a9c3b72f86107fd9e",
+      "ts": 1791825013.51
+    },
+    {
+      "data": {
+        "args": "{}",
+        "error": null,
+        "ok": true,
+        "tool": "get_balance"
+      },
+      "event": "tool.call",
+      "hash": "c0e14c8406dcdb05309b4bcc87f52e78d5310a35e8bfbf018184c4b79277ee4e",
+      "prev_hash": "93b62b180236dd82d80a74148239564ba0c6bc8794dfc60b6e1dbccf481129cb",
+      "session_id": "84c80e85178a469a9c3b72f86107fd9e",
+      "ts": 1791825013.517
+    },
+    {
+      "data": {
+        "llm": "offline",
+        "reply": "Your Savings Account has S$3,250.00.",
+        "ui": "text"
+      },
+      "event": "agent.reply",
+      "hash": "4621feeef35e09fe2864d4f2abce8e3c9e03f8961b05ad1b1d0be87efb40771d",
+      "prev_hash": "c0e14c8406dcdb05309b4bcc87f52e78d5310a35e8bfbf018184c4b79277ee4e",
+      "session_id": "84c80e85178a469a9c3b72f86107fd9e",
+      "ts": 1791825013.523
+    }
+  ]
+}

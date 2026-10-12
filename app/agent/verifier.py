@@ -34,6 +34,10 @@ You are NOT shown what the assistant prepared. Extract the ONE transaction the c
 Rules:
 - Use only what the customer actually said. Never guess. Use null for anything they did not state.
 - amount: a number in SGD ("fifty dollars" -> 50, "1.5k" -> 1500). If they corrected themselves, use the final value.
+- Exact expressions: "a grand" = 1000, "half a grand" = 500, "a couple of hundred" = 200,
+  "half of 1000 dollars" = 500. "make that 100" replaces the previous amount with 100.
+- Owned accounts can be transfer destinations. In "to my joint account", payee is Joint Account,
+  not from_account. Source is specified by "from"; never swap source and destination.
 - payee: who or what they want to pay, in their words or the matching saved name (e.g. "daughter", "Chen Wei",
   "electricity bill", "Asia dividend fund").
 - asset_class: "cash" for transfers and bills; for investments the kind of product if stated or obvious from the
@@ -56,7 +60,7 @@ class Job:
 
 
 def catalog(bank, user_id: str) -> dict:
-    return {"payees": [{"name": p["name"], "relation": p["relation"], "aliases": p["aliases"]}
+    return {"transactions": bank.transactions(user_id, limit=30), "payees": [{"name": p["name"], "relation": p["relation"], "aliases": p["aliases"]}
                        for p in bank.payees(user_id)],
             "bills": [b["title"] for b in bank.bills(user_id)],
             "accounts": [a["name"] for a in bank.accounts(user_id)],
@@ -68,9 +72,17 @@ def extract_offline(utterances: list[str], cat: dict) -> dict:
     """Deterministic extraction from the transcript (no model)."""
     money = [i for i, u in enumerate(utterances) if detect_intent(u) in ("transfer", "bill_pay", "invest")]
     text = " ".join(utterances[money[-1]:] if money else utterances)
+    if re.search(r"\b(?:same again|usual amount)\b", text, re.I):
+        text = " ".join(utterances)
     intent = {"transfer": "transfer", "bill_pay": "bill", "invest": "investment"}.get(detect_intent(text), "none")
     pool = cat["products"] if intent == "investment" else cat["payees"]
     hits = match_payees(text, pool)
+    if len(hits) > 1:
+        # Separate explicitly priced tasks, never split a single amount shared by ambiguous recipients.
+        pieces = re.split(r",?\s+(?:oh\s+)?and\s+", text, maxsplit=1, flags=re.I)
+        if len(pieces) == 2 and all(parse_amount(p) is not None and len(match_payees(p, pool)) == 1 for p in pieces):
+            text = pieces[0]
+            hits = match_payees(text, pool)
     payee = hits[0]["name"] if len(hits) == 1 else None
     if intent == "bill" and not payee:
         payee = next((b for b in cat["bills"] if b.lower() in text.lower()), None)
@@ -80,7 +92,12 @@ def extract_offline(utterances: list[str], cat: dict) -> dict:
         if not asset and len(hits) == 1:
             asset = hits[0]["asset_class"]
     acct = find_account(text)
-    return {"intent": intent, "payee": payee, "amount": parse_amount(text) if intent != "none" else None,
+    amount = parse_amount(text) if intent != "none" else None
+    if amount is None and payee and re.search(r"\b(?:same again|usual amount)\b", text, re.I):
+        prior = next((t for t in cat.get("transactions", []) if payee.lower() in t["desc"].lower() and t["amount_cents"] < 0), None)
+        if prior:
+            amount = -prior["amount_cents"] / 100
+    return {"intent": intent, "payee": payee, "amount": amount,
             "asset_class": asset, "from_account": acct}
 
 

@@ -88,7 +88,13 @@ def recognize(wav_bytes: bytes, engine: str | None = None, hotwords: str = "") -
         r = requests.post(f"https://{host}", data=payload.encode(), headers=headers, timeout=20)
     except requests.RequestException as e:
         raise ASRError(f"Network error: {e}") from e
-    resp = r.json().get("Response", {})
+    try:
+        r.raise_for_status()
+        resp = r.json()["Response"]
+        if not isinstance(resp, dict) or not ("Result" in resp or "Error" in resp):
+            raise ValueError("Unexpected response")
+    except (requests.RequestException, ValueError, TypeError, KeyError) as e:
+        raise ASRError("Speech service returned an invalid response. Please retry or type your request.") from e
     if "Error" in resp:
         raise ASRError(f"{resp['Error'].get('Code')}: {resp['Error'].get('Message')}")
     return {"text": resp.get("Result", ""), "audio_ms": resp.get("AudioDuration"),

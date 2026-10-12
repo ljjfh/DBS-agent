@@ -1,0 +1,19 @@
+test_ambiguous_words_cannot_prepare_payment (__main__.SemanticSafety.test_ambiguous_words_cannot_prepare_payment) ... ok
+test_cancelled_parent_cannot_fund_relative_child (__main__.SemanticSafety.test_cancelled_parent_cannot_fund_relative_child) ... ok
+test_correction_invalidates_old_authorization (__main__.SemanticSafety.test_correction_invalidates_old_authorization) ... ok
+test_correction_rescans_fraud (__main__.SemanticSafety.test_correction_rescans_fraud) ... ok
+test_correction_with_new_target_requires_restatement (__main__.SemanticSafety.test_correction_with_new_target_requires_restatement) ... ok
+test_destination_tamper_invalidates_signature (__main__.SemanticSafety.test_destination_tamper_invalidates_signature) ... ok
+test_half_cent_requires_exact_amount (__main__.SemanticSafety.test_half_cent_requires_exact_amount) ... ok
+test_internal_credit_rolls_back_on_storage_error (__main__.SemanticSafety.test_internal_credit_rolls_back_on_storage_error) ... ok
+test_internal_transfer_preserves_total_and_is_idempotent (__main__.SemanticSafety.test_internal_transfer_preserves_total_and_is_idempotent) ... ok
+test_internal_transfer_rejects_unknown_destination (__main__.SemanticSafety.test_internal_transfer_rejects_unknown_destination) ... ok
+test_misheard_name_does_not_guess (__main__.SemanticSafety.test_misheard_name_does_not_guess) ... ok
+test_parent_correction_updates_relative_amount (__main__.SemanticSafety.test_parent_correction_updates_relative_amount) ... ok
+test_same_account_cannot_be_signed (__main__.SemanticSafety.test_same_account_cannot_be_signed) ... ok
+test_unrelated_receipt_is_not_an_antecedent (__main__.SemanticSafety.test_unrelated_receipt_is_not_an_antecedent) ... ok
+
+----------------------------------------------------------------------
+Ran 14 tests in 0.390s
+
+OK

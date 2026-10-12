@@ -186,7 +186,8 @@ class HttpTest(unittest.TestCase):
         from app.kernel import webauthn
         a = self.post("/api/reset", {"visitor": "aaaaaaaaaaaaaaaa"}).json()["session_id"]
         b = self.post("/api/reset", {"visitor": "bbbbbbbbbbbbbbbb"}).json()["session_id"]
-        self.assertTrue(a.startswith("aaaaaaaaaaaaaaaa.") and b.startswith("bbbbbbbbbbbbbbbb."))
+        self.assertNotEqual(a, b)
+        self.assertNotIn("aaaaaaaaaaaaaaaa", a)  # server-generated, opaque session capability
         ua, ub = runtime.sessions.get(a).user_id, runtime.sessions.get(b).user_id
         self.assertNotEqual(ua, ub)
         runtime.bank.account(ua, "SAV-001")["balance_cents"] = 1_00          # A's world changes...
@@ -203,7 +204,7 @@ class HttpTest(unittest.TestCase):
         a2 = self.post("/api/reset", {"visitor": "aaaaaaaaaaaaaaaa", "session_id": a, "world": True}).json()["session_id"]
         self.assertEqual(runtime.bank.account(runtime.sessions.get(a2).user_id, "SAV-001")["balance_cents"], 325000)
         self.assertEqual(runtime.bank.account(ub, "SAV-001")["balance_cents"], 2_00)
-        # A session id carries its visitor, so even after a server restart it maps back to the same customer
+        # Identity comes from the server-owned binding, never a client-controlled prefix
         runtime.sessions._s.pop(b)
         self.assertEqual(runtime.sessions.get(b).user_id, ub)
         # junk visitor ids are ignored

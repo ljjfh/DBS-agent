@@ -33,7 +33,7 @@ def effective(bank, user_id: str, now: float | None = None) -> str:
     p = bank.protection(user_id)
     pend = p.get("pending")
     if pend and (now or time.time()) >= pend["effective_at"]:
-        p["level"], p["pending"] = pend["to"], None
+        p = bank.update_protection(user_id, level=pend["to"])
     return p["level"]
 
 
@@ -57,7 +57,7 @@ def cap_scam(level: RiskLevel, protection: str) -> RiskLevel:
 
 def raise_now(bank, user_id: str) -> dict:
     p = bank.protection(user_id)
-    p["level"], p["pending"] = "enhanced", None
+    bank.update_protection(user_id, level="enhanced")
     return status(bank, user_id)
 
 
@@ -65,6 +65,6 @@ def schedule_lowering(bank, user_id: str, now: float | None = None) -> dict:
     p = bank.protection(user_id)
     if effective(bank, user_id) == "standard":
         return status(bank, user_id)
-    p["pending"] = {"to": "standard", "effective_at": int((now or time.time()) + settings.protection_delay),
-                    "requested_at": int(now or time.time())}
+    bank.update_protection(user_id, pending={"to": "standard", "effective_at": int((now or time.time()) + settings.protection_delay),
+                    "requested_at": int(now or time.time())})
     return status(bank, user_id)

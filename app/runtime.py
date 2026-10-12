@@ -5,14 +5,17 @@ from app.agent.loop import Agent
 from app.agent.tools import ToolGateway
 from app.agent.verifier import Verifier
 from app.bank.gateway import ExecutionGateway
-from app.bank.mock_bank import bank
+from app.bank.mock_bank import MockBank
 from app.config import settings
 from app.kernel.audit import AuditLog
 from app.kernel.credentials import CredentialRegistry
 from app.kernel.executor import Kernel
-from app.kernel.state import sessions
+from app.kernel.state import SessionStore
 
+sessions = SessionStore(settings.ledger_path)
+bank = MockBank(settings.ledger_path)
 audit = AuditLog(settings.audit_path)
+bank.flush_audit(audit)
 registry = CredentialRegistry(settings.passkey_path)
 execution_gateway = ExecutionGateway(bank, registry, audit, allow_unsigned=settings.auth_mode == "mock")
 kernel = Kernel(bank, audit, registry=registry, gateway=execution_gateway)

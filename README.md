@@ -3,6 +3,14 @@
 A conversational transaction agent for everyone, optimized for elderly users. Core principle:
 **the LLM understands, the code decides, and the user authorizes.**
 
+Semantic robustness update: colloquial SGD amounts, amount corrections that invalidate the old card,
+and receipt-bound proportional follow-ups are covered in [the semantic regression report](qa/SEMANTIC_REPORT.md).
+Try: "Move a grand to my joint account and then buy DBS shares with half of it".
+The new Joint Account is a zero-balance, synthetic single-signatory account. Internal transfers preserve
+total cash, and every step still needs its own reviewed signature. This does not implement DBS joint-account
+mandates or real securities execution. Uncertain names and amounts require clarification; real accent audio
+has not been benchmarked.
+
 > Prototype, not an official DBS product. The bank API is mocked. **The fingerprint sensor is simulated by default**
 > (the DBS brief allows mock biometrics): a clearly labelled sensor screen, and the user's tap unlocks a
 > non-extractable browser key that signs the exact card, which the kernel and the payment gateway both verify. Settings
@@ -38,7 +46,7 @@ safety boundary (draft only, two-engine check, device signature, gateway) is the
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env                                     # runs without any keys (offline mode)
-uvicorn app.server:app --reload --port 8000
+python -m app.serve
 ```
 
 Open http://localhost:8000 (use `localhost`, not your LAN IP — see "Security" below). You land on a DBS digibank-style
@@ -82,7 +90,7 @@ automatically. Without a domain, use `<server IP with dashes>.sslip.io` (e.g. `4
 **Anything else that runs a Dockerfile** (Railway, Fly.io, Hugging Face Spaces): the `Dockerfile` listens on `$PORT`;
 the platform's hostname is allowed automatically, or set `PUBLIC_HOST`.
 
-Notes: sessions live in memory, so run one instance. On free tiers the disk is wiped on every deploy, so passkeys
+Notes: run one process/instance. SQLite persists the synthetic ledger, receipts and session identity bindings; pending drafts stay in memory. On free tiers the disk is wiped on every deploy, so passkeys
 need re-enrolling (one fingerprint). If the model endpoint isn't reachable from the server (e.g. a campus-only API),
 Star falls back to the offline rule model and the trace says so.
 
@@ -222,3 +230,5 @@ docs/SECURITY.md            threats, what is implemented, what is simulated, wha
 tests/  kernel tests + "misbehaving model" Harness tests + HTTP tests (real server on a free port)
         + test_hackathon.py (one class per DBS requirement, plus protection levels)
 ```
+
+Recovery/security fixes and test evidence: see [qa/FIX_REPORT.md](qa/FIX_REPORT.md). Run all regression layers with `python qa/run_all.py`.

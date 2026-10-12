@@ -1,0 +1,34 @@
+PASS  B01: 首页账户/账单/持仓加载
+PASS  B_nav_activity: 导航 Transactions
+PASS  B_nav_contacts: 导航 Payees
+PASS  B_nav_audit: 导航 Audit trail
+PASS  B_nav_lab: 导航 Security lab
+PASS  B_nav_settings: 导航 Settings
+PASS  B_pay: 点击模拟指纹完成付款
+PASS  B_cancel: 取消确认卡
+PASS  B_sensor_cancel: 取消模拟指纹
+PASS  B_restore: 刷新恢复待确认卡
+PASS  B_doubleclick: 重复点击指纹
+PASS  B_download: 下载回执并离线验签
+PASS  B_lost_response: 后端已付款但确认响应丢失
+PASS  B_cancel_network: 取消请求网络失败
+PASS  B_senior: 适老模式持久化
+PASS  B_mobile: 390px标准视图
+PASS  B_mobile_senior: 390px适老视图
+PASS  B_xss: 对话显示HTML片段
+PASS  B_voice_normal: 模拟识别事件：normal
+PASS  B_voice_restart: 模拟识别事件：restart
+PASS  B_voice_network: 模拟识别事件：network
+PASS  B_voice_pause: 适老语音中途停顿3.2秒
+PASS  B_voice_missing: 浏览器无语音识别支持
+PASS  B_frozen: 模型误写金额演示
+PASS  B_lab: 浏览器运行安全实验室
+PASS  B_bill: 点击账单Pay并支付
+PASS  B_investment: 投资后持仓更新
+PASS  B_multi: 账单+转账顺序执行
+PASS  B_audit_export: 审计导出
+PASS  B_preferences: 大字和朗读设置
+PASS  B_reset: 重置演示
+PASS  B_voice_permission: 语音权限拒绝
+PASS  B_trace: 轨迹面板
+{'PASS': 33, 'FAIL': 0, 'ERROR': 0}

@@ -1,4 +1,6 @@
 .env
+.env.*
+!.env.example
 __pycache__/
 *.pyc
 data/*.jsonl
@@ -8,3 +10,12 @@ eval/report.json
 .venv/
 eval/report.md
 eval/report.html
+
+/data/*.sqlite3*
+/data/sessions.json
+
+# Local QA bundles and archived runs are not release source.
+/qa/*.zip
+/qa/runs/
+/qa/current-run.json
+/qa/results/*.wav

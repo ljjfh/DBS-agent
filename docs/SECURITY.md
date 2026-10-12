@@ -12,11 +12,11 @@ non-repudiation or resistance to every attack. This table is meant to be read by
 | Model gets a field wrong (payee, amount, asset, source account) | Independent read-only verifier (no tools, never sees the draft, can be a different model) extracts the fields from the raw transcript; deterministic diff → FROZEN, can never be signed; no verdict → can't be signed (fail closed); verifier errors fall back to a deterministic extractor, never to "no check" | Both engines read the same transcript, so an ASR mishearing fools both (the read-back and card are the backstop); offline, both engines share one parser |
 | Payment nobody asked for (e.g. instruction hidden in data) | Grounding: neither payee nor amount in the user's words → BLOCK (R52); tool results sanitized; no execution tool exists for the model | Sanitizing is pattern-based and incomplete; the real defence is that the model cannot pay |
 | Unsigned execution | `/api/confirm` requires a signature from an enrolled credential: a WebAuthn passkey with user verification (device fingerprint / face), or, only if the customer has no passkey, a browser key. The execution gateway in front of the ledger re-verifies the signature itself against the enrolled credential, checks the signed payload is for exactly this card, and keeps its own replay list | Same-origin scripts are trusted in this demo; the gateway runs in the same process as the kernel |
-| Weaker signing method (downgrade) | Once a passkey is enrolled for the customer and site, browser-key signatures are refused (PASSKEY_REQUIRED); passkey must have the UV flag, right rp id and origin, and an increasing counter | Enrolment is trust-on-first-use; "Remove (demo)" has no identity check |
+| Weaker signing method (downgrade) | Once a passkey is enrolled for the customer and site, browser-key signatures are refused (PASSKEY_REQUIRED); passkey must have the UV flag, right rp id and origin, and an increasing counter | First enrolment is trust-on-first-use; removal now requires a fresh, single-use enrolled-passkey assertion with user verification |
 | Scammer coaches the victim to switch protection off | Protection level is an account setting, separate from the screen mode; lowering it needs a device signature and only takes effect after `PROTECTION_LOWER_DELAY` (24 h), cancellable any time; raising is instant | A patient scammer could wait out the delay; real banks add notifications to family / a call-back |
 | Content changed after the user saw it | Signature covers the exact challenge bytes (card digest, payee, amount, account, "you said", nonce, expiry); digest recomputed at sign and at execution | A compromised server is inside the trust boundary |
-| Replay | Challenge is single use, replaced on reissue, expires in 120 s; HMAC execution token single use; idempotent execution | Distributed deployment needs durable idempotency |
-| State changes between approval and execution | Rules re-run at execution (balance, limits, scam level) | Real bank settlement failures need integration |
+| Replay | Challenge is single use, replaced on reissue, expires in 120 s; HMAC execution token single use; idempotent execution | Ledger receipts and idempotency are persisted in SQLite; this snapshot implementation still requires a single process |
+| State changes between approval and execution | Rules re-run before signing and execution; newly raised risks invalidate the previous authorization; bill status and amount are checked atomically during posting | Real bank settlement failures need integration |
 | Scam coaching (police, "safe account", OTP…) | Phrase pre-check blocks before the model; separate judge call can only escalate; flagged sessions lose draft tools | Novel scripts can evade both layers; cooling-off and family alerts are the backstop |
 | ASR mishears the amount | Read-back in words and digits; amount grounding; verify question on unusual amounts | Both layers see the same transcript; ASR confidence is not used yet |
 | Audit tampering | Append-only hash chain, verify button | No external anchoring; a full rewrite by the server admin is not detected |
@@ -32,8 +32,8 @@ non-repudiation or resistance to every attack. This table is meant to be read by
   biometric is checked (the screen says so).
 - **Credential enrolment**: the first passkey (or browser key) is accepted for the one demo customer without an
   identity check (trust on first use). Attestation is "none".
-- **Bank**: in-memory mock with synthetic accounts, payees and bills. No real money or bank API.
-- **Family alert**: a demo message only.
+- **Bank**: synthetic accounts, payees and bills persisted to local SQLite (`LEDGER_PATH`, default `data/ledger.sqlite3`). No real money or bank API.
+- **Family alert / staff handoff**: unavailable in this demo; the screen explicitly directs the user to contact them.
 
 ## What the security lab proves
 
@@ -46,3 +46,20 @@ Use synthetic data only. Secrets live in `.env` (git-ignored) and are read serve
 the device (passkeys stay in the secure hardware; the browser key is non-extractable). Only public keys are stored
 on the server (`data/passkeys.json`, git-ignored). Requests to the configured model contain the user's text and
 tool results.
+
+## Recovery and session boundaries
+
+The single-process ledger commits balances, bill status, signed receipts, idempotency records and an audit outbox together.
+If audit export fails after posting, the payment remains successful and events are retained for retry. Startup replays
+pending events. Audit delivery is at least once; a crash between log append and outbox removal can duplicate an audit
+record but cannot debit again. Corrupt audit files are reported and preserved rather than silently repaired.
+
+`GET /api/transaction/{session_id}/{draft_id}` recovers an acknowledged or lost-response payment, scoped to the
+session's customer. Sessions are opaque server-generated bearer capabilities with persisted customer bindings.
+Client-provided visitor labels cannot recreate another customer's identity. Pending drafts are not persisted; after
+restart they must be recreated and signed again. Committed transactions and their signed receipts survive restart.
+The local non-public demo still uses a shared synthetic customer; this is not customer login or account onboarding.
+
+Run `python -m app.serve` locally. Deployment examples use `--no-proxy-headers`; do not trust arbitrary
+`X-Forwarded-For` headers. Behind a proxy, rate limiting is conservatively shared by the visible proxy IP until a
+trusted-proxy configuration is explicitly implemented. Persist the `data` directory across deployments.

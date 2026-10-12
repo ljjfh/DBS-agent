@@ -86,7 +86,10 @@ async function refresh(){
     renderAccounts(); renderBills(); renderHoldings();
     const pill = $('#prot-pill'); if(pill){ pill.className = `pill prot ${protLevel()}`; pill.lastChild.textContent = protLevel() === 'enhanced' ? 'Enhanced protection' : 'Standard protection'; }
     if(['activity', 'contacts', 'settings'].includes(state.page)) renderPage();
-  }catch(e){ console.error(e); }
+  }catch(e){
+    if(e.data?.code === 'SESSION_NOT_FOUND'){ state.sid = null; store.set('sid', null); return refresh(); }
+    console.error(e);
+  }
 }
 
 // ---------------------------------------------------------------- Read aloud (browser TTS; slower in Senior mode)
@@ -337,7 +340,7 @@ function renderStage(){
   st.querySelectorAll('.replay').forEach(b => b.onclick = () => speak(state.messages[b.dataset.i].text, true));
   st.querySelectorAll('.receipt').forEach(b => b.onclick = () => { const r = state.messages[b.dataset.i].receipt; download(`receipt-${r.txn_id}.json`, r); });
   st.querySelectorAll('.again').forEach(b => b.onclick = () => { $('#text')?.focus(); if(state.senior) micToggle(); });
-  st.querySelectorAll('.notify').forEach(b => b.onclick = () => push({role:'bot', text:'(Demo) I have sent an alert to your family contact, Chen Mei Ling.'}));
+  st.querySelectorAll('.notify').forEach(b => b.onclick = () => push({role:'bot', text:'This demo cannot send family alerts. Please call your family contact, Chen Mei Ling, directly.'}));
   st.querySelectorAll('.nx-go').forEach(b => b.onclick = () => { const m = state.messages[b.dataset.i]; m.done = true; send(m.task); });
   st.querySelectorAll('.nx-no').forEach(b => b.onclick = () => { state.messages[b.dataset.i].done = true; push({role:'bot', text:'OK. Just call me whenever you need me.'}); });
   st.scrollTop = st.scrollHeight;
@@ -467,7 +470,7 @@ function renderConfirm(){
   $('#c-go').onclick = () => { stopSpeaking(); confirmCard(); };
   $('#c-repk') && ($('#c-repk').onclick = async () => {
     try{
-      await api('/api/passkey/remove', {session_id: state.sid}); await refresh(); await enrolPasskey();
+      await removePasskey(); await refresh(); await enrolPasskey();
       state.uvFail = false; renderConfirm(); toast('Fingerprint set up again. Check the card and confirm.');
     }catch(e){ toast(e.name === 'NotAllowedError' ? 'Set-up was cancelled. Nothing changed.' : e.message); }
   });
@@ -475,15 +478,17 @@ function renderConfirm(){
 $('#confirm').addEventListener('cancel', e => { e.preventDefault(); cancelCard(); });
 function closeConfirm(){ clearInterval(state.coolTimer); const d = $('#confirm'); if(d.open) d.close(); state.card = null; state.uvFail = false; }
 async function cancelCard(){
-  const c = state.card; if(!c) return; closeConfirm();
+  const c = state.card; if(!c || state.confirming) return;
   try{
-    const r = await api('/api/cancel', {session_id: state.sid, draft_id: c.draft_id}); push({role:'bot', text:r.reply}); speak(r.speak);
+    const r = await api('/api/cancel', {session_id: state.sid, draft_id: c.draft_id}); closeConfirm(); push({role:'bot', text:r.reply}); speak(r.speak);
     if(r.next_task) offerNext(r.next_task);
-  }catch(e){ push({role:'bot', text:e.message}); }
-  state.check = checksFromCard(c, 'cancelled'); renderSafety();
+    state.check = checksFromCard(c, 'cancelled'); renderSafety();
+  }catch(e){ push({role:'bot', text:'Cancellation could not be confirmed. The payment is still waiting. Please try again.'}); renderConfirm(); }
 }
 async function confirmCard(){
   const c = state.card; const btn = $('#c-go');
+  if(!c || state.confirming) return;
+  state.confirming = true; let submitted = false;
   btn.disabled = true; btn.textContent = 'Touch the sensor…';
   const verify_answer = c.verify_question ? state.verify : null;
   try{
@@ -491,13 +496,16 @@ async function confirmCard(){
     await ensureSigner();
     const ch = await api('/api/challenge', {session_id: state.sid, draft_id: c.draft_id, digest: c.digest, verify_answer});
     const assertion = await signPayload(ch.payload, ch.passkey);
+    submitted = true; store.set('pendingPayment', {sid:state.sid, card:c});
     const r = await api('/api/confirm', {session_id: state.sid, draft_id: c.draft_id, digest: c.digest, assertion, verify_answer});
-    closeConfirm(); addTrace(r.trace);
+    store.set('pendingPayment', null); closeConfirm(); addTrace(r.trace);
     push({role:'bot', text: r.reply, ok: true, receipt: r.receipt?.verifiable}); speak(r.speak);
     state.check = checksFromCard(c, 'done', r.receipt?.verifiable?.authorization?.method); renderSafety();
     if(r.next_task) continueWith(r.next_task);      // multi-step request: go straight on to the next step
     refresh();
   }catch(e){
+    if(submitted && (!e.status || e.status >= 500)){ await recoverPayment(c); return; }
+    store.set('pendingPayment', null);
     const msg = e.name === 'NotAllowedError' ? 'The fingerprint check was cancelled or timed out. Nothing was sent.'
       : e.name === 'SecurityError' ? `Fingerprint signing needs a website name, not an address like ${location.hostname}. Please open http://localhost:${location.port || 80} and try again. Nothing was sent.`
       : e.message;
@@ -505,8 +513,30 @@ async function confirmCard(){
     if(e.data?.code === 'UV_REQUIRED'){ state.uvFail = true; push({role:'bot', text:UV_HELP}); speak(UV_HELP); }
     else { push({role:'bot', text:msg}); speak(msg); }
     if(['NOT_AWAITING_AUTH', 'RECHECK_BLOCKED'].includes(e.data?.code) || String(e.data?.code || '').startsWith('GW_')) closeConfirm(); else renderConfirm();
-  }
+  }finally{ state.confirming = false; }
 }
+
+async function recoverPayment(c){
+  try{
+    const r = await api(`/api/transaction/${encodeURIComponent(state.sid)}/${encodeURIComponent(c.draft_id)}`);
+    if(r.status === 'SUCCESS'){
+      store.set('pendingPayment', null); closeConfirm();
+      push({role:'bot', text:r.reply, ok:true, receipt:r.receipt?.verifiable});
+      state.check = checksFromCard(c, 'done'); renderSafety(); await refresh(); return;
+    }
+  }catch{}
+  push({role:'bot', text:'Payment status is uncertain. Check its status before making another payment.'});
+  const btn = $('#c-go'); btn.disabled = false; btn.textContent = 'Check payment status';
+  btn.onclick = () => recoverPayment(c);
+  $('#c-cancel').disabled = true;
+}
+
+async function removePasskey(){
+  const ch = await api('/api/passkey/remove/challenge', {session_id:state.sid});
+  const assertion = await signPayload(ch.payload, ch.passkey);
+  await api('/api/passkey/remove', {session_id:state.sid, assertion});
+}
+
 
 // ---------------------------------------------------------------- Signing: passkey (real fingerprint / face) first
 // A passkey lives in the device's secure hardware and is unlocked by the OS's own biometric prompt (Touch ID,
@@ -752,14 +782,15 @@ function settingsPage(m){
       if(!await passkeyCapability()){ toast("This browser can't use a real fingerprint or face here. The simulated sensor stays on."); return; }
       store.set('realBio', true);
     }else{
+      try{ if(pk.enrolled){ await removePasskey(); await refresh(); } }
+      catch(e){ toast('Identity verification was not completed. Your passkey is still enabled.'); return; }
       store.set('realBio', false);
-      if(pk.enrolled){ await api('/api/passkey/remove', {session_id: state.sid}); await refresh(); }
     }
     state.signMode = await detectSignMode(); renderPage();
     toast(on ? 'Real fingerprint / face is on.' : 'Back to the simulated fingerprint sensor.');
   });
   $('#pk-setup') && ($('#pk-setup').onclick = async () => { try{ await enrolPasskey(); toast('Fingerprint signing is set up.'); renderPage(); }catch(e){ toast(e.name === 'NotAllowedError' ? 'Set-up cancelled.' : e.message); } });
-  $('#pk-remove') && ($('#pk-remove').onclick = async () => { await api('/api/passkey/remove', {session_id: state.sid}); await refresh(); toast('Passkey removed from this demo. (A real bank would verify your identity first.)'); });
+  $('#pk-remove') && ($('#pk-remove').onclick = async () => { await removePasskey(); await refresh(); toast('Identity verified. Passkey removed from this demo.'); });
 }
 async function setProtection(to){
   const cur = state.data?.protection;
@@ -836,6 +867,7 @@ function startBrowserSR(SR){
 function finishBrowserSR(){
   const text = (rec.final + ' ' + rec.interim).replace(/\s+/g, ' ').trim();
   rec.sr = null; rec.base = ''; setRec(false);
+  if(rec.err){ const err = rec.err; rec.err = ''; if($('#text')) $('#text').value = text; hint(err + ' Your words were not sent. Check the text before sending.'); return; }
   if(!text){ hint(rec.err || "Didn't catch that, please tap the mic and try again"); rec.err = ''; return; }
   rec.err = '';
   addTrace([{kind:'asr', label:'Browser speech recognition: ' + text}]);
@@ -925,11 +957,13 @@ function b64(buf){ let s = ''; const b = new Uint8Array(buf); for(let i = 0; i <
 document.addEventListener('keydown', e => { if(e.key === 'Escape' && $('#trace').classList.contains('open') && !$('#confirm').open) toggleTrace(false); });
 (async function init(){
   try{ state.health = await api('/api/health'); }catch{}
-  if(visitorMode() && !String(state.sid || '').startsWith(VISITOR + '.')){
+  if(visitorMode() && !state.sid){
     try{ const r = await api('/api/reset', {visitor: VISITOR}); state.sid = r.session_id; store.set('sid', r.session_id); }catch{}
   }
   await refresh();
   state.signMode = await detectSignMode();      // after refresh: an enrolled passkey keeps being used
   render();
-  restorePending();
+  const pending = store.get('pendingPayment', null);
+  if(pending && pending.sid === state.sid){ state.card = pending.card; renderConfirm(); await recoverPayment(pending.card); }
+  else restorePending();
 })();

@@ -18,7 +18,7 @@ import re
 import time
 from dataclasses import dataclass, field
 
-from app.agent import fraud, presenter
+from app.agent import fraud, presenter, request_guard
 from app.agent.llm import LLMError, OfflineLLM, detect_intent
 from app.agent.prompts import SYSTEM_PROMPT, state_summary
 from app.agent.textparse import money_mentions, parse_amount
@@ -37,7 +37,7 @@ _SPLIT = re.compile(r"\b(?:and then|after that|afterwards|then)\b", re.I)
 _AND = re.compile(r",?\s+\band\b\s+(?:also\s+)?", re.I)
 # The model says it prepared / set up a payment, but no draft was made this turn
 _CLAIMS_PREPARED = re.compile(r"\b(i'?ve|i have|i)\s+(just\s+)?(prepared|drafted|set up|created|arranged)\b.{0,40}"
-                              r"\b(transfer|payment|investment|card)\b|\bhere'?s your (transfer|payment|investment)\b", re.I)
+                              r"\b(transfer|payment|investment|card|draft|purchase|buy)\b|\bhere'?s your (transfer|payment|investment)\b", re.I)
 _MONEY_INTENTS = ("transfer", "bill_pay", "invest")
 _NOTE = re.compile(r"\s*\[system note:[^\]]*\]", re.I)
 NUDGE = ("[Harness check] No draft exists: you did not call any draft tool in this turn, so nothing has been prepared. "
@@ -65,6 +65,7 @@ _LIST = re.compile(r",(?!\d)|;|\band\b|\balso\b", re.I)          # "1,000" is a 
 _EACHWORD = re.compile(r"\b(each|both)\b", re.I)
 _VERB = {"transfer": "send", "invest": "invest", "bill_pay": "pay"}
 _INVESTY = re.compile(r"\b(stocks?|shares?|funds?|etfs?|bonds?|deposit|apple|microsoft|singtel|unit trust)\b", re.I)
+_RELATIVE = re.compile(r"\bhalf\s+(?:that amount|of (?:it|that)|as much)\b", re.I)
 
 
 def _verb_for(item: str, last: str) -> str:
@@ -131,6 +132,14 @@ def split_plan(text: str) -> list[str]:
     """Split a compound request into ordered tasks, only when every part is a request on its own:
     "pay the bill, then send 200 to my daughter", "send 500 to my son and invest the rest in a fund",
     "invest 500 in Microsoft, 1000 in Apple". ("send 50 to my son and daughter" stays one task.)"""
+    # Protect conjunctions inside one amount or one utilities bill before task splitting.
+    text = re.sub(r"\b(hundred|thousand)\s+and\s+(?=\w+)", r"\1 ", text, flags=re.I)
+    text = re.sub(r"\bwater and electricity\b", "water/electricity", text, flags=re.I)
+    # "twenty dollars and fifty cents" is one amount, not two queued payments.
+    if re.search(r"\bdollars?\s+and\s+[a-z -]+\s+cents?\b", text, re.I) and not re.search(r"\bthen\b", text, re.I):
+        return [text]
+    if re.search(r"[,;]\s*(?:no|sorry|actually|I mean)\b", text, re.I):
+        return [text]
     parts = [text]
     for rx in (_SPLIT, _AND):
         cand = [p.strip(" ,.") for p in rx.split(text) if p.strip(" ,.")]
@@ -152,10 +161,78 @@ class Agent:
         s.add_trace("user", text)
         self.audit.append("user.utterance", s.session_id, {"text": text})
 
+        raw_text = text
+        if _RELATIVE.search(text) and len(split_plan(text)) == 1:
+            parent_id = s.plan_references.pop(text, None)
+            receipt = next((r for r in s.receipts if r.get("card", {}).get("draft_id") == parent_id), None)
+            if not receipt or receipt.get("status") != "SUCCESS" or receipt["card"]["amount_cents"] % 2:
+                reply = "I need the exact SGD amount. Which amount should I use? The previous step must be completed before its amount can be reused."
+                s.messages.extend([{"role": "user", "content": text}, {"role": "assistant", "content": reply}])
+                return TurnResult(reply, {"type": "text"}, reply, s.trace[start:], "reference guard")
+            cents = receipt["card"]["amount_cents"] // 2
+            text = _RELATIVE.sub(f"{cents // 100}.{cents % 100:02d} SGD", text)
+            # For an owned-account transfer, "of it" means funds in that destination account.
+            target = self.bank.payee(s.user_id, receipt["card"]["payee_id"])
+            if target and target.get("type") == "own_account" and not re.search(r"\bfrom\b", text, re.I):
+                text += " from my " + target["name"]
+            s.add_trace("reference", "Amount resolved from the completed, signed parent transaction",
+                        {"original": raw_text, "resolved": text, "parent_draft_id": parent_id})
+            self.audit.append("plan.reference_resolved", s.session_id,
+                              {"original": raw_text, "resolved": text, "parent_draft_id": parent_id})
+
+        if request_guard.cancelled(text):
+            if s.current_draft and s.phase in (Phase.AWAITING_AUTH, Phase.COOLING, Phase.FROZEN):
+                self.gateway.kernel.cancel(s, s.current_draft_id)
+                s.settle()
+            s.plan.clear()
+            s.plan_references.clear()
+            reply = "OK, no payment will be sent from that request."
+            s.messages.extend([{"role": "user", "content": text}, {"role": "assistant", "content": reply}])
+            s.task_start = len(s.messages)
+            return TurnResult(reply, {"type": "text"}, reply, s.trace[start:], "request guard")
+        pending_edit = s.current_draft if s.phase in (Phase.AWAITING_AUTH, Phase.COOLING) else None
+        if pending_edit and request_guard.correction(text):
+            amount = parse_amount(text)
+            old_start = s.task_start
+            self.gateway.kernel.cancel(s, pending_edit.draft_id, reason="user correction")
+            s.settle()
+            s.task_start = old_start
+            s.messages.append({"role": "user", "content": text})
+            error = request_guard.problem(text)
+            raw_level, reasons, _ = fraud.scan(text)
+            s.escalate_scam(prot.cap_scam(raw_level, prot.effective(self.bank, s.user_id)), reasons)
+            if s.scam_level.rank >= RiskLevel.HIGH.rank:
+                return self._locked(s, start, text)
+            # Amount-only corrections may not silently discard a new recipient/account instruction.
+            if re.search(r"\b(?:to|from)\s+(?:my |the )?(?:daughter|son|grandson|Chen|current|savings|joint)\b", text, re.I):
+                error = "The old payment is cancelled. Please restate the complete recipient, source account and amount."
+            if not error and amount and pending_edit.kind != "bill":
+                verdict = self.gateway.verifier.verdict(s) if self.gateway.verifier else None
+                d = self.gateway.kernel.create_draft(s, kind=pending_edit.kind, payee_id=pending_edit.payee_id,
+                    amount_cents=round(amount * 100), from_account=pending_edit.from_account,
+                    evidence=text, verification=verdict)
+                for task, parent in list(s.plan_references.items()):
+                    if parent == pending_edit.draft_id:
+                        s.plan_references[task] = d.draft_id
+                reply = "The old confirmation is cancelled. Please review the corrected payment."
+                s.messages.append({"role": "assistant", "content": reply})
+                card = presenter.build_card(d, self.bank, s.phase)
+                return TurnResult(reply, {"type": {Phase.FROZEN: "frozen", Phase.BLOCKED: "blocked", Phase.COOLING: "cooldown"}.get(s.phase, "confirm"), "card": card},
+                                  reply, s.trace[start:], "request correction")
+            reply = error or "Please make a new payment request with the recipient and amount."
+            s.task_start = len(s.messages)
+            return TurnResult(reply, {"type": "text"}, reply, s.trace[start:], "request guard")
+        error = request_guard.problem(text) if detect_intent(text) in _MONEY_INTENTS else None
+        if error:
+            s.messages.extend([{"role": "user", "content": text}, {"role": "assistant", "content": error}])
+            s.task_start = len(s.messages)
+            return TurnResult(error, {"type": "text"}, error, s.trace[start:], "request guard")
+
         # 0. Plan
         plan_before = list(s.plan)
         parts = split_plan(text)
         if len(parts) > 1:
+            s.plan_references.clear()
             s.plan[:] = parts[1:]          # a restated compound request replaces what was queued before
             s.add_trace("plan", "Compound request split into ordered tasks", parts)
             text_now = parts[0]
@@ -188,7 +265,7 @@ class Agent:
             return self._still_pending(s, start, text_now, pending)
 
         # 2. Constrained ReAct
-        s.messages.append({"role": "user", "content": text_now})
+        s.messages.append({"role": "user", "content": text_now, "raw_content": raw_text})
         verifier = self.gateway.verifier
         if verifier and s.phase == Phase.IDLE and self._money_related(s, text_now) and \
                 any(t.tier == "draft" for t in self.gateway.available(s)):
@@ -198,6 +275,15 @@ class Agent:
         draft_before = s.current_draft_id
         intent = detect_intent(OfflineLLM._effective_text(s.messages))   # includes answers to our own questions
         reply, llm_name, gave_up = self._react(s, self.llm, history, draft_before, intent)
+        tool_rejected = any(t.get("kind") == "observation" and isinstance(t.get("detail"), dict)
+                            and t["detail"].get("ok") is False for t in s.trace[start:])
+        if not gave_up and not tool_rejected and not str(llm_name).startswith("offline") and s.phase == Phase.IDLE and s.current_draft_id == draft_before and intent in _MONEY_INTENTS:
+            # A model sometimes asks for an amount already explicitly supplied ("a grand").
+            # Only finish locally when both target and exact amount are unambiguous; the
+            # independent verifier and all normal kernel checks still apply to this draft.
+            from app.agent.verifier import catalog, extract_offline
+            known = extract_offline(s.task_utterances(), catalog(self.bank, s.user_id))
+            gave_up = bool(known.get("payee") and known.get("amount"))
         if gave_up and s.current_draft_id == draft_before and s.phase == Phase.IDLE:
             # The model twice said "prepared" without ever calling a draft tool. Finish this turn with the
             # deterministic planner (same as when the model is down); everything after it is unchanged:
@@ -209,6 +295,8 @@ class Agent:
 
         # 3. Output validation
         new_draft = s.current_draft if s.current_draft_id and s.current_draft_id != draft_before else None
+        if new_draft and s.plan and _RELATIVE.search(s.plan[0]):
+            s.plan_references[s.plan[0]] = new_draft.draft_id
         reply = self._validate_reply(s, reply, new_draft, text_now)
         # What the model sees next turn: the reply PLUS what really happened. Without this note the history looks like
         # "user asks -> assistant says 'I've prepared it'" (tool calls aren't kept), and the model learns to skip the tools.
@@ -342,7 +430,7 @@ class Agent:
         s.add_trace("guard", f"Exceeded step limit {settings.max_steps}, handing off to a human")
         if s.phase == Phase.IDLE:
             s.transition(Phase.HANDOFF)
-        return "I need a colleague to help with this. I'm connecting you to a staff member now.", llm_name, False
+        return "I could not complete this request. This demo has no live staff service; please use the official banking app to contact a staff member.", llm_name, False
 
     @staticmethod
     def _what_happened(s: Session, d) -> str:

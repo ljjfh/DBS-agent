@@ -70,7 +70,7 @@ class Sandbox:
 def sandbox(tmpdir: str) -> Sandbox:
     bank = MockBank()
     audit = AuditLog(os.path.join(tmpdir, f"lab-{os.urandom(4).hex()}.jsonl"))
-    kernel = Kernel(bank, audit, allow_mock=False, require_verification=True)
+    kernel = Kernel(bank, audit, allow_mock=False, require_verification=True, risk_hour=14)
     kernel.registry.allow_browser_key = True      # the sandbox's simulated device signs with a browser key
     s = Session(session_id="lab-" + os.urandom(3).hex())
     d, jwk = p256.generate_keypair()

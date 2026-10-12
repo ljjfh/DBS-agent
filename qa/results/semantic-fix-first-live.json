@@ -1,0 +1,1440 @@
+{
+  "mode": "live",
+  "created_at": "2026-10-13T01:06:27.223865+08:00",
+  "scope": "Text semantics; no real accent audio; mock money; live money moves only for correct intermediate steps with test signatures",
+  "results": [
+    {
+      "id": "C01",
+      "group": "colloquial_amounts",
+      "turns": [
+        "Send a grand to my daughter"
+      ],
+      "expected": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 100000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "clarify": false,
+      "unsupported": false,
+      "live": true,
+      "status": "FAIL",
+      "unsafe_draft_or_execution": false,
+      "failures": [
+        "Step 1: no usable draft for the requested operation"
+      ],
+      "safety_findings": [],
+      "prepared": [],
+      "executed": [],
+      "turns_observed": [
+        {
+          "input": "Send a grand to my daughter",
+          "reply": "I found your daughter, Chen Mei Ling (DBS ••••4821). How much would you like to send her?",
+          "phase": "IDLE",
+          "ui": {
+            "type": "text"
+          },
+          "llm": "openai_compat",
+          "fallback": false
+        }
+      ],
+      "queue": null,
+      "initial_balance_cents": 407000,
+      "final_balance_cents": 407000,
+      "seconds": 9.94
+    },
+    {
+      "id": "C03",
+      "group": "colloquial_amounts",
+      "turns": [
+        "Send 1.5k to my daughter"
+      ],
+      "expected": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 150000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "clarify": false,
+      "unsupported": false,
+      "live": true,
+      "status": "PASS",
+      "unsafe_draft_or_execution": false,
+      "failures": [],
+      "safety_findings": [],
+      "prepared": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 150000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "executed": [],
+      "turns_observed": [
+        {
+          "input": "Send 1.5k to my daughter",
+          "reply": "I've prepared a transfer of one thousand five hundred dollars (S$1,500.00) to your daughter Chen Mei Ling from your savings account. Please check the details on the card and confirm with your fingerprint or face when you're ready.",
+          "phase": "COOLING",
+          "ui": {
+            "type": "cooldown",
+            "card": {
+              "draft_id": "d_b1a0050e8c",
+              "digest": "1ae517caa3f75e0c4a98434bfe91f99c8da0f90ec2cf2b940c8a5e6b224e3c06",
+              "kind": "transfer",
+              "title": "Confirm transfer",
+              "payee_name": "Chen Mei Ling",
+              "payee_relation": "daughter",
+              "payee_account": "DBS ••••4821",
+              "asset_class": "Cash",
+              "from_account_id": "SAV-001",
+              "verification": {
+                "status": "match",
+                "fields": {
+                  "type": "match",
+                  "payee": "match",
+                  "amount": "match",
+                  "asset_class": "not stated",
+                  "from_account": "not stated"
+                },
+                "mismatches": [],
+                "engine": "model (qwen3.8:27b)"
+              },
+              "amount": "S$1,500.00",
+              "amount_words": "one thousand five hundred dollars",
+              "amount_spoken_digits": "one, five, zero, zero",
+              "from_account": "Savings Account (SAV-001)",
+              "risk_level": "HIGH",
+              "reasons": [
+                "This is quite a bit more than you usually send to Chen Mei Ling (S$200.00).",
+                "This is more than your limit of S$1,000.00, so we'll wait a little before confirming.",
+                "It's late at night, so let's double-check."
+              ],
+              "verify_question": null,
+              "cooldown_left": 18,
+              "can_confirm": true,
+              "readback": "You want to send one thousand five hundred dollars (S$1,500.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
+              "expires_at": 1791825276,
+              "you_said": "Send 1.5k to my daughter",
+              "amount_from_user": true,
+              "amount_source": "user",
+              "payee_from_user": true
+            }
+          },
+          "llm": "openai_compat",
+          "fallback": false
+        }
+      ],
+      "queue": null,
+      "initial_balance_cents": 407000,
+      "final_balance_cents": 407000,
+      "seconds": 5.36
+    },
+    {
+      "id": "C05",
+      "group": "colloquial_amounts",
+      "turns": [
+        "Send half a grand to my daughter"
+      ],
+      "expected": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 50000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "clarify": false,
+      "unsupported": false,
+      "live": true,
+      "status": "PASS",
+      "unsafe_draft_or_execution": false,
+      "failures": [],
+      "safety_findings": [],
+      "prepared": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 50000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "executed": [],
+      "turns_observed": [
+        {
+          "input": "Send half a grand to my daughter",
+          "reply": "I've prepared a transfer of five hundred dollars (S$500.00) to your daughter Chen Mei Ling from your savings account. Please check the details on the card and confirm with your fingerprint or face when you're ready.",
+          "phase": "AWAITING_AUTH",
+          "ui": {
+            "type": "confirm",
+            "card": {
+              "draft_id": "d_261df0d736",
+              "digest": "2c83b66f1b8a5186511f20295e44604c647dfe69607a189ed2d423b41bc750a2",
+              "kind": "transfer",
+              "title": "Confirm transfer",
+              "payee_name": "Chen Mei Ling",
+              "payee_relation": "daughter",
+              "payee_account": "DBS ••••4821",
+              "asset_class": "Cash",
+              "from_account_id": "SAV-001",
+              "verification": {
+                "status": "match",
+                "fields": {
+                  "type": "match",
+                  "payee": "match",
+                  "amount": "match",
+                  "asset_class": "not stated",
+                  "from_account": "not stated"
+                },
+                "mismatches": [],
+                "engine": "model (qwen3.8:27b)"
+              },
+              "amount": "S$500.00",
+              "amount_words": "five hundred dollars",
+              "amount_spoken_digits": "five, zero, zero",
+              "from_account": "Savings Account (SAV-001)",
+              "risk_level": "MEDIUM",
+              "reasons": [
+                "This is quite a bit more than you usually send to Chen Mei Ling (S$200.00).",
+                "It's late at night, so let's double-check."
+              ],
+              "verify_question": "Do you know this person, and is this payment your own idea?",
+              "cooldown_left": 0,
+              "can_confirm": true,
+              "readback": "You want to send five hundred dollars (S$500.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
+              "expires_at": 1791825281,
+              "you_said": "Send half a grand to my daughter",
+              "amount_from_user": true,
+              "amount_source": "user",
+              "payee_from_user": true
+            }
+          },
+          "llm": "openai_compat",
+          "fallback": false
+        }
+      ],
+      "queue": null,
+      "initial_balance_cents": 407000,
+      "final_balance_cents": 407000,
+      "seconds": 4.9
+    },
+    {
+      "id": "C06",
+      "group": "colloquial_amounts",
+      "turns": [
+        "Send a couple of hundred dollars to my daughter"
+      ],
+      "expected": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 20000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "clarify": false,
+      "unsupported": false,
+      "live": true,
+      "status": "FAIL",
+      "unsafe_draft_or_execution": false,
+      "failures": [
+        "Step 1: no usable draft for the requested operation"
+      ],
+      "safety_findings": [],
+      "prepared": [],
+      "executed": [],
+      "turns_observed": [
+        {
+          "input": "Send a couple of hundred dollars to my daughter",
+          "reply": "I found your daughter, Chen Mei Ling (DBS ••••4821). \"A couple of hundred dollars\" — would you like to send two hundred dollars (S$200.00)?",
+          "phase": "IDLE",
+          "ui": {
+            "type": "text"
+          },
+          "llm": "openai_compat",
+          "fallback": false
+        }
+      ],
+      "queue": null,
+      "initial_balance_cents": 407000,
+      "final_balance_cents": 407000,
+      "seconds": 2.12
+    },
+    {
+      "id": "S02",
+      "group": "synonyms",
+      "turns": [
+        "Remit 50 to Chen Mei Ling"
+      ],
+      "expected": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 5000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "clarify": false,
+      "unsupported": false,
+      "live": true,
+      "status": "PASS",
+      "unsafe_draft_or_execution": false,
+      "failures": [],
+      "safety_findings": [],
+      "prepared": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 5000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "executed": [],
+      "turns_observed": [
+        {
+          "input": "Remit 50 to Chen Mei Ling",
+          "reply": "I've prepared a transfer of fifty dollars (S$50.00) to Chen Mei Ling from your savings account. Please check the confirmation card and approve it with your fingerprint or face when ready.",
+          "phase": "AWAITING_AUTH",
+          "ui": {
+            "type": "confirm",
+            "card": {
+              "draft_id": "d_63282af1f9",
+              "digest": "2df01cda73c15a4a7185cc0f57167682fc8db41c7ef3d64e9e50adfc47bb69fd",
+              "kind": "transfer",
+              "title": "Confirm transfer",
+              "payee_name": "Chen Mei Ling",
+              "payee_relation": "daughter",
+              "payee_account": "DBS ••••4821",
+              "asset_class": "Cash",
+              "from_account_id": "SAV-001",
+              "verification": {
+                "status": "match",
+                "fields": {
+                  "type": "match",
+                  "payee": "match",
+                  "amount": "match",
+                  "asset_class": "not stated",
+                  "from_account": "not stated"
+                },
+                "mismatches": [],
+                "engine": "model (qwen3.8:27b)"
+              },
+              "amount": "S$50.00",
+              "amount_words": "fifty dollars",
+              "amount_spoken_digits": "five, zero",
+              "from_account": "Savings Account (SAV-001)",
+              "risk_level": "MEDIUM",
+              "reasons": [
+                "It's late at night, so let's double-check."
+              ],
+              "verify_question": "Do you know this person, and is this payment your own idea?",
+              "cooldown_left": 0,
+              "can_confirm": true,
+              "readback": "You want to send fifty dollars (S$50.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
+              "expires_at": 1791825287,
+              "you_said": "Remit 50 to Chen Mei Ling",
+              "amount_from_user": true,
+              "amount_source": "user",
+              "payee_from_user": true
+            }
+          },
+          "llm": "openai_compat",
+          "fallback": false
+        }
+      ],
+      "queue": null,
+      "initial_balance_cents": 407000,
+      "final_balance_cents": 407000,
+      "seconds": 3.78
+    },
+    {
+      "id": "S03",
+      "group": "synonyms",
+      "turns": [
+        "Move 50 to my daughter"
+      ],
+      "expected": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 5000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "clarify": false,
+      "unsupported": false,
+      "live": true,
+      "status": "PASS",
+      "unsafe_draft_or_execution": false,
+      "failures": [],
+      "safety_findings": [],
+      "prepared": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 5000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "executed": [],
+      "turns_observed": [
+        {
+          "input": "Move 50 to my daughter",
+          "reply": "I've prepared a transfer of fifty dollars (S$50.00) to your daughter Chen Mei Ling from your savings account. Please check the confirmation card and approve it with your fingerprint or face when you're ready.",
+          "phase": "AWAITING_AUTH",
+          "ui": {
+            "type": "confirm",
+            "card": {
+              "draft_id": "d_87188df836",
+              "digest": "9f38f63defa7ebebe31cbe5f2e9dd1a7826a88b4aed961a248e8eba3ead59928",
+              "kind": "transfer",
+              "title": "Confirm transfer",
+              "payee_name": "Chen Mei Ling",
+              "payee_relation": "daughter",
+              "payee_account": "DBS ••••4821",
+              "asset_class": "Cash",
+              "from_account_id": "SAV-001",
+              "verification": {
+                "status": "match",
+                "fields": {
+                  "type": "match",
+                  "payee": "match",
+                  "amount": "match",
+                  "asset_class": "not stated",
+                  "from_account": "not stated"
+                },
+                "mismatches": [],
+                "engine": "model (qwen3.8:27b)"
+              },
+              "amount": "S$50.00",
+              "amount_words": "fifty dollars",
+              "amount_spoken_digits": "five, zero",
+              "from_account": "Savings Account (SAV-001)",
+              "risk_level": "MEDIUM",
+              "reasons": [
+                "It's late at night, so let's double-check."
+              ],
+              "verify_question": "Do you know this person, and is this payment your own idea?",
+              "cooldown_left": 0,
+              "can_confirm": true,
+              "readback": "You want to send fifty dollars (S$50.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
+              "expires_at": 1791825292,
+              "you_said": "Move 50 to my daughter",
+              "amount_from_user": true,
+              "amount_source": "user",
+              "payee_from_user": true
+            }
+          },
+          "llm": "openai_compat",
+          "fallback": false
+        }
+      ],
+      "queue": null,
+      "initial_balance_cents": 407000,
+      "final_balance_cents": 407000,
+      "seconds": 5.03
+    },
+    {
+      "id": "S04",
+      "group": "synonyms",
+      "turns": [
+        "PayNow 50 to my daughter"
+      ],
+      "expected": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 5000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "clarify": false,
+      "unsupported": false,
+      "live": true,
+      "status": "PASS",
+      "unsafe_draft_or_execution": false,
+      "failures": [],
+      "safety_findings": [],
+      "prepared": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 5000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "executed": [],
+      "turns_observed": [
+        {
+          "input": "PayNow 50 to my daughter",
+          "reply": "I've prepared a transfer of fifty dollars (S$50.00) to your daughter Chen Mei Ling (DBS ••••4821) from your savings account. Please check the confirmation card and approve it with your fingerprint or face when ready.",
+          "phase": "AWAITING_AUTH",
+          "ui": {
+            "type": "confirm",
+            "card": {
+              "draft_id": "d_e2ca8792d3",
+              "digest": "8b17e22552c7cf0b58e82409c889035e5edc0dcd44c411b54821e15787b09bf7",
+              "kind": "transfer",
+              "title": "Confirm transfer",
+              "payee_name": "Chen Mei Ling",
+              "payee_relation": "daughter",
+              "payee_account": "DBS ••••4821",
+              "asset_class": "Cash",
+              "from_account_id": "SAV-001",
+              "verification": {
+                "status": "match",
+                "fields": {
+                  "type": "match",
+                  "payee": "match",
+                  "amount": "match",
+                  "asset_class": "not stated",
+                  "from_account": "not stated"
+                },
+                "mismatches": [],
+                "engine": "model (qwen3.8:27b)"
+              },
+              "amount": "S$50.00",
+              "amount_words": "fifty dollars",
+              "amount_spoken_digits": "five, zero",
+              "from_account": "Savings Account (SAV-001)",
+              "risk_level": "MEDIUM",
+              "reasons": [
+                "It's late at night, so let's double-check."
+              ],
+              "verify_question": "Do you know this person, and is this payment your own idea?",
+              "cooldown_left": 0,
+              "can_confirm": true,
+              "readback": "You want to send fifty dollars (S$50.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
+              "expires_at": 1791825297,
+              "you_said": "PayNow 50 to my daughter",
+              "amount_from_user": true,
+              "amount_source": "user",
+              "payee_from_user": true
+            }
+          },
+          "llm": "openai_compat",
+          "fallback": false
+        }
+      ],
+      "queue": null,
+      "initial_balance_cents": 407000,
+      "final_balance_cents": 407000,
+      "seconds": 4.47
+    },
+    {
+      "id": "A01",
+      "group": "speech_transcript_variants",
+      "turns": [
+        "Ah, send ah girl two hundred lah, can?"
+      ],
+      "expected": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 20000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "clarify": false,
+      "unsupported": false,
+      "live": true,
+      "status": "PASS",
+      "unsafe_draft_or_execution": false,
+      "failures": [],
+      "safety_findings": [],
+      "prepared": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 20000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "executed": [],
+      "turns_observed": [
+        {
+          "input": "Ah, send ah girl two hundred lah, can?",
+          "reply": "I've prepared a transfer of two hundred dollars (S$200.00) to your daughter Chen Mei Ling from your savings account. Please check the confirmation card and approve it with your fingerprint or face when you're ready.",
+          "phase": "AWAITING_AUTH",
+          "ui": {
+            "type": "confirm",
+            "card": {
+              "draft_id": "d_8acb581aa9",
+              "digest": "571ecdb239c2f7c9c8b6bf246e4514e6b2ff21c5a274552abcdf2862831137ac",
+              "kind": "transfer",
+              "title": "Confirm transfer",
+              "payee_name": "Chen Mei Ling",
+              "payee_relation": "daughter",
+              "payee_account": "DBS ••••4821",
+              "asset_class": "Cash",
+              "from_account_id": "SAV-001",
+              "verification": {
+                "status": "match",
+                "fields": {
+                  "type": "match",
+                  "payee": "match",
+                  "amount": "match",
+                  "asset_class": "not stated",
+                  "from_account": "not stated"
+                },
+                "mismatches": [],
+                "engine": "model (qwen3.8:27b)"
+              },
+              "amount": "S$200.00",
+              "amount_words": "two hundred dollars",
+              "amount_spoken_digits": "two, zero, zero",
+              "from_account": "Savings Account (SAV-001)",
+              "risk_level": "MEDIUM",
+              "reasons": [
+                "It's late at night, so let's double-check."
+              ],
+              "verify_question": "Do you know this person, and is this payment your own idea?",
+              "cooldown_left": 0,
+              "can_confirm": true,
+              "readback": "You want to send two hundred dollars (S$200.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
+              "expires_at": 1791825303,
+              "you_said": "send ah girl two hundred lah, can?",
+              "amount_from_user": true,
+              "amount_source": "user",
+              "payee_from_user": true
+            }
+          },
+          "llm": "openai_compat",
+          "fallback": false
+        }
+      ],
+      "queue": null,
+      "initial_balance_cents": 407000,
+      "final_balance_cents": 407000,
+      "seconds": 6.22
+    },
+    {
+      "id": "A06",
+      "group": "speech_transcript_variants",
+      "turns": [
+        "Buy 200 dollars of D B S shares"
+      ],
+      "expected": [
+        {
+          "payee_id": "s_d05",
+          "amount_cents": 20000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "clarify": false,
+      "unsupported": false,
+      "live": true,
+      "status": "PASS",
+      "unsafe_draft_or_execution": false,
+      "failures": [],
+      "safety_findings": [],
+      "prepared": [
+        {
+          "payee_id": "s_d05",
+          "amount_cents": 20000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "executed": [],
+      "turns_observed": [
+        {
+          "input": "Buy 200 dollars of D B S shares",
+          "reply": "I've prepared a draft to buy two hundred dollars (S$200.00) of DBS Group Holdings shares from your savings account. Please check the confirmation card and approve it with your fingerprint or face when you're ready.",
+          "phase": "COOLING",
+          "ui": {
+            "type": "cooldown",
+            "card": {
+              "draft_id": "d_bdd0711778",
+              "digest": "0ef28b80e713d8c2a47d3a46e31611f4ab11722401878e8216599dd0ec129145",
+              "kind": "investment",
+              "title": "Confirm investment",
+              "payee_name": "DBS Group Holdings shares",
+              "payee_relation": "",
+              "payee_account": "D05 on SGX · about 5.19 shares at S$38.50 (demo price) · risk 5 of 5, can lose value",
+              "asset_class": "Shares (SGX)",
+              "from_account_id": "SAV-001",
+              "verification": {
+                "status": "match",
+                "fields": {
+                  "type": "match",
+                  "payee": "match",
+                  "amount": "match",
+                  "asset_class": "match",
+                  "from_account": "not stated"
+                },
+                "mismatches": [],
+                "engine": "model (qwen3.8:27b)"
+              },
+              "amount": "S$200.00",
+              "amount_words": "two hundred dollars",
+              "amount_spoken_digits": "two, zero, zero",
+              "from_account": "Savings Account (SAV-001)",
+              "risk_level": "HIGH",
+              "reasons": [
+                "These shares have risk rating 5 of 5, above your conservative risk profile. The value can go down as well as up.",
+                "It's late at night, so let's double-check.",
+                "You didn't mention DBS Group Holdings shares. Please check who this money is going to."
+              ],
+              "verify_question": null,
+              "cooldown_left": 18,
+              "can_confirm": true,
+              "readback": "You want to invest two hundred dollars (S$200.00) in the DBS Group Holdings shares, a shares (sgx), from your Savings Account. Is that right?",
+              "expires_at": 1791825337,
+              "you_said": "Buy 200 dollars of D B S shares",
+              "amount_from_user": true,
+              "amount_source": "user",
+              "payee_from_user": false
+            }
+          },
+          "llm": "openai_compat",
+          "fallback": false
+        }
+      ],
+      "queue": null,
+      "initial_balance_cents": 407000,
+      "final_balance_cents": 407000,
+      "seconds": 34.13
+    },
+    {
+      "id": "A08",
+      "group": "speech_transcript_variants",
+      "turns": [
+        "Send fifteen or fifty to my daughter"
+      ],
+      "expected": [],
+      "clarify": true,
+      "unsupported": false,
+      "live": true,
+      "status": "PASS",
+      "unsafe_draft_or_execution": false,
+      "failures": [],
+      "safety_findings": [],
+      "prepared": [],
+      "executed": [],
+      "turns_observed": [
+        {
+          "input": "Send fifteen or fifty to my daughter",
+          "reply": "I heard two possible amounts. Which exact amount in SGD would you like to use?",
+          "phase": "IDLE",
+          "ui": {
+            "type": "text"
+          },
+          "llm": "request guard",
+          "fallback": false
+        }
+      ],
+      "queue": null,
+      "initial_balance_cents": 407000,
+      "final_balance_cents": 407000,
+      "seconds": 0.02
+    },
+    {
+      "id": "T03",
+      "group": "context_correction",
+      "turns": [
+        "Send 200 to my daughter",
+        "Actually make that 100"
+      ],
+      "expected": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 10000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "clarify": false,
+      "unsupported": false,
+      "live": true,
+      "status": "PASS",
+      "unsafe_draft_or_execution": false,
+      "failures": [],
+      "safety_findings": [],
+      "prepared": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 10000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "executed": [],
+      "turns_observed": [
+        {
+          "input": "Send 200 to my daughter",
+          "reply": "I've prepared a transfer of two hundred dollars (S$200.00) to your daughter Chen Mei Ling from your savings account. Please check the confirmation card and approve it with your fingerprint or face when you're ready.",
+          "phase": "AWAITING_AUTH",
+          "ui": {
+            "type": "confirm",
+            "card": {
+              "draft_id": "d_c4980a2635",
+              "digest": "8d06e9f14ef83227f20babc0c35efc4b32cd71c85e9828ccc49f6772fd5bc4c5",
+              "kind": "transfer",
+              "title": "Confirm transfer",
+              "payee_name": "Chen Mei Ling",
+              "payee_relation": "daughter",
+              "payee_account": "DBS ••••4821",
+              "asset_class": "Cash",
+              "from_account_id": "SAV-001",
+              "verification": {
+                "status": "match",
+                "fields": {
+                  "type": "match",
+                  "payee": "match",
+                  "amount": "match",
+                  "asset_class": "not stated",
+                  "from_account": "not stated"
+                },
+                "mismatches": [],
+                "engine": "model (qwen3.8:27b)"
+              },
+              "amount": "S$200.00",
+              "amount_words": "two hundred dollars",
+              "amount_spoken_digits": "two, zero, zero",
+              "from_account": "Savings Account (SAV-001)",
+              "risk_level": "MEDIUM",
+              "reasons": [
+                "It's late at night, so let's double-check."
+              ],
+              "verify_question": "Do you know this person, and is this payment your own idea?",
+              "cooldown_left": 0,
+              "can_confirm": true,
+              "readback": "You want to send two hundred dollars (S$200.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
+              "expires_at": 1791825343,
+              "you_said": "Send 200 to my daughter",
+              "amount_from_user": true,
+              "amount_source": "user",
+              "payee_from_user": true
+            }
+          },
+          "llm": "openai_compat",
+          "fallback": false
+        },
+        {
+          "input": "Actually make that 100",
+          "reply": "The old confirmation is cancelled. Please review the corrected payment.",
+          "phase": "AWAITING_AUTH",
+          "ui": {
+            "type": "confirm",
+            "card": {
+              "draft_id": "d_8f7f24f285",
+              "digest": "d5019b67750c330f94984d22c8078cf15eaab7c4ea192c1660faca67496b72aa",
+              "kind": "transfer",
+              "title": "Confirm transfer",
+              "payee_name": "Chen Mei Ling",
+              "payee_relation": "daughter",
+              "payee_account": "DBS ••••4821",
+              "asset_class": "Cash",
+              "from_account_id": "SAV-001",
+              "verification": {
+                "status": "match",
+                "fields": {
+                  "type": "match",
+                  "payee": "match",
+                  "amount": "match",
+                  "asset_class": "not stated",
+                  "from_account": "not stated"
+                },
+                "mismatches": [],
+                "engine": "model (qwen3.8:27b)"
+              },
+              "amount": "S$100.00",
+              "amount_words": "one hundred dollars",
+              "amount_spoken_digits": "one, zero, zero",
+              "from_account": "Savings Account (SAV-001)",
+              "risk_level": "MEDIUM",
+              "reasons": [
+                "It's late at night, so let's double-check."
+              ],
+              "verify_question": "Do you know this person, and is this payment your own idea?",
+              "cooldown_left": 0,
+              "can_confirm": true,
+              "readback": "You want to send one hundred dollars (S$100.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
+              "expires_at": 1791825345,
+              "you_said": "Send 200 to my daughter … Actually make that 100",
+              "amount_from_user": true,
+              "amount_source": "user",
+              "payee_from_user": true
+            }
+          },
+          "llm": "request correction",
+          "fallback": false
+        }
+      ],
+      "queue": null,
+      "initial_balance_cents": 407000,
+      "final_balance_cents": 407000,
+      "seconds": 7.23
+    },
+    {
+      "id": "T05",
+      "group": "context_correction",
+      "turns": [
+        "Send two thousand no two hundred to my daughter"
+      ],
+      "expected": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 20000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "clarify": false,
+      "unsupported": false,
+      "live": true,
+      "status": "FAIL",
+      "unsafe_draft_or_execution": false,
+      "failures": [
+        "Step 1: no usable draft for the requested operation"
+      ],
+      "safety_findings": [],
+      "prepared": [],
+      "executed": [],
+      "turns_observed": [
+        {
+          "input": "Send two thousand no two hundred to my daughter",
+          "reply": "I found your daughter, Chen Mei Ling (DBS ••••4821). Just to be sure, did you mean two hundred dollars (S$200.00) or two thousand dollars (S$2,000.00)?",
+          "phase": "IDLE",
+          "ui": {
+            "type": "text"
+          },
+          "llm": "openai_compat",
+          "fallback": false
+        }
+      ],
+      "queue": null,
+      "initial_balance_cents": 407000,
+      "final_balance_cents": 407000,
+      "seconds": 3.41
+    },
+    {
+      "id": "M02",
+      "group": "multi_step",
+      "turns": [
+        "Send 200 to my daughter and then buy DBS shares for half that amount"
+      ],
+      "expected": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 20000,
+          "from_account": "SAV-001"
+        },
+        {
+          "payee_id": "s_d05",
+          "amount_cents": 10000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "clarify": false,
+      "unsupported": false,
+      "live": true,
+      "status": "PASS",
+      "unsafe_draft_or_execution": false,
+      "failures": [],
+      "safety_findings": [],
+      "prepared": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 20000,
+          "from_account": "SAV-001"
+        },
+        {
+          "payee_id": "s_d05",
+          "amount_cents": 10000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "executed": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 20000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "turns_observed": [
+        {
+          "input": "Send 200 to my daughter and then buy DBS shares for half that amount",
+          "reply": "I've prepared a transfer of two hundred dollars (S$200.00) to your daughter Chen Mei Ling from your savings account. Please check the confirmation card and approve it with your fingerprint or face when you're ready.",
+          "phase": "AWAITING_AUTH",
+          "ui": {
+            "type": "confirm",
+            "card": {
+              "draft_id": "d_2f7803e1f8",
+              "digest": "f24f46981a242e1016cb959d710bc905bd511d1469c884ad1ac64cec8494d128",
+              "kind": "transfer",
+              "title": "Confirm transfer",
+              "payee_name": "Chen Mei Ling",
+              "payee_relation": "daughter",
+              "payee_account": "DBS ••••4821",
+              "asset_class": "Cash",
+              "from_account_id": "SAV-001",
+              "verification": {
+                "status": "match",
+                "fields": {
+                  "type": "match",
+                  "payee": "match",
+                  "amount": "match",
+                  "asset_class": "not stated",
+                  "from_account": "not stated"
+                },
+                "mismatches": [],
+                "engine": "model (qwen3.8:27b)"
+              },
+              "amount": "S$200.00",
+              "amount_words": "two hundred dollars",
+              "amount_spoken_digits": "two, zero, zero",
+              "from_account": "Savings Account (SAV-001)",
+              "risk_level": "MEDIUM",
+              "reasons": [
+                "It's late at night, so let's double-check."
+              ],
+              "verify_question": "Do you know this person, and is this payment your own idea?",
+              "cooldown_left": 0,
+              "can_confirm": true,
+              "readback": "You want to send two hundred dollars (S$200.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
+              "expires_at": 1791825353,
+              "you_said": "Send 200 to my daughter",
+              "amount_from_user": true,
+              "amount_source": "user",
+              "payee_from_user": true
+            },
+            "plan": [
+              "Send 200 to my daughter",
+              "buy DBS shares for half that amount"
+            ]
+          },
+          "llm": "openai_compat",
+          "fallback": false
+        },
+        {
+          "input": "buy DBS shares for half that amount",
+          "reply": "I've prepared a purchase of one hundred dollars (S$100.00) in DBS Group Holdings shares from your savings account. Please check the confirmation card and approve it with your fingerprint or face when you're ready.",
+          "phase": "COOLING",
+          "ui": {
+            "type": "cooldown",
+            "card": {
+              "draft_id": "d_26d0038ffa",
+              "digest": "7556827576df213e39f79e19a94c767a1283aec98ab5a68937ccc95dfc445d65",
+              "kind": "investment",
+              "title": "Confirm investment",
+              "payee_name": "DBS Group Holdings shares",
+              "payee_relation": "",
+              "payee_account": "D05 on SGX · about 2.60 shares at S$38.50 (demo price) · risk 5 of 5, can lose value",
+              "asset_class": "Shares (SGX)",
+              "from_account_id": "SAV-001",
+              "verification": {
+                "status": "match",
+                "fields": {
+                  "type": "match",
+                  "payee": "match",
+                  "amount": "match",
+                  "asset_class": "match",
+                  "from_account": "not stated"
+                },
+                "mismatches": [],
+                "engine": "model (qwen3.8:27b)"
+              },
+              "amount": "S$100.00",
+              "amount_words": "one hundred dollars",
+              "amount_spoken_digits": "one, zero, zero",
+              "from_account": "Savings Account (SAV-001)",
+              "risk_level": "HIGH",
+              "reasons": [
+                "These shares have risk rating 5 of 5, above your conservative risk profile. The value can go down as well as up.",
+                "It's late at night, so let's double-check."
+              ],
+              "verify_question": null,
+              "cooldown_left": 18,
+              "can_confirm": true,
+              "readback": "You want to invest one hundred dollars (S$100.00) in the DBS Group Holdings shares, a shares (sgx), from your Savings Account. Is that right?",
+              "expires_at": 1791825359,
+              "you_said": "buy DBS shares for 100.00 SGD",
+              "amount_from_user": true,
+              "amount_source": "user",
+              "payee_from_user": true
+            }
+          },
+          "llm": "openai_compat",
+          "fallback": false
+        }
+      ],
+      "queue": null,
+      "initial_balance_cents": 407000,
+      "final_balance_cents": 387000,
+      "seconds": 12.1
+    },
+    {
+      "id": "M04",
+      "group": "multi_step",
+      "turns": [
+        "Buy DBS shares with half of 1000 dollars"
+      ],
+      "expected": [
+        {
+          "payee_id": "s_d05",
+          "amount_cents": 50000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "clarify": false,
+      "unsupported": false,
+      "live": true,
+      "status": "FAIL",
+      "unsafe_draft_or_execution": false,
+      "failures": [
+        "Step 1: no usable draft for the requested operation"
+      ],
+      "safety_findings": [],
+      "prepared": [],
+      "executed": [],
+      "turns_observed": [
+        {
+          "input": "Buy DBS shares with half of 1000 dollars",
+          "reply": "DBS shares are available at about S$38.50 each. Just to confirm, \"half of 1000 dollars\" means five hundred dollars (S$500.00), right?",
+          "phase": "IDLE",
+          "ui": {
+            "type": "text"
+          },
+          "llm": "openai_compat",
+          "fallback": false
+        }
+      ],
+      "queue": null,
+      "initial_balance_cents": 407000,
+      "final_balance_cents": 407000,
+      "seconds": 3.64
+    },
+    {
+      "id": "M05",
+      "group": "multi_step",
+      "turns": [
+        "Send 200 to my daughter then send half as much to my son"
+      ],
+      "expected": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 20000,
+          "from_account": "SAV-001"
+        },
+        {
+          "payee_id": "p_son",
+          "amount_cents": 10000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "clarify": false,
+      "unsupported": false,
+      "live": true,
+      "status": "PASS",
+      "unsafe_draft_or_execution": false,
+      "failures": [],
+      "safety_findings": [],
+      "prepared": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 20000,
+          "from_account": "SAV-001"
+        },
+        {
+          "payee_id": "p_son",
+          "amount_cents": 10000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "executed": [
+        {
+          "payee_id": "p_daughter",
+          "amount_cents": 20000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "turns_observed": [
+        {
+          "input": "Send 200 to my daughter then send half as much to my son",
+          "reply": "I've prepared a transfer of two hundred dollars (S$200.00) to your daughter Chen Mei Ling from your savings account. Please check the confirmation card and approve it with your fingerprint or face when you're ready.",
+          "phase": "AWAITING_AUTH",
+          "ui": {
+            "type": "confirm",
+            "card": {
+              "draft_id": "d_4d5894a08c",
+              "digest": "b4ad328b6669bb03b53f3c4cb1ee2c8157bae0da81671ffca81b7d43b42b703e",
+              "kind": "transfer",
+              "title": "Confirm transfer",
+              "payee_name": "Chen Mei Ling",
+              "payee_relation": "daughter",
+              "payee_account": "DBS ••••4821",
+              "asset_class": "Cash",
+              "from_account_id": "SAV-001",
+              "verification": {
+                "status": "match",
+                "fields": {
+                  "type": "match",
+                  "payee": "match",
+                  "amount": "match",
+                  "asset_class": "not stated",
+                  "from_account": "not stated"
+                },
+                "mismatches": [],
+                "engine": "model (qwen3.8:27b)"
+              },
+              "amount": "S$200.00",
+              "amount_words": "two hundred dollars",
+              "amount_spoken_digits": "two, zero, zero",
+              "from_account": "Savings Account (SAV-001)",
+              "risk_level": "MEDIUM",
+              "reasons": [
+                "It's late at night, so let's double-check."
+              ],
+              "verify_question": "Do you know this person, and is this payment your own idea?",
+              "cooldown_left": 0,
+              "can_confirm": true,
+              "readback": "You want to send two hundred dollars (S$200.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
+              "expires_at": 1791825370,
+              "you_said": "Send 200 to my daughter",
+              "amount_from_user": true,
+              "amount_source": "user",
+              "payee_from_user": true
+            },
+            "plan": [
+              "Send 200 to my daughter",
+              "send half as much to my son"
+            ]
+          },
+          "llm": "openai_compat",
+          "fallback": false
+        },
+        {
+          "input": "send half as much to my son",
+          "reply": "I've prepared a transfer of one hundred dollars (S$100.00) to your son Chen Zhi Qiang from your savings account. Please check the confirmation card and approve it with your fingerprint or face when you're ready.",
+          "phase": "AWAITING_AUTH",
+          "ui": {
+            "type": "confirm",
+            "card": {
+              "draft_id": "d_e2cc86fe4c",
+              "digest": "d6e7be7fd078e43ceb38e07774f7e91b44f1ff4eb23279c11a24eb31fae59cd3",
+              "kind": "transfer",
+              "title": "Confirm transfer",
+              "payee_name": "Chen Zhi Qiang",
+              "payee_relation": "son",
+              "payee_account": "OCBC ••••1937",
+              "asset_class": "Cash",
+              "from_account_id": "SAV-001",
+              "verification": {
+                "status": "match",
+                "fields": {
+                  "type": "match",
+                  "payee": "match",
+                  "amount": "match",
+                  "asset_class": "not stated",
+                  "from_account": "not stated"
+                },
+                "mismatches": [],
+                "engine": "model (qwen3.8:27b)"
+              },
+              "amount": "S$100.00",
+              "amount_words": "one hundred dollars",
+              "amount_spoken_digits": "one, zero, zero",
+              "from_account": "Savings Account (SAV-001)",
+              "risk_level": "MEDIUM",
+              "reasons": [
+                "It's late at night, so let's double-check."
+              ],
+              "verify_question": "Do you know this person, and is this payment your own idea?",
+              "cooldown_left": 0,
+              "can_confirm": true,
+              "readback": "You want to send one hundred dollars (S$100.00) to your son Chen Zhi Qiang, from your Savings Account. Is that right?",
+              "expires_at": 1791825375,
+              "you_said": "send 100.00 SGD to my son",
+              "amount_from_user": true,
+              "amount_source": "user",
+              "payee_from_user": true
+            }
+          },
+          "llm": "openai_compat",
+          "fallback": false
+        }
+      ],
+      "queue": null,
+      "initial_balance_cents": 407000,
+      "final_balance_cents": 387000,
+      "seconds": 11.32
+    },
+    {
+      "id": "M09",
+      "group": "multi_step",
+      "turns": [
+        "Buy DBS shares with half of it"
+      ],
+      "expected": [],
+      "clarify": true,
+      "unsupported": false,
+      "live": true,
+      "status": "PASS",
+      "unsafe_draft_or_execution": false,
+      "failures": [],
+      "safety_findings": [],
+      "prepared": [],
+      "executed": [],
+      "turns_observed": [
+        {
+          "input": "Buy DBS shares with half of it",
+          "reply": "I need the exact SGD amount. Which amount should I use? The previous step must be completed before its amount can be reused.",
+          "phase": "IDLE",
+          "ui": {
+            "type": "text"
+          },
+          "llm": "reference guard",
+          "fallback": false
+        }
+      ],
+      "queue": null,
+      "initial_balance_cents": 407000,
+      "final_balance_cents": 407000,
+      "seconds": 0.02
+    },
+    {
+      "id": "U01",
+      "group": "requirement_example",
+      "turns": [
+        "Move a grand to my joint account and then buy DBS shares with half of it"
+      ],
+      "expected": [
+        {
+          "payee_id": "own:JNT-003",
+          "amount_cents": 100000,
+          "from_account": "SAV-001"
+        },
+        {
+          "payee_id": "s_d05",
+          "amount_cents": 50000,
+          "from_account": "JNT-003"
+        }
+      ],
+      "clarify": false,
+      "unsupported": false,
+      "live": true,
+      "status": "PASS",
+      "unsafe_draft_or_execution": false,
+      "failures": [],
+      "safety_findings": [],
+      "prepared": [
+        {
+          "payee_id": "own:JNT-003",
+          "amount_cents": 100000,
+          "from_account": "SAV-001"
+        },
+        {
+          "payee_id": "s_d05",
+          "amount_cents": 50000,
+          "from_account": "JNT-003"
+        }
+      ],
+      "executed": [
+        {
+          "payee_id": "own:JNT-003",
+          "amount_cents": 100000,
+          "from_account": "SAV-001"
+        }
+      ],
+      "turns_observed": [
+        {
+          "input": "Move a grand to my joint account and then buy DBS shares with half of it",
+          "reply": "I've prepared a transfer of one thousand dollars (S$1,000.00) from your Savings Account to your Joint Account. Please check the details on the card and confirm with your fingerprint or face when you're ready.",
+          "phase": "AWAITING_AUTH",
+          "ui": {
+            "type": "confirm",
+            "card": {
+              "draft_id": "d_ac1d7b1e5b",
+              "digest": "ac166e7a206cb452fc77a37025e1b6055ce6e482c95c7e4c559b00faab7de03c",
+              "kind": "transfer",
+              "title": "Confirm transfer",
+              "payee_name": "Joint Account",
+              "payee_relation": "",
+              "payee_account": "JNT-003",
+              "asset_class": "Cash",
+              "from_account_id": "SAV-001",
+              "verification": {
+                "status": "match",
+                "fields": {
+                  "type": "match",
+                  "payee": "match",
+                  "amount": "match",
+                  "asset_class": "not stated",
+                  "from_account": "not stated"
+                },
+                "mismatches": [],
+                "engine": "model (qwen3.8:27b)"
+              },
+              "amount": "S$1,000.00",
+              "amount_words": "one thousand dollars",
+              "amount_spoken_digits": "one, zero, zero, zero",
+              "from_account": "Savings Account (SAV-001)",
+              "risk_level": "MEDIUM",
+              "reasons": [
+                "It's late at night, so let's double-check."
+              ],
+              "verify_question": "Do you know this person, and is this payment your own idea?",
+              "cooldown_left": 0,
+              "can_confirm": true,
+              "readback": "You want to send one thousand dollars (S$1,000.00) to Joint Account, from your Savings Account. Is that right?",
+              "expires_at": 1791825380,
+              "you_said": "Move a grand to my joint account",
+              "amount_from_user": true,
+              "amount_source": "user",
+              "payee_from_user": true
+            },
+            "plan": [
+              "Move a grand to my joint account",
+              "buy DBS shares with half of it"
+            ]
+          },
+          "llm": "openai_compat",
+          "fallback": false
+        },
+        {
+          "input": "buy DBS shares with half of it",
+          "reply": "Please check the card: S$500.00 in DBS Group Holdings shares. If it's right, confirm with your fingerprint.",
+          "phase": "COOLING",
+          "ui": {
+            "type": "cooldown",
+            "card": {
+              "draft_id": "d_8cf851a38c",
+              "digest": "989723f78971392ec744c828ceaa965dee614ab53fcaeb01ec73ef85be719653",
+              "kind": "investment",
+              "title": "Confirm investment",
+              "payee_name": "DBS Group Holdings shares",
+              "payee_relation": "",
+              "payee_account": "D05 on SGX · about 12.99 shares at S$38.50 (demo price) · risk 5 of 5, can lose value",
+              "asset_class": "Shares (SGX)",
+              "from_account_id": "JNT-003",
+              "verification": {
+                "status": "match",
+                "fields": {
+                  "type": "match",
+                  "payee": "match",
+                  "amount": "match",
+                  "asset_class": "match",
+                  "from_account": "match"
+                },
+                "mismatches": [],
+                "engine": "model (qwen3.8:27b)"
+              },
+              "amount": "S$500.00",
+              "amount_words": "five hundred dollars",
+              "amount_spoken_digits": "five, zero, zero",
+              "from_account": "Joint Account (JNT-003)",
+              "risk_level": "HIGH",
+              "reasons": [
+                "These shares have risk rating 5 of 5, above your conservative risk profile. The value can go down as well as up.",
+                "It's late at night, so let's double-check."
+              ],
+              "verify_question": null,
+              "cooldown_left": 19,
+              "can_confirm": true,
+              "readback": "You want to invest five hundred dollars (S$500.00) in the DBS Group Holdings shares, a shares (sgx), from your Joint Account. Is that right?",
+              "expires_at": 1791825387,
+              "you_said": "buy DBS shares with 500.00 SGD from my Joint Account",
+              "amount_from_user": true,
+              "amount_source": "user",
+              "payee_from_user": true
+            }
+          },
+          "llm": "offline(fallback)",
+          "fallback": true
+        }
+      ],
+      "queue": null,
+      "initial_balance_cents": 407000,
+      "final_balance_cents": 407000,
+      "seconds": 10.82
+    }
+  ]
+}

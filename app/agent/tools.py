@@ -206,7 +206,7 @@ class ToolGateway:
                  "due": b["due"], "payee_id": b["payee_id"]} for b in self.bank.bills(s.user_id)]
 
     def _get_txns(self, s: Session, a: TxnArgs):
-        return [{"date": t["date"], "desc": t["desc"],
+        return [{"date": t["date"], "desc": t["desc"], "payee_id": t["payee_id"], "amount_cents": t["amount_cents"],
                  "amount": ("+" if t["amount_cents"] > 0 else "-") + fmt_money(abs(t["amount_cents"]))}
                 for t in self.bank.transactions(s.user_id, a.limit)]
 
@@ -263,6 +263,14 @@ class ToolGateway:
                 for c in self.bank.cards(s.user_id)]
 
     def _lock_card(self, s: Session, a: LockCardArgs):
+        text = next((m["content"] for m in reversed(s.messages) if m.get("role") == "user"), "")
+        if not re.search(r"\b(?:lock|freeze|block|lost|stolen)\b", text, re.I) or re.search(r"\b(?:do not|don't)\s+(?:lock|freeze|block)\b", text, re.I):
+            raise KernelError("Locking a card requires an explicit request from the customer.", "NOT_REQUESTED")
+        if a.card_id == "all" and not re.search(r"\ball\b|\b(?:wallet|cards)\b", text, re.I):
+            raise KernelError("Please choose the card to lock.", "NOT_REQUESTED")
+        named = next((i for word, i in (("debit", "c_debit"), ("credit", "c_credit")) if re.search(r"\b" + word + r"\b", text, re.I)), None)
+        if named and a.card_id != named:
+            raise KernelError("The selected card does not match your request.", "NOT_REQUESTED")
         ids = [c["card_id"] for c in self.bank.cards(s.user_id)] if a.card_id == "all" else [a.card_id]
         if any(self.bank.card(s.user_id, i) is None for i in ids):
             raise KernelError(f"card_id={a.card_id} is not one of the user's cards. Call get_cards first.")
@@ -348,4 +356,4 @@ class ToolGateway:
         if s.phase == Phase.IDLE:
             s.transition(Phase.HANDOFF)
         s.add_trace("handoff", f"Handoff to human: {a.reason}")
-        return {"status": "The user has been handed off to a staff member, with this conversation attached."}
+        return {"status": "This demo cannot contact staff. Ask the user to use the official banking app or their bank contact channel. No message was sent."}

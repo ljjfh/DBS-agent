@@ -1,0 +1,663 @@
+{
+  "browser": "Installed Microsoft Edge, headless",
+  "speech": "Synthetic SpeechRecognition events; no physical microphone",
+  "counts": {
+    "PASS": 33,
+    "FAIL": 0,
+    "ERROR": 0
+  },
+  "results": [
+    {
+      "id": "B01",
+      "group": "浏览器端到端",
+      "title": "首页账户/账单/持仓加载",
+      "expected": "三账户、六外部收款方和三个自有账户目标；无JS异常",
+      "status": "PASS",
+      "priority": "P2",
+      "observed": {
+        "details": {
+          "accounts": 3,
+          "payees": 9
+        },
+        "page_errors": [],
+        "chat_requests": []
+      },
+      "ms": 630
+    },
+    {
+      "id": "B_nav_activity",
+      "group": "浏览器端到端",
+      "title": "导航 Transactions",
+      "expected": "页面成功展示",
+      "status": "PASS",
+      "priority": "P2",
+      "observed": {
+        "details": {
+          "heading": "Transactions"
+        },
+        "page_errors": [],
+        "chat_requests": []
+      },
+      "ms": 519
+    },
+    {
+      "id": "B_nav_contacts",
+      "group": "浏览器端到端",
+      "title": "导航 Payees",
+      "expected": "页面成功展示",
+      "status": "PASS",
+      "priority": "P2",
+      "observed": {
+        "details": {
+          "heading": "Payees"
+        },
+        "page_errors": [],
+        "chat_requests": []
+      },
+      "ms": 373
+    },
+    {
+      "id": "B_nav_audit",
+      "group": "浏览器端到端",
+      "title": "导航 Audit trail",
+      "expected": "页面成功展示",
+      "status": "PASS",
+      "priority": "P2",
+      "observed": {
+        "details": {
+          "heading": "Audit trail"
+        },
+        "page_errors": [],
+        "chat_requests": []
+      },
+      "ms": 419
+    },
+    {
+      "id": "B_nav_lab",
+      "group": "浏览器端到端",
+      "title": "导航 Security lab",
+      "expected": "页面成功展示",
+      "status": "PASS",
+      "priority": "P2",
+      "observed": {
+        "details": {
+          "heading": "Security lab"
+        },
+        "page_errors": [],
+        "chat_requests": []
+      },
+      "ms": 391
+    },
+    {
+      "id": "B_nav_settings",
+      "group": "浏览器端到端",
+      "title": "导航 Settings",
+      "expected": "页面成功展示",
+      "status": "PASS",
+      "priority": "P2",
+      "observed": {
+        "details": {
+          "heading": "Settings"
+        },
+        "page_errors": [],
+        "chat_requests": []
+      },
+      "ms": 407
+    },
+    {
+      "id": "B_pay",
+      "group": "浏览器端到端",
+      "title": "点击模拟指纹完成付款",
+      "expected": "浏览器真实签名，扣50并展示回执",
+      "status": "PASS",
+      "priority": "P1",
+      "observed": {
+        "details": {
+          "status": 200,
+          "receipts": 1,
+          "balance": 320000
+        },
+        "page_errors": [],
+        "chat_requests": [
+          "Send 50 to my daughter"
+        ]
+      },
+      "ms": 2176
+    },
+    {
+      "id": "B_cancel",
+      "group": "浏览器端到端",
+      "title": "取消确认卡",
+      "expected": "不扣款、清除待办",
+      "status": "PASS",
+      "priority": "P1",
+      "observed": {
+        "details": "IDLE",
+        "page_errors": [],
+        "chat_requests": [
+          "Send 50 to my daughter"
+        ]
+      },
+      "ms": 699
+    },
+    {
+      "id": "B_sensor_cancel",
+      "group": "浏览器端到端",
+      "title": "取消模拟指纹",
+      "expected": "未扣款，可重新确认",
+      "status": "PASS",
+      "priority": "P1",
+      "observed": {
+        "details": {
+          "balance": 325000
+        },
+        "page_errors": [],
+        "chat_requests": [
+          "Send 50 to my daughter"
+        ]
+      },
+      "ms": 719
+    },
+    {
+      "id": "B_restore",
+      "group": "浏览器端到端",
+      "title": "刷新恢复待确认卡",
+      "expected": "相同金额草稿恢复",
+      "status": "PASS",
+      "priority": "P1",
+      "observed": {
+        "details": {
+          "card": "S$50.00"
+        },
+        "page_errors": [],
+        "chat_requests": [
+          "Send 50 to my daughter"
+        ]
+      },
+      "ms": 799
+    },
+    {
+      "id": "B_doubleclick",
+      "group": "浏览器端到端",
+      "title": "重复点击指纹",
+      "expected": "只执行一笔",
+      "status": "PASS",
+      "priority": "P1",
+      "observed": {
+        "details": {
+          "balance": 320000,
+          "receipts": 1
+        },
+        "page_errors": [],
+        "chat_requests": [
+          "Send 50 to my daughter"
+        ]
+      },
+      "ms": 2590
+    },
+    {
+      "id": "B_download",
+      "group": "浏览器端到端",
+      "title": "下载回执并离线验签",
+      "expected": "导出JSON可被验证",
+      "status": "PASS",
+      "priority": "P1",
+      "observed": {
+        "details": [
+          [
+            "Receipt not edited",
+            true
+          ],
+          [
+            "Card matches its digest",
+            true
+          ],
+          [
+            "Signed payload is for this exact card",
+            true
+          ],
+          [
+            "Signature valid for the device key",
+            true
+          ],
+          [
+            "Key id 60d5b26d3c42ffc7 matches",
+            true
+          ]
+        ],
+        "page_errors": [],
+        "chat_requests": [
+          "Send 50 to my daughter"
+        ]
+      },
+      "ms": 2585
+    },
+    {
+      "id": "B_lost_response",
+      "group": "浏览器端到端",
+      "title": "后端已付款但确认响应丢失",
+      "expected": "查询原交易状态，不能继续显示可重试付款",
+      "status": "PASS",
+      "priority": "P1",
+      "observed": {
+        "details": {
+          "server_receipts": 1,
+          "server_balance": 320000,
+          "confirm_enabled": false,
+          "screen": "Send 50 to my daughter\nSTAR\nPlease check the card: S$50.00 to Chen Mei Ling. If it's right, confirm with your fingerprint.🔊\nSTAR\nPayment completed: S$50.00 — Chen Mei Ling.🔊\n Download signed receipt"
+        },
+        "page_errors": [],
+        "chat_requests": [
+          "Send 50 to my daughter"
+        ]
+      },
+      "ms": 3255
+    },
+    {
+      "id": "B_cancel_network",
+      "group": "浏览器端到端",
+      "title": "取消请求网络失败",
+      "expected": "保留待办并提示取消未完成",
+      "status": "PASS",
+      "priority": "P1",
+      "observed": {
+        "details": {
+          "server_phase": "AWAITING_AUTH",
+          "screen": "DBS DIGIBANK · STAR ASSISTANT\nGood morning, Mdm Chen.\n\nYour accounts at a glance. Your next payment, in your own words.\n\nTuesday, 13 October 2026\nTotal available balance\nS$4,070.00\nAcross 3 accounts · updated just now\n•• 001\nS$3,250.00\nSavings Account\n•• 002\nS$820.00\nCurrent Account\n•• 003\nS$0.00\nJoint Account\nStar · your banking assistant\nOFFLINE RULES\nSend 50 to my daughter\nSTAR\nPlease check the card: S$50.00 to Chen Mei Ling. If it's right, confirm with your fingerprint.🔊\nSTAR\nCancellation could not be confirmed. The payment is still waiting. Please try again.🔊\nSpeak\nType your request\nStar prepares · you check · your phone signs. No money moves without you.\nBehind your request\nS$50.00 to Chen Mei Ling\n✓\nRequest understood\nConfirm transfer: S$50.00 to Chen Mei Ling\n✓\nMatches what you said\n“Send 50 to my daughter”\n✓\nIndependent check matched\nA separate reader heard the same type, who, amount.\n✓\nBank safety rules passed\nKnown payee, usual amount, within limits.\n…\nWaiting for you\nNothing moves until you check the card and sign.\nOpen the full agent trace ›\nUpcoming bills\n2 due\nOctober utilities bill\nDue 2026-10-20\nS$86.40 Pay\nOctober town council charges (S&CC)\nDue 2026-10-31\nS$42.00 Pay\nInvestments\nConservative profile\nSingapore Savings Bonds\nGovernment bond · 5000 units\nS$5,000.00\n+S$0.00\nDBS Group Holdings shares\nShares (SGX) · 50 units\nS$1,925.00\n+S$325.00\n\nDemo prices. Ask \"How are my investments doing?\"\n\nCards\nDBS Visa Debit Card\n•••• 7781\nLock\nDBS Live Fresh Card\n•••• 3304\nLock\n\nLocking is instant. Unlock in the DBS app or call 1800 111 1111."
+        },
+        "page_errors": [],
+        "chat_requests": [
+          "Send 50 to my daughter"
+        ]
+      },
+      "ms": 900
+    },
+    {
+      "id": "B_senior",
+      "group": "浏览器端到端",
+      "title": "适老模式持久化",
+      "expected": "刷新保留适老模式且风控等级不变",
+      "status": "PASS",
+      "priority": "P2",
+      "observed": {
+        "details": {
+          "body_class": "senior",
+          "protection": {
+            "level": "enhanced",
+            "pending": null,
+            "delay_seconds": 86400,
+            "high_threshold": 1000
+          }
+        },
+        "page_errors": [],
+        "chat_requests": []
+      },
+      "ms": 457
+    },
+    {
+      "id": "B_mobile",
+      "group": "浏览器端到端",
+      "title": "390px标准视图",
+      "expected": "整页无横向溢出",
+      "status": "PASS",
+      "priority": "P2",
+      "observed": {
+        "details": {
+          "width": 390,
+          "scroll": 390
+        },
+        "page_errors": [],
+        "chat_requests": []
+      },
+      "ms": 432
+    },
+    {
+      "id": "B_mobile_senior",
+      "group": "浏览器端到端",
+      "title": "390px适老视图",
+      "expected": "整页无横向溢出",
+      "status": "PASS",
+      "priority": "P2",
+      "observed": {
+        "details": {
+          "width": 390,
+          "scroll": 390
+        },
+        "page_errors": [],
+        "chat_requests": []
+      },
+      "ms": 349
+    },
+    {
+      "id": "B_xss",
+      "group": "浏览器端到端",
+      "title": "对话显示HTML片段",
+      "expected": "作为文本展示不执行",
+      "status": "PASS",
+      "priority": "P1",
+      "observed": {
+        "details": {
+          "injected_images": 0
+        },
+        "page_errors": [],
+        "chat_requests": [
+          "<img src=x onerror=\"window.__xss=1\"> What is my balance?"
+        ]
+      },
+      "ms": 577
+    },
+    {
+      "id": "B_voice_normal",
+      "group": "浏览器端到端",
+      "title": "模拟识别事件：normal",
+      "expected": "完整说完才提交一次；故障保留未完成文本",
+      "status": "PASS",
+      "priority": "P1",
+      "observed": {
+        "details": {
+          "premature": 0,
+          "requests": [
+            "Send fifty to my daughter"
+          ]
+        },
+        "page_errors": [],
+        "chat_requests": [
+          "Send fifty to my daughter"
+        ]
+      },
+      "ms": 1265
+    },
+    {
+      "id": "B_voice_restart",
+      "group": "浏览器端到端",
+      "title": "模拟识别事件：restart",
+      "expected": "完整说完才提交一次；故障保留未完成文本",
+      "status": "PASS",
+      "priority": "P1",
+      "observed": {
+        "details": {
+          "premature": 0,
+          "requests": [
+            "Send fifty to my daughter"
+          ]
+        },
+        "page_errors": [],
+        "chat_requests": [
+          "Send fifty to my daughter"
+        ]
+      },
+      "ms": 1278
+    },
+    {
+      "id": "B_voice_network",
+      "group": "浏览器端到端",
+      "title": "模拟识别事件：network",
+      "expected": "完整说完才提交一次；故障保留未完成文本",
+      "status": "PASS",
+      "priority": "P1",
+      "observed": {
+        "details": {
+          "requests": [],
+          "expected": "network error with partial utterance must not auto-submit"
+        },
+        "page_errors": [],
+        "chat_requests": []
+      },
+      "ms": 1242
+    },
+    {
+      "id": "B_voice_pause",
+      "group": "浏览器端到端",
+      "title": "适老语音中途停顿3.2秒",
+      "expected": "不提前提交，续说后整句发送",
+      "status": "PASS",
+      "priority": "P1",
+      "observed": {
+        "details": {
+          "after_3_2_seconds": 0,
+          "requests": [
+            "Send fifty to my daughter"
+          ]
+        },
+        "page_errors": [],
+        "chat_requests": [
+          "Send fifty to my daughter"
+        ]
+      },
+      "ms": 3957
+    },
+    {
+      "id": "B_voice_missing",
+      "group": "浏览器端到端",
+      "title": "浏览器无语音识别支持",
+      "expected": "提供文字输入提示",
+      "status": "PASS",
+      "priority": "P2",
+      "observed": {
+        "details": {
+          "screen": "STAR\nThis browser doesn't support voice input. Please use Chrome, or type instead.🔊"
+        },
+        "page_errors": [],
+        "chat_requests": []
+      },
+      "ms": 418
+    },
+    {
+      "id": "B_frozen",
+      "group": "浏览器端到端",
+      "title": "模型误写金额演示",
+      "expected": "冻结草稿，无法签名",
+      "status": "PASS",
+      "priority": "P1",
+      "observed": {
+        "details": {
+          "phase": "FROZEN"
+        },
+        "page_errors": [],
+        "chat_requests": []
+      },
+      "ms": 1032
+    },
+    {
+      "id": "B_lab",
+      "group": "浏览器端到端",
+      "title": "浏览器运行安全实验室",
+      "expected": "22种内置攻击被阻止",
+      "status": "PASS",
+      "priority": "P1",
+      "observed": {
+        "details": {
+          "score": "22 / 22 attacks blocked"
+        },
+        "page_errors": [],
+        "chat_requests": []
+      },
+      "ms": 1458
+    },
+    {
+      "id": "B_bill",
+      "group": "浏览器端到端",
+      "title": "点击账单Pay并支付",
+      "expected": "金额来自账单，结清后状态更新",
+      "status": "PASS",
+      "priority": "P1",
+      "observed": {
+        "details": {
+          "bill": {
+            "bill_id": "b_sp_oct",
+            "payee_id": "p_sp",
+            "title": "October utilities bill",
+            "amount_cents": 8640,
+            "due": "2026-10-20",
+            "status": "paid",
+            "amount": "S$86.40"
+          },
+          "balance": 316360
+        },
+        "page_errors": [],
+        "chat_requests": [
+          "Pay the October utilities bill"
+        ]
+      },
+      "ms": 2146
+    },
+    {
+      "id": "B_investment",
+      "group": "浏览器端到端",
+      "title": "投资后持仓更新",
+      "expected": "扣款200且增加目标基金持仓",
+      "status": "PASS",
+      "priority": "P1",
+      "observed": {
+        "details": {
+          "holdings": [
+            {
+              "name": "Singapore Savings Bonds",
+              "asset_class": "Government bond",
+              "units": 5000,
+              "value": "S$5,000.00",
+              "gain_cents": 0,
+              "gain": "+S$0.00"
+            },
+            {
+              "name": "DBS Group Holdings shares",
+              "asset_class": "Shares (SGX)",
+              "units": 50,
+              "value": "S$1,925.00",
+              "gain_cents": 32500,
+              "gain": "+S$325.00"
+            },
+            {
+              "name": "DBS Income Fund",
+              "asset_class": "Unit trust",
+              "units": 196.08,
+              "value": "S$200.00",
+              "gain_cents": 0,
+              "gain": "+S$0.00"
+            }
+          ],
+          "balance": 305000
+        },
+        "page_errors": [],
+        "chat_requests": [
+          "Invest 200 in income fund"
+        ]
+      },
+      "ms": 2149
+    },
+    {
+      "id": "B_multi",
+      "group": "浏览器端到端",
+      "title": "账单+转账顺序执行",
+      "expected": "各自签名确认，第二笔不提前扣款",
+      "status": "PASS",
+      "priority": "P1",
+      "observed": {
+        "details": {
+          "after_first": 316360,
+          "after_second": 311360,
+          "receipts": 2
+        },
+        "page_errors": [],
+        "chat_requests": [
+          "Pay the electricity bill then send 50 to my daughter",
+          "send 50 to my daughter"
+        ]
+      },
+      "ms": 4445
+    },
+    {
+      "id": "B_audit_export",
+      "group": "浏览器端到端",
+      "title": "审计导出",
+      "expected": "可下载且完整性通过",
+      "status": "PASS",
+      "priority": "P2",
+      "observed": {
+        "details": {
+          "integrity": {
+            "ok": true,
+            "records": 130,
+            "head": "4621feeef35e09fe2864d4f2abce8e3c9e03f8961b05ad1b1d0be87efb40771d"
+          },
+          "entries": 3
+        },
+        "page_errors": [],
+        "chat_requests": [
+          "What is my balance?"
+        ]
+      },
+      "ms": 954
+    },
+    {
+      "id": "B_preferences",
+      "group": "浏览器端到端",
+      "title": "大字和朗读设置",
+      "expected": "用户设置刷新后保留",
+      "status": "PASS",
+      "priority": "P2",
+      "observed": {
+        "details": {
+          "large": "large",
+          "read": "true"
+        },
+        "page_errors": [],
+        "chat_requests": []
+      },
+      "ms": 592
+    },
+    {
+      "id": "B_reset",
+      "group": "浏览器端到端",
+      "title": "重置演示",
+      "expected": "余额恢复，当前回执清空",
+      "status": "PASS",
+      "priority": "P2",
+      "observed": {
+        "details": {
+          "balance": 325000,
+          "receipts": 0
+        },
+        "page_errors": [],
+        "chat_requests": [
+          "Send 50 to my daughter"
+        ]
+      },
+      "ms": 2252
+    },
+    {
+      "id": "B_voice_permission",
+      "group": "浏览器端到端",
+      "title": "语音权限拒绝",
+      "expected": "提示权限问题不自动提交",
+      "status": "PASS",
+      "priority": "P2",
+      "observed": {
+        "details": {
+          "hint": "No microphone permission. You can type instead. Your words were not sent. Check the text before sending."
+        },
+        "page_errors": [],
+        "chat_requests": []
+      },
+      "ms": 396
+    },
+    {
+      "id": "B_trace",
+      "group": "浏览器端到端",
+      "title": "轨迹面板",
+      "expected": "显示工具调用且可关闭",
+      "status": "PASS",
+      "priority": "P2",
+      "observed": {
+        "details": {
+          "trace": "USER\nWhat is my balance?\nTHOUGHT\nThe user wants their balance; look up the account.\nACTION\nget_balance({})\nOBSERVE\nReturned 3 records\nDetails"
+        },
+        "page_errors": [],
+        "chat_requests": [
+          "What is my balance?"
+        ]
+      },
+      "ms": 912
+    }
+  ]
+}

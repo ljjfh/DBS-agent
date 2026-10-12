@@ -51,6 +51,8 @@ def evaluate(draft: Draft, bank: MockBank, ctx: RuleContext | None = None) -> Ri
         raise_to(RiskLevel.BLOCK, "R00_UNKNOWN_PAYEE", "This person is not in your saved payees, so I can't send money to them directly.")
     if acct is None:
         raise_to(RiskLevel.BLOCK, "R01_UNKNOWN_ACCOUNT", "I can't find the account to pay from.")
+    if payee and payee.get("type") == "own_account" and payee.get("to_account") == draft.from_account:
+        raise_to(RiskLevel.BLOCK, "R07_SAME_ACCOUNT", "Please choose two different accounts for an internal transfer.")
     if draft.amount_cents <= 0:
         raise_to(RiskLevel.BLOCK, "R02_BAD_AMOUNT", "The amount must be more than zero.")
     if acct and draft.amount_cents > acct["balance_cents"]:
@@ -65,9 +67,9 @@ def evaluate(draft: Draft, bank: MockBank, ctx: RuleContext | None = None) -> Ri
     if payee is not None and draft.kind == "transfer":
         history = bank.payee_history(draft.user_id, draft.payee_id)
         # ---- New payee (HIGH) ----
-        if not history:
+        if not history and payee.get("type") != "own_account":
             raise_to(RiskLevel.HIGH, "R10_NEW_PAYEE", "This is your first transfer to this person, so for safety we'll wait a little before confirming.")
-        else:
+        elif history:
             typical = max(history)
             if draft.amount_cents > typical * 2:
                 raise_to(RiskLevel.MEDIUM, "R11_ABOVE_USUAL",
