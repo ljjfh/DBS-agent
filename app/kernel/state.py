@@ -5,6 +5,7 @@ The state machine is the outer skeleton: it decides what is allowed in each phas
 """
 from __future__ import annotations
 
+import re
 import threading
 import time
 import uuid
@@ -92,22 +93,53 @@ class Session:
         return item
 
 
+_VISITOR = re.compile(r"^[a-f0-9]{8,32}$")
+_VISITOR_SID = re.compile(r"^([a-f0-9]{8,32})\.[a-f0-9]{6,32}$")
+
+
+def visitor_of(session_id: str | None) -> str | None:
+    """Online demo: a session id "<visitor>.<random>" belongs to that browser's own demo customer."""
+    m = _VISITOR_SID.match(session_id or "")
+    return m.group(1) if m else None
+
+
+def valid_visitor(v) -> str | None:
+    v = str(v or "").lower()
+    return v if _VISITOR.match(v) else None
+
+
 class SessionStore:
+    MAX_SESSIONS = 5000
+
     def __init__(self):
         self._s: dict[str, Session] = {}
         self._lock = threading.Lock()
+
+    @staticmethod
+    def _new(session_id: str) -> Session:
+        from app.bank.mock_bank import DEMO_USER
+        v = visitor_of(session_id)
+        return Session(session_id=session_id, user_id=f"{DEMO_USER}~{v}" if v else DEMO_USER)
+
+    def _trim(self) -> None:
+        for old in list(self._s)[:max(0, len(self._s) - self.MAX_SESSIONS)]:
+            self._s.pop(old, None)
 
     def get(self, session_id: str | None) -> Session:
         with self._lock:
             if not session_id or session_id not in self._s:
                 session_id = session_id or uuid.uuid4().hex[:12]
-                self._s[session_id] = Session(session_id=session_id)
+                self._s[session_id] = self._new(session_id)
+                self._trim()
             return self._s[session_id]
 
     def reset(self, session_id: str) -> Session:
         with self._lock:
-            self._s[session_id] = Session(session_id=session_id)
+            self._s[session_id] = self._new(session_id)
             return self._s[session_id]
+
+    def new_for_visitor(self, visitor: str) -> Session:
+        return self.reset(f"{visitor}.{uuid.uuid4().hex[:12]}")
 
 
 sessions = SessionStore()

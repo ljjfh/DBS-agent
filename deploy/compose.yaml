@@ -1,0 +1,25 @@
+# Tencent Cloud Lighthouse (or any Linux server with Docker): app + Caddy for automatic HTTPS.
+#   PUBLIC_HOST=<your domain, or 43-xxx-xxx-xxx.sslip.io for the server's IP> docker compose -f deploy/compose.yaml up -d --build
+# Secrets come from ../.env on the server (never committed).
+services:
+  app:
+    build: ..
+    env_file: ../.env
+    environment:
+      PUBLIC_DEMO: "1"
+      PUBLIC_HOST: ${PUBLIC_HOST:?set PUBLIC_HOST}
+    volumes:
+      - star-data:/srv/data
+    restart: unless-stopped
+  caddy:
+    image: caddy:2
+    ports: ["80:80", "443:443"]
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST}
+    command: caddy reverse-proxy --from ${PUBLIC_HOST} --to app:8000
+    volumes:
+      - caddy-data:/data
+    restart: unless-stopped
+volumes:
+  star-data:
+  caddy-data:

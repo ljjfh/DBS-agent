@@ -10,6 +10,8 @@ import threading
 import time
 import uuid
 
+DEMO_USER = "u_chen"
+
 _WORLD = {
     "users": {
         "u_chen": {
@@ -123,8 +125,35 @@ class MockBank:
             self.executed: dict[str, dict] = {}   # idempotency key -> receipt
             self.recent_exec_times: dict[str, list[float]] = {}
 
+    # ---------- Demo customers per visitor ----------
+    # On a shared online demo every browser gets its own copy of Mdm Chen ("u_chen~<visitor id>"), so one tester's
+    # payments, resets and passkey never affect another's. Locally (no visitor id) everyone is plain "u_chen".
+    MAX_VISITORS = 2000
+
+    @staticmethod
+    def visitor_user_id(visitor: str) -> str:
+        return f"{DEMO_USER}~{visitor}"
+
+    def _ensure(self, user_id: str) -> None:
+        if user_id in self.world["users"] or not user_id.startswith(DEMO_USER + "~"):
+            return
+        with self._lock:
+            users = self.world["users"]
+            if user_id not in users:
+                visitors = [u for u in users if "~" in u]
+                for old in visitors[:max(0, len(visitors) - self.MAX_VISITORS + 1)]:   # forget the oldest
+                    users.pop(old, None)
+                users[user_id] = copy.deepcopy(_WORLD["users"][DEMO_USER])
+
+    def reset_user(self, user_id: str) -> None:
+        """Reset one demo customer's accounts, payees, bills, holdings and cards (nobody else's)."""
+        with self._lock:
+            self.world["users"][user_id] = copy.deepcopy(_WORLD["users"][DEMO_USER])
+            self.recent_exec_times.pop(user_id, None)
+
     # ---------- Read-only ----------
     def user(self, user_id: str) -> dict:
+        self._ensure(user_id)
         return self.world["users"][user_id]
 
     def accounts(self, user_id: str) -> list[dict]:

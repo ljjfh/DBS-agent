@@ -17,10 +17,12 @@ from starlette.routing import Route
 
 from app import lab, runtime
 from app.agent import presenter
+from app.bank.mock_bank import DEMO_USER
 from app.config import ROOT, settings
 from app.kernel import protection as prot
 from app.kernel.executor import KernelError
 from app.kernel.signing import Site
+from app.kernel.state import valid_visitor
 from app.models import fmt_money
 from app.security import SecurityMiddleware
 from app.voice import asr
@@ -125,7 +127,7 @@ async def audit_export(request: Request):
 async def health(_: Request):
     return JSONResponse({"llm": getattr(runtime.llm, "name", "?"), "model": settings.llm_model if settings.llm_enabled
                          else "offline-rules", "asr": "tencent" if settings.asr_enabled else "browser-fallback",
-                         "verifier": runtime.verifier.name})
+                         "verifier": runtime.verifier.name, "public_demo": settings.public_demo})
 
 
 async def world(request: Request):
@@ -298,9 +300,20 @@ async def audit_verify(_: Request):
 async def reset(request: Request):
     body = await _json(request)
     sid = body.get("session_id")
-    if body.get("world"):
-        runtime.bank.reset()
-    s = runtime.sessions.reset(sid) if sid else runtime.sessions.get(None)
+    visitor = valid_visitor(body.get("visitor"))
+    if visitor:
+        # Online demo: this browser's own demo customer. "Reset demo" resets only their world, never anyone else's;
+        # their passkey stays enrolled.
+        s = runtime.sessions.new_for_visitor(visitor)
+        if body.get("world"):
+            runtime.bank.reset_user(s.user_id)
+    else:
+        if body.get("world"):
+            if settings.public_demo:
+                runtime.bank.reset_user(DEMO_USER)     # a shared server never wipes every visitor at once
+            else:
+                runtime.bank.reset()
+        s = runtime.sessions.reset(sid) if sid else runtime.sessions.get(None)
     return JSONResponse({"session_id": s.session_id, "ts": time.time()})
 
 

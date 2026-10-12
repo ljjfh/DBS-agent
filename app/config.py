@@ -15,6 +15,17 @@ def _f(name: str, default: str) -> str:
     return os.getenv(name, default).strip()
 
 
+def _hosts() -> list[str]:
+    hosts = [h.strip().lower() for h in _f("ALLOWED_HOSTS", "localhost,127.0.0.1,[::1]").split(",") if h.strip()]
+    fly = _f("FLY_APP_NAME", "")
+    for h in [_f("PUBLIC_HOST", ""), _f("RENDER_EXTERNAL_HOSTNAME", ""), _f("RAILWAY_PUBLIC_DOMAIN", ""),
+              _f("SPACE_HOST", ""), f"{fly}.fly.dev" if fly else ""]:
+        h = h.strip().lower().removeprefix("https://").removeprefix("http://").rstrip("/")
+        if h and h not in hosts:
+            hosts.append(h)
+    return hosts
+
+
 class Settings:
     # ---- Model (OpenAI-compatible API, defaults to Tencent Hunyuan) ----
     # offline = built-in rule "model": needs no key, and is the fallback when the online model is unavailable
@@ -60,7 +71,11 @@ class Settings:
     auth_mode = _f("AUTH_MODE", "device_key")
     challenge_ttl = int(_f("CHALLENGE_TTL", "120"))
     # Hosts the web server answers to (DNS-rebinding protection). Add your LAN name/IP here to demo from another device.
-    allowed_hosts = [h.strip().lower() for h in _f("ALLOWED_HOSTS", "localhost,127.0.0.1,[::1]").split(",") if h.strip()]
+    # On a hosting platform its public hostname is added automatically (Render, Railway, Fly.io, Hugging Face Spaces),
+    # or set PUBLIC_HOST yourself (e.g. a Tencent Cloud server's domain).
+    allowed_hosts = _hosts()
+    # A shared online demo: every browser is its own demo customer, and nobody can reset everyone's world
+    public_demo = _f("PUBLIC_DEMO", "0").lower() in ("1", "true", "yes")
     draft_ttl = int(_f("DRAFT_TTL", "600"))
 
     # ---- Tencent Cloud ASR (SentenceRecognition) ----

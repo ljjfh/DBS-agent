@@ -1,0 +1,34 @@
+# One-click deploy on Render (https://render.com): New + > Blueprint > pick this repository.
+# Secrets marked "sync: false" are typed into the Render dashboard, never committed.
+services:
+  - type: web
+    name: star-dbs-agent
+    runtime: python
+    region: singapore
+    plan: free                      # free instances sleep after ~15 min idle; pick "starter" for judging week
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.server:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
+    autoDeploy: true                # every push to main redeploys
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.4
+      - key: PUBLIC_DEMO            # every browser gets its own demo customer; per-device rate limits
+        value: "1"
+      - key: SIGNING_SECRET
+        generateValue: true
+      - key: LLM_PROVIDER           # openai_compat, or leave empty for the offline rule model
+        sync: false
+      - key: LLM_BASE_URL
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_MODEL
+        sync: false
+      - key: LLM_THINKING
+        value: "off"
+      - key: TENCENTCLOUD_SECRET_ID
+        sync: false
+      - key: TENCENTCLOUD_SECRET_KEY
+        sync: false
+      - key: ASR_ENGINE
+        value: 16k_en

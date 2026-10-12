@@ -8,6 +8,14 @@ const store = {
   get(k, d){ try{ const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch{ return d; } },
   set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} },
 };
+// Online demo (server PUBLIC_DEMO=1): this browser's own demo customer, so testers never see each other's payments,
+// resets or passkeys. Locally the server doesn't ask for it and everyone is the same Mdm Chen.
+const VISITOR = (() => {
+  let v = store.get('vid', null);
+  if(!/^[a-f0-9]{16}$/.test(v || '')){ v = [...crypto.getRandomValues(new Uint8Array(8))].map(b => b.toString(16).padStart(2, '0')).join(''); store.set('vid', v); }
+  return v;
+})();
+const visitorMode = () => !!state.health.public_demo;
 
 const state = {
   sid: store.get('sid', null), page: 'overview', data: null, health: {},
@@ -697,7 +705,7 @@ async function setProtection(to){
   await refresh();
 }
 async function resetDemo(){
-  const r = await api('/api/reset', {session_id: state.sid, world: true});
+  const r = await api('/api/reset', {session_id: state.sid, world: true, ...(visitorMode() ? {visitor: VISITOR} : {})});
   state.sid = r.session_id; store.set('sid', r.session_id);
   state.messages = []; state.check = null; $('#tlist').innerHTML = ''; closeConfirm();
   await refresh(); go('overview'); toast('Demo reset');
@@ -844,6 +852,9 @@ function b64(buf){ let s = ''; const b = new Uint8Array(buf); for(let i = 0; i <
 document.addEventListener('keydown', e => { if(e.key === 'Escape' && $('#trace').classList.contains('open') && !$('#confirm').open) toggleTrace(false); });
 (async function init(){
   try{ state.health = await api('/api/health'); }catch{}
+  if(visitorMode() && !String(state.sid || '').startsWith(VISITOR + '.')){
+    try{ const r = await api('/api/reset', {visitor: VISITOR}); state.sid = r.session_id; store.set('sid', r.session_id); }catch{}
+  }
   state.signMode = await detectSignMode();
   await refresh();
   render();

@@ -179,6 +179,46 @@ class HttpTest(unittest.TestCase):
         roles = [m["role"] for m in runtime.sessions.get(sid).messages]
         self.assertFalse(any(a == b == "assistant" for a, b in zip(roles, roles[1:])), roles)
 
+    def test_visitors_are_isolated(self):
+        """Online demo: two browsers (visitors) are two separate demo customers. One's payment, reset or passkey
+        never shows up for the other."""
+        from app import runtime
+        from app.kernel import webauthn
+        a = self.post("/api/reset", {"visitor": "aaaaaaaaaaaaaaaa"}).json()["session_id"]
+        b = self.post("/api/reset", {"visitor": "bbbbbbbbbbbbbbbb"}).json()["session_id"]
+        self.assertTrue(a.startswith("aaaaaaaaaaaaaaaa.") and b.startswith("bbbbbbbbbbbbbbbb."))
+        ua, ub = runtime.sessions.get(a).user_id, runtime.sessions.get(b).user_id
+        self.assertNotEqual(ua, ub)
+        runtime.bank.account(ua, "SAV-001")["balance_cents"] = 1_00          # A's world changes...
+        self.assertEqual(runtime.bank.account(ub, "SAV-001")["balance_cents"], 325000)   # ...B's doesn't
+        # A enrols a passkey: B is unaffected and can still enrol their own
+        auth = webauthn.SoftAuthenticator(rp_id="127.0.0.1", origin=self.base)
+        opts = self.post("/api/passkey/options", {"session_id": a}).json()
+        self.assertEqual(self.post("/api/passkey/register", {"session_id": a, **auth.register(
+            webauthn.unb64u(opts["challenge"]))}).status_code, 200)
+        st_b = requests.get(self.base + "/api/state", params={"session_id": b}).json()
+        self.assertFalse(st_b["passkey"]["enrolled"])
+        # A resets their world: only A's balance comes back, B's session and world are untouched
+        runtime.bank.account(ub, "SAV-001")["balance_cents"] = 2_00
+        a2 = self.post("/api/reset", {"visitor": "aaaaaaaaaaaaaaaa", "session_id": a, "world": True}).json()["session_id"]
+        self.assertEqual(runtime.bank.account(runtime.sessions.get(a2).user_id, "SAV-001")["balance_cents"], 325000)
+        self.assertEqual(runtime.bank.account(ub, "SAV-001")["balance_cents"], 2_00)
+        # A session id carries its visitor, so even after a server restart it maps back to the same customer
+        runtime.sessions._s.pop(b)
+        self.assertEqual(runtime.sessions.get(b).user_id, ub)
+        # junk visitor ids are ignored
+        junk = self.post("/api/reset", {"visitor": "../../etc"}).json()["session_id"]
+        self.assertEqual(runtime.sessions.get(junk).user_id, "u_chen")
+
+    def test_platform_hostnames_are_allowed(self):
+        from unittest import mock
+        from app import config
+        with mock.patch.dict(os.environ, {"RENDER_EXTERNAL_HOSTNAME": "star.onrender.com",
+                                          "PUBLIC_HOST": "https://demo.example.com/", "FLY_APP_NAME": "star"}):
+            hosts = config._hosts()
+        for h in ["localhost", "star.onrender.com", "demo.example.com", "star.fly.dev"]:
+            self.assertIn(h, hosts)
+
     def test_audit_endpoints(self):
         sid = self.post("/api/reset", {}).json()["session_id"]
         self.post("/api/chat", {"session_id": sid, "text": "What's my balance?"})

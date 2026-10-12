@@ -4,6 +4,7 @@
 * Same-origin POSTs   - a browser POST with a foreign Origin header is refused: blocks cross-site requests
 * JSON only           - POST bodies must be application/json: a plain HTML form can't trigger an API call
 * Size limits         - 32 KB for API calls, 3 MB for the speech endpoint
+* Rate limits         - online demo only (PUBLIC_DEMO=1): model and speech calls per device per 5 minutes
 * Security headers    - strict CSP (no inline script, no third-party code), no framing, no sniffing,
                         microphone allowed only for this page
 
@@ -12,6 +13,9 @@ This is a local, single-process demo server. Do not expose it to the internet as
 from __future__ import annotations
 
 import json
+import threading
+import time
+from collections import deque
 
 from app.config import settings
 
@@ -26,6 +30,32 @@ HEADERS = [
     (b"cache-control", b"no-store"),
 ]
 API_LIMIT, ASR_LIMIT = 32 * 1024, 3 * 1024 * 1024   # 50 s of 16 kHz WAV is ~2.2 MB as base64
+
+
+# Online demo only: each device gets a fair share of the model and speech APIs (they cost money and have quotas)
+COSTLY = {"/api/chat": 40, "/api/asr": 20}          # requests per device per 5 minutes
+_WINDOW = 300
+_hits: dict[tuple[str, str], deque] = {}
+_hits_lock = threading.Lock()
+
+
+def _client(scope, headers) -> str:
+    fwd = headers.get("x-forwarded-for", "")            # behind the platform's proxy, the first hop is the device
+    return fwd.split(",")[0].strip() or (scope.get("client") or ("?",))[0]
+
+
+def _allow(client: str, path: str) -> bool:
+    now = time.time()
+    with _hits_lock:
+        if len(_hits) > 20000:
+            _hits.clear()
+        q = _hits.setdefault((client, path), deque())
+        while q and now - q[0] > _WINDOW:
+            q.popleft()
+        if len(q) >= COSTLY[path]:
+            return False
+        q.append(now)
+        return True
 
 
 class SecurityMiddleware:
@@ -56,6 +86,9 @@ class SecurityMiddleware:
                 length = limit + 1
             if length > limit:
                 return await self._deny(send, 413, "TOO_LARGE", "Request is too large.")
+            if settings.public_demo and path in COSTLY and not _allow(_client(scope, headers), path):
+                return await self._deny(send, 429, "RATE_LIMITED",
+                                        "Too many requests from this device. Please wait a minute and try again.")
 
         async def send_with_headers(message):
             if message["type"] == "http.response.start":

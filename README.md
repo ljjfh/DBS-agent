@@ -54,13 +54,36 @@ a time with tap-to-answer choices, replies read aloud slowly, and a bigger confi
 words. Settings also has "Larger text", "Read replies aloud" and "Reset demo".
 
 ```bash
-python -m unittest discover tests     # 139 tests (kernel, passkeys, verifier, gateway, protection, Harness, HTTP)
+python -m unittest discover tests     # 156 tests (kernel, passkeys, verifier, gateway, protection, Harness, HTTP)
 python -m app.lab                    # security lab: 22 real attacks on an isolated sandbox
 python eval/run_eval.py               # core + hard suites + attack tests -> eval/report.md / .json / .html
 python eval/run_eval.py --compare --repeat 3   # the headline run: rules-only baseline vs LLM agent, 3x each
 python eval/run_eval.py -v --only t1  # full trace for a single case
 LLM_PROVIDER=offline python eval/run_eval.py   # force the offline baseline even if .env has a model configured
 ```
+
+## Deploying online
+
+The app is one Python web service (no build step, no database). Passkeys need HTTPS, which every option below
+provides. Set `PUBLIC_DEMO=1` on any shared server: each browser then gets its own demo customer (its own balances,
+payments, resets and passkey), "Reset demo" only resets that browser, and model/speech calls are rate-limited per
+device so the API keys can't be drained.
+
+**Render (quickest, free):** New + → Blueprint → pick this repository. `render.yaml` sets everything up in the
+Singapore region; type the secrets (`LLM_*`, `TENCENTCLOUD_*`) into the dashboard when asked. Every push to `main`
+redeploys. Free instances sleep after ~15 idle minutes (the first visit then takes about a minute); switch the plan
+to Starter for judging week.
+
+**Tencent Cloud Lighthouse / any Linux server with Docker:** copy `.env` to the server, then
+`PUBLIC_HOST=<your domain> docker compose -f deploy/compose.yaml up -d --build`. Caddy gets the HTTPS certificate
+automatically. Without a domain, use `<server IP with dashes>.sslip.io` (e.g. `43-128-1-2.sslip.io`).
+
+**Anything else that runs a Dockerfile** (Railway, Fly.io, Hugging Face Spaces): the `Dockerfile` listens on `$PORT`;
+the platform's hostname is allowed automatically, or set `PUBLIC_HOST`.
+
+Notes: sessions live in memory, so run one instance. On free tiers the disk is wiped on every deploy, so passkeys
+need re-enrolling (one fingerprint). If the model endpoint isn't reachable from the server (e.g. a campus-only API),
+Star falls back to the offline rule model and the trace says so.
 
 ## Connecting a model (Tencent Hunyuan, Qwen or others)
 
