@@ -281,3 +281,15 @@ class TestJointAccount(ApiBase):
         jnt = self.bal("JNT-003")
         self.pay()
         self.assertEqual(self.bal("JNT-003"), jnt - 8000)
+
+
+class TestNamedAccountDefault(ApiBase):
+    def test_model_forgets_from_account_but_user_named_it(self):
+        # seen live: "half of my joint account" drafted from Savings and was frozen
+        d = self.model_drafts("Buy DBS shares with half of my joint account", "draft_investment",
+                              {"product_id": "s_d05", "amount": 750})
+        self.assertEqual((d.from_account, d.amount_cents, d.grounding["amount_source"]), ("JNT-003", 75000, "derived"))
+
+    def test_to_my_joint_is_not_the_source(self):
+        d = self.model_drafts("Move 100 to my joint account", "draft_transfer", {"payee_id": "own:JNT-003", "amount": 100})
+        self.assertNotEqual(d.from_account, "JNT-003")

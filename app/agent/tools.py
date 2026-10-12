@@ -23,6 +23,7 @@ from typing import Any, Callable, Optional
 from pydantic import BaseModel, Field, ValidationError
 
 from app.agent import fraud
+from app.agent.textparse import account_id_for, find_account
 from app.bank import dbs_api
 from app.bank.dbs_api.base import NoArgs, Tool, bind
 from app.bank.mock_bank import MockBank, USD_SGD, price_sgd_cents
@@ -252,6 +253,13 @@ class ToolGateway:
         if from_account and self.bank.account(s.user_id, from_account) is None:
             raise KernelError(f"from_account={from_account} is not one of the user's accounts. Use an account_id "
                               "from get_balance, or omit it to use the main account.")
+        if not from_account:
+            # the model left it out, but the user named an account ("half of my joint account"): use what they said
+            accounts = self.bank.accounts(s.user_id)
+            for u in reversed([m["content"] for m in s.messages if m.get("role") == "user"][-2:]):
+                named = account_id_for(find_account(u), accounts)
+                if named:
+                    return named
         return from_account
 
     def _verification(self, s: Session) -> dict | None:
