@@ -6,3 +6,5 @@ data/*.json
 eval/eval_audit.jsonl
 eval/report.json
 .venv/
+eval/report.md
+eval/report.html
