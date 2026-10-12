@@ -1,4 +1,4 @@
-# Star · DBS Conversational Transaction Agent (Hackathon prototype v0.3)
+# Star · DBS Conversational Transaction Agent (Hackathon prototype v0.4)
 
 A conversational transaction agent for everyone, optimized for elderly users. Core principle:
 **the LLM understands, the code decides, and the user authorizes.**
