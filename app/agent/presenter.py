@@ -33,14 +33,18 @@ def build_card(d: Draft, bank: MockBank, phase: Phase) -> dict:
     acct = bank.account(d.user_id, d.from_account) or {}
     relation = payee.get("relation", "")
     is_person = payee.get("type") == "person"
-    who = f"your {relation} {d.payee_name}" if relation and is_person else d.payee_name
+    own = payee.get("type") == "own"
+    who = f"your {relation} {d.payee_name}" if relation and is_person else f"your {d.payee_name}" if own else d.payee_name
+    bill = bank.bill(d.user_id, d.bill_id) if d.bill_id else None
+    sched = d.schedule or {}
     words = amount_words_en(d.amount_cents)
     if invest:
         readback = (f"You want to invest {words} ({fmt_money(d.amount_cents)}) in the {d.payee_name}, "
                     f"a {d.asset_class.lower()}, from your {acct.get('name', 'account')}. Is that right?")
     else:
-        verb = "send" if d.kind == "transfer" else "pay"
-        readback = (f"You want to {verb} {words} ({fmt_money(d.amount_cents)}) to {who}, "
+        verb = "move" if own else "send" if d.kind == "transfer" else "pay"
+        when = f" {sched['label'][0].lower()}{sched['label'][1:]}" if sched else ""
+        readback = (f"You want to {verb} {words} ({fmt_money(d.amount_cents)}) to {who}{when}, "
                     f"from your {acct.get('name', 'account')}. Is that right?")
     risk = d.risk
     v = d.verification or {}
@@ -48,10 +52,18 @@ def build_card(d: Draft, bank: MockBank, phase: Phase) -> dict:
         "draft_id": d.draft_id,
         "digest": d.digest,
         "kind": d.kind,
-        "title": {"transfer": "Confirm transfer", "bill": "Confirm bill payment",
-                  "investment": "Confirm investment"}[d.kind],
+        "title": ("Confirm regular transfer" if sched else "Move money between your accounts" if own else
+                  {"transfer": "Confirm transfer", "bill": "Confirm bill payment", "investment": "Confirm investment"}[d.kind]),
+        "schedule": sched.get("label", ""),
+        "amount_note": (f"{d.grounding['heard'][0].upper()}{d.grounding['heard'][1:]}. Please check the amount."
+                        if d.grounding.get("heard") else
+                        f"{d.grounding['derived']}, worked out by the bank" if d.grounding.get("amount_source") == "derived"
+                        else ("minimum payment due" if d.amount_cents == bill.get("min_due_cents") else
+                         "full statement balance" if d.amount_cents == bill["amount_cents"] else
+                         f"part of your statement of {fmt_money(bill['amount_cents'])}")
+                        if bill and "min_due_cents" in bill else ""),
         "payee_name": d.payee_name,
-        "payee_relation": relation if is_person else "",
+        "payee_relation": relation if is_person or own else "",
         "payee_account": product_line(payee, d.amount_cents) if invest else payee.get("masked_account", ""),
         "asset_class": d.asset_class,
         "from_account_id": d.from_account,
@@ -84,6 +96,11 @@ def receipt_text(d: Draft, receipt: dict) -> str:
         if d.asset_class.startswith("Shares"):
             return f"Done. You bought about {receipt.get('units', 0):,.2f} {who} for {fmt_money(d.amount_cents)}. {after}"
         return f"Done. You've invested {fmt_money(d.amount_cents)} in the {who}. {after}"
+    if d.schedule:
+        return (f"Done. {fmt_money(d.amount_cents)} will go to {who} {d.schedule['label'][0].lower()}"
+                f"{d.schedule['label'][1:]}. Nothing has been taken today.")
+    if d.kind == "transfer" and d.payee_id.startswith("own:"):
+        return f"Done. {fmt_money(d.amount_cents)} is now in your {who}."
     if d.kind == "transfer":
         return (f"Done. {who} will receive it right away. "
                 f"Your account now has {fmt_money(receipt['balance_after_cents'])}.")

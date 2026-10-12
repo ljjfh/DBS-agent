@@ -74,6 +74,7 @@ class Draft(BaseModel):
     grounding: dict = Field(default_factory=dict)  # is payee/amount backed by the user's own words (kernel/evidence.py)
     you_said: str = ""                             # the user's own words this payment is based on (shown + signed)
     verification: dict = Field(default_factory=dict)  # independent verifier's verdict (kernel/crosscheck.py)
+    schedule: Optional[dict] = None   # standing instruction: {"frequency", "day", "first_date", "label"}; None = one-off
 
     def card_fields(self) -> dict:
         """Fields that go into the hash: every item shown on the confirmation card is here."""
@@ -82,6 +83,6 @@ class Draft(BaseModel):
             "from_account": self.from_account, "payee_id": self.payee_id,
             "payee_name": self.payee_name, "amount_cents": self.amount_cents,
             "currency": self.currency, "bill_id": self.bill_id, "asset_class": self.asset_class,
-            "you_said": self.you_said,
+            "you_said": self.you_said, "schedule": self.schedule,
             "nonce": self.nonce, "expires_at": int(self.expires_at),
         }

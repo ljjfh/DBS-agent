@@ -78,8 +78,9 @@ class SemanticSafety(unittest.TestCase):
         w = self.w
         w.prepare('Move a grand to my joint account')
         total = sum(a['balance_cents'] for a in w.bank.accounts(w.s.user_id))
+        joint_before = w.bank.account(w.s.user_id, 'JNT-003')['balance_cents']
         r = w.pay()
-        self.assertEqual(w.bank.account(w.s.user_id, 'JNT-003')['balance_cents'], 100000)
+        self.assertEqual(w.bank.account(w.s.user_id, 'JNT-003')['balance_cents'], joint_before + 100000)
         self.assertEqual(w.balance(), 225000)
         self.assertEqual(sum(a['balance_cents'] for a in w.bank.accounts(w.s.user_id)), total)
         w.bank.execute_payment(w.s.user_id, 'SAV-001', 'own:JNT-003', 100000, r['draft_id'])
@@ -88,11 +89,12 @@ class SemanticSafety(unittest.TestCase):
     def test_internal_credit_rolls_back_on_storage_error(self):
         w = self.w
         w.bank.accounts(w.s.user_id)
+        joint_before = w.bank.account(w.s.user_id, 'JNT-003')['balance_cents']
         with patch.object(w.bank, '_save', side_effect=OSError('disk full')):
             with self.assertRaises(OSError):
                 w.bank.execute_payment(w.s.user_id, 'SAV-001', 'own:JNT-003', 10000, 'rollback')
         self.assertEqual(w.balance(), 325000)
-        self.assertEqual(w.bank.account(w.s.user_id, 'JNT-003')['balance_cents'], 0)
+        self.assertEqual(w.bank.account(w.s.user_id, 'JNT-003')['balance_cents'], joint_before)
 
     def test_internal_transfer_rejects_unknown_destination(self):
         with self.assertRaises(ValueError):

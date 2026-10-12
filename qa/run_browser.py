@@ -60,8 +60,8 @@ def main():
             p.locator("#c-go").click();p.locator(".mf-pad").click()
         def balance(p):return state(p)["accounts"][0]["balance_cents"]
         def home(p,c):
-            d=state(p);return {a['account_id'] for a in d['accounts']}=={'SAV-001','CUR-002','JNT-003'} and len(d["payees"])==9,dict(accounts=len(d["accounts"]),payees=len(d["payees"]))
-        run("B01","首页账户/账单/持仓加载","三账户、六外部收款方和三个自有账户目标；无JS异常",home)
+            d=state(p);return {a['account_id'] for a in d['accounts']}=={'SAV-001','CUR-002','JNT-003'} and len(d["payees"])==10,dict(accounts=len(d["accounts"]),payees=len(d["payees"]))
+        run("B01","首页账户/账单/持仓加载","三账户、七外部收款方（含信用卡账单）和三个自有账户目标；无JS异常",home)
         for route,title in [("activity","Transactions"),("contacts","Payees"),("audit","Audit trail"),("lab","Security lab"),("settings","Settings")]:
             def nav(p,c,route=route,title=title):
                 p.locator(f'[data-page="{route}"]').click();expect(p.locator("h1")).to_have_text(title)

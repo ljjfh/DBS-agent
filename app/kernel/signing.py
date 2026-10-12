@@ -116,7 +116,7 @@ def build_challenge(session_id: str, draft: Draft, ttl: int | None = None) -> st
         "domain": CHALLENGE_DOMAIN, "session_id": session_id, "draft_id": draft.draft_id, "digest": draft.digest,
         "kind": card["kind"], "payee": card["payee_name"], "amount_cents": card["amount_cents"],
         "currency": card["currency"], "asset_class": card["asset_class"], "from_account": card["from_account"],
-        "you_said": card["you_said"],
+        "you_said": card["you_said"], "schedule": card.get("schedule"),
         "nonce": secrets.token_hex(12), "expires_at": int(time.time()) + (ttl or settings.challenge_ttl),
     })
 

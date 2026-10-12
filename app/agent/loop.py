@@ -20,8 +20,9 @@ from dataclasses import dataclass, field
 
 from app.agent import fraud, presenter, request_guard
 from app.agent.llm import LLMError, OfflineLLM, detect_intent
-from app.agent.prompts import SYSTEM_PROMPT, state_summary
-from app.agent.textparse import money_mentions, parse_amount
+from app.agent.prompts import SYSTEM_PROMPT, _unexpected_answer, state_summary
+from app.agent.textparse import money_mentions, parse_amount, relative_in
+from app.kernel.evidence import derived_amounts, user_utterances
 from app.agent.tools import ToolGateway
 from app.bank.mock_bank import MockBank
 from app.config import settings
@@ -38,7 +39,12 @@ _AND = re.compile(r",?\s+\band\b\s+(?:also\s+)?", re.I)
 # The model says it prepared / set up a payment, but no draft was made this turn
 _CLAIMS_PREPARED = re.compile(r"\b(i'?ve|i have|i)\s+(just\s+)?(prepared|drafted|set up|created|arranged)\b.{0,40}"
                               r"\b(transfer|payment|investment|card|draft|purchase|buy)\b|\bhere'?s your (transfer|payment|investment)\b", re.I)
-_MONEY_INTENTS = ("transfer", "bill_pay", "invest")
+_MONEY_INTENTS = ("transfer", "bill_pay", "invest", "add_payee", "giro_setup")
+# "John Tan has been added", "your limit is now raised", "GIRO is set up": only true after the user signs the card
+_CLAIMS_CHANGED = re.compile(r"\b(has|have|had) been (added|set up|raised|increased|changed|registered|approved)\b|"
+                             r"\b(is|are) now (added|set up|raised|active|registered|one of your payees)\b|"
+                             r"\b(added|registered) (him|her|them|it|\w+(?: \w+)?) (as|to) (a |your )?(new )?payees?\b|"
+                             r"\bnow (one of )?your payees?\b|\bi'?ve (added|raised|increased|set up)\b", re.I)
 _NOTE = re.compile(r"\s*\[system note:[^\]]*\]", re.I)
 NUDGE = ("[Harness check] No draft exists: you did not call any draft tool in this turn, so nothing has been prepared. "
          "Do not say it is prepared. If you know who/what and how much, call list_payees (or list_investments) and then "
@@ -46,7 +52,8 @@ NUDGE = ("[Harness check] No draft exists: you did not call any draft tool in th
 NUDGE_LOOKUP = ("[Harness check] You answered without calling any tool, so you have not checked anything. Never say a "
                 "payee, product, bill or account doesn't exist without looking it up. Call the right tool now "
                 "(list_payees, list_investments, get_bills, get_balance, get_portfolio, get_cards), then continue.")
-_DATA_INTENTS = ("transfer", "bill_pay", "invest", "bill_query", "income", "balance", "spending", "portfolio", "card")
+_DATA_INTENTS = ("transfer", "bill_pay", "invest", "bill_query", "income", "balance", "spending", "portfolio", "card",
+                 "limits", "regular", "regular_cancel", "add_payee", "giro_setup")
 
 
 @dataclass
@@ -162,18 +169,27 @@ class Agent:
         self.audit.append("user.utterance", s.session_id, {"text": text})
 
         raw_text = text
+        reference_parent_id = None
         if _RELATIVE.search(text) and len(split_plan(text)) == 1:
             parent_id = s.plan_references.pop(text, None)
+            if parent_id is None and s.receipts:
+                # A separate follow-up may explicitly identify the account just credited.
+                from app.agent.textparse import account_id_for, find_account
+                previous = s.receipts[0].get("card", {})
+                account_id = account_id_for(find_account(text), self.bank.accounts(s.user_id))
+                if account_id and previous.get("payee_id") == "own:" + account_id:
+                    parent_id = previous.get("draft_id")
             receipt = next((r for r in s.receipts if r.get("card", {}).get("draft_id") == parent_id), None)
             if not receipt or receipt.get("status") != "SUCCESS" or receipt["card"]["amount_cents"] % 2:
                 reply = "I need the exact SGD amount. Which amount should I use? The previous step must be completed before its amount can be reused."
                 s.messages.extend([{"role": "user", "content": text}, {"role": "assistant", "content": reply}])
                 return TurnResult(reply, {"type": "text"}, reply, s.trace[start:], "reference guard")
             cents = receipt["card"]["amount_cents"] // 2
+            reference_parent_id = parent_id
             text = _RELATIVE.sub(f"{cents // 100}.{cents % 100:02d} SGD", text)
             # For an owned-account transfer, "of it" means funds in that destination account.
             target = self.bank.payee(s.user_id, receipt["card"]["payee_id"])
-            if target and target.get("type") == "own_account" and not re.search(r"\bfrom\b", text, re.I):
+            if target and target.get("type") == "own" and not re.search(r"\bfrom\b", text, re.I):
                 text += " from my " + target["name"]
             s.add_trace("reference", "Amount resolved from the completed, signed parent transaction",
                         {"original": raw_text, "resolved": text, "parent_draft_id": parent_id})
@@ -210,7 +226,7 @@ class Agent:
                 verdict = self.gateway.verifier.verdict(s) if self.gateway.verifier else None
                 d = self.gateway.kernel.create_draft(s, kind=pending_edit.kind, payee_id=pending_edit.payee_id,
                     amount_cents=round(amount * 100), from_account=pending_edit.from_account,
-                    evidence=text, verification=verdict)
+                    evidence=text, verification=verdict, schedule=pending_edit.schedule)
                 for task, parent in list(s.plan_references.items()):
                     if parent == pending_edit.draft_id:
                         s.plan_references[task] = d.draft_id
@@ -265,14 +281,23 @@ class Agent:
             return self._still_pending(s, start, text_now, pending)
 
         # 2. Constrained ReAct
-        s.messages.append({"role": "user", "content": text_now, "raw_content": raw_text})
+        s.messages.append({"role": "user", "content": text_now, "raw_content": raw_text,
+                           "reference_parent_id": reference_parent_id})
         verifier = self.gateway.verifier
         if verifier and s.phase == Phase.IDLE and self._money_related(s, text_now) and \
                 any(t.tier == "draft" for t in self.gateway.available(s)):
             s.verifier_job = verifier.start(s)       # second engine starts now, alongside the ReAct loop
             s.add_trace("verify", f"Independent verifier started in parallel ({verifier.name}); it sees only your words")
+        # "half of my money" / "with half of it" / "whatever is left": the bank's code works the amount out
+        s.amount_hint = None
+        if relative_in(OfflineLLM._effective_text(s.messages)):    # also "Yes" after "that is S$812.50, shall I?"
+            cands = derived_amounts(user_utterances(s.messages), self.bank.accounts(s.user_id), None)
+            if cands:
+                s.amount_hint = cands[0]
+                s.add_trace("evidence", f"Amount worked out by the bank: {cands[0][1]} = {fmt_money(cands[0][0])}")
         history = s.messages[-settings.max_history_turns * 2:]
         draft_before = s.current_draft_id
+        change_before = (s.pending_change or {}).get("change_id")
         intent = detect_intent(OfflineLLM._effective_text(s.messages))   # includes answers to our own questions
         reply, llm_name, gave_up = self._react(s, self.llm, history, draft_before, intent)
         tool_rejected = any(t.get("kind") == "observation" and isinstance(t.get("detail"), dict)
@@ -284,7 +309,8 @@ class Agent:
             from app.agent.verifier import catalog, extract_offline
             known = extract_offline(s.task_utterances(), catalog(self.bank, s.user_id))
             gave_up = bool(known.get("payee") and known.get("amount"))
-        if gave_up and s.current_draft_id == draft_before and s.phase == Phase.IDLE:
+        if gave_up and s.current_draft_id == draft_before and s.phase == Phase.IDLE and \
+                (s.pending_change or {}).get("change_id") == change_before:
             # The model twice said "prepared" without ever calling a draft tool. Finish this turn with the
             # deterministic planner (same as when the model is down); everything after it is unchanged:
             # draft -> independent verifier -> rules -> card -> the user's own fingerprint.
@@ -297,10 +323,14 @@ class Agent:
         new_draft = s.current_draft if s.current_draft_id and s.current_draft_id != draft_before else None
         if new_draft and s.plan and _RELATIVE.search(s.plan[0]):
             s.plan_references[s.plan[0]] = new_draft.draft_id
-        reply = self._validate_reply(s, reply, new_draft, text_now)
+        new_change = s.pending_change if (s.pending_change or {}).get("change_id") not in (None, change_before) else None
+        reply = self._validate_reply(s, reply, new_draft, text_now, changed=bool(new_change))
         # What the model sees next turn: the reply PLUS what really happened. Without this note the history looks like
         # "user asks -> assistant says 'I've prepared it'" (tool calls aren't kept), and the model learns to skip the tools.
-        s.messages.append({"role": "assistant", "content": reply + self._what_happened(s, new_draft)})
+        note = self._what_happened(s, new_draft) or (
+            f"\n[system note: a confirmation card was shown for: {new_change['card']['title']}. Nothing changes until "
+            f"the user signs it.]" if new_change else "")
+        s.messages.append({"role": "assistant", "content": reply + note})
 
         # 4. UI
         ui = {"type": "text"}
@@ -315,6 +345,8 @@ class Agent:
             # Whatever the user asked, keep the waiting card in front of them (e.g. after "I'm ready")
             ui = {"type": "cooldown" if s.phase == Phase.COOLING else "confirm",
                   "card": presenter.build_card(pending, self.bank, s.phase), "reopened": True}
+        elif s.pending_change and s.pending_change["change_id"] != change_before:
+            ui = {"type": "change", "card": s.pending_change["card"]}     # add payee / raise limit / GIRO: sign it
         elif s.phase == Phase.HANDOFF:
             ui = {"type": "handoff"}
         else:
@@ -351,6 +383,7 @@ class Agent:
         (or still claimed without a draft) after the nudge."""
         working: list[dict] = []
         llm_name = getattr(llm, "name", "llm")
+        change_before = (s.pending_change or {}).get("change_id")
         seen_calls: set[str] = set()
         nudged = False
         tools_used = 0
@@ -396,10 +429,13 @@ class Agent:
                 s.add_trace("thought", msg["content"])
             if not tool_calls:
                 reply = (msg.get("content") or "").strip()
-                no_draft = s.current_draft_id == draft_before
+                no_draft = s.current_draft_id == draft_before and (s.pending_change or {}).get("change_id") == change_before
                 claims = no_draft and bool(_CLAIMS_PREPARED.search(reply)) and \
                     any(t.tier == "draft" for t in self.gateway.available(s))
-                skipped = tools_used == 0 and intent in _DATA_INTENTS
+                # Asking back while the user is answering our own question ("how much?" -> "Agree!" -> "Did you
+                # mean a grand?") is a clarification, not a skipped lookup
+                clarifying = reply.endswith("?") and bool(_unexpected_answer(s.messages))
+                skipped = tools_used == 0 and intent in _DATA_INTENTS and not clarifying
                 if (claims or skipped) and not nudged:
                     nudged = True
                     why = ("said it prepared a payment without calling a draft tool" if claims
@@ -436,7 +472,8 @@ class Agent:
     def _what_happened(s: Session, d) -> str:
         if not d:
             return ""
-        verb = {"transfer": "draft_transfer", "bill": "draft_bill_payment", "investment": "draft_investment"}[d.kind]
+        verb = "draft_standing_instruction" if d.schedule else \
+            {"transfer": "draft_transfer", "bill": "draft_bill_payment", "investment": "draft_investment"}[d.kind]
         state = {Phase.FROZEN: "frozen by the verifier", Phase.BLOCKED: "blocked by the rules",
                  Phase.COOLING: "in cooling-off"}.get(s.phase, "shown on the confirmation card")
         return (f"\n[system note: {verb} was called and created draft {d.draft_id}: {fmt_money(d.amount_cents)} "
@@ -510,7 +547,7 @@ class Agent:
                           speak=reply, trace=s.trace[start:], llm="guard")
 
     # ------------------------------------------------------------------ Validation
-    def _validate_reply(self, s: Session, reply: str | None, draft, text: str) -> str:
+    def _validate_reply(self, s: Session, reply: str | None, draft, text: str, changed: bool = False) -> str:
         reply = _NOTE.sub("", reply or "").strip() or None
         if draft:
             prep = "in" if draft.kind == "investment" else "to"
@@ -530,7 +567,14 @@ class Agent:
             if not reply or any(all(abs(v * 100 - a) > 0.5 for a in allowed) for v in mentioned):
                 s.add_trace("guard", "Amount in model reply doesn't match the draft; using the code template", {"model_reply": reply})
                 return template
-        if not draft and reply and _CLAIMS_PREPARED.search(reply):
+        pc = s.pending_change
+        if pc and reply and _CLAIMS_CHANGED.search(reply):
+            # An account change only happens after the user signs its card: never let the model say it's done
+            s.add_trace("guard", "Model claimed an account change was made before the user signed it; corrected",
+                        {"model_reply": reply})
+            return (f"Nothing has changed yet: {pc['card']['title'].lower()} is waiting for you. Please check the card "
+                    "and confirm it with your fingerprint, or cancel it.")
+        if not draft and not changed and reply and _CLAIMS_PREPARED.search(reply):
             pend = s.current_draft if s.phase in (Phase.AWAITING_AUTH, Phase.COOLING) else None
             s.add_trace("guard", "Model claimed it prepared a payment, but no draft was made this turn; corrected",
                         {"model_reply": reply})

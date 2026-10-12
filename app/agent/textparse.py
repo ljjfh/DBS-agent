@@ -100,6 +100,8 @@ def parse_amount(text: str) -> float | None:
         return float(cents / 100) if cents == cents.to_integral_value() else None
     for m in _MONEY_RE.finditer(text):
         digits, cents, unit = m.group(1), m.group(2), (m.group(3) or "").lower()
+        if is_percent(text, m.end(1) + (len(cents) + 1 if cents else 0)):
+            continue                                  # "20%" is a share, not S$20
         # Skip long numbers that look like account numbers, phone numbers or dates
         raw = digits.replace(",", "")
         if len(raw) >= 7 and not unit:
@@ -131,6 +133,10 @@ def parse_amount(text: str) -> float | None:
     return None
 
 
+def is_percent(text: str, end: int) -> bool:
+    return bool(re.match(r"\s?(%|per ?cent\b|percent\b)", text[end:], re.I))
+
+
 def find_raw_account(text: str) -> str | None:
     m = re.search(r"(?<!\d)(\d[\d\- ]{6,}\d)(?!\d)", text)
     if not m:
@@ -139,7 +145,8 @@ def find_raw_account(text: str) -> str | None:
     return digits if len(digits) >= 7 else None
 
 
-_ACCOUNT_RE = re.compile(r"\b(current|savings?)\s+(account|acct|a/c)\b|\bfrom (?:my |the )?(current|savings?)\b", re.I)
+_ACCOUNT_RE = re.compile(r"\b(current|savings?|joint)\s+(account|acct|a/c)\b|\bfrom (?:my |the |our )?(current|savings?|joint)\b",
+                         re.I)
 
 
 def find_account(text: str) -> str | None:
@@ -148,13 +155,13 @@ def find_account(text: str) -> str | None:
     source = re.search(r"\bfrom (?:my |the )?(current|savings?|joint)(?:\s+account)?\b", text, re.I)
     if source:
         return source[1].lower().rstrip('s') + ('s account' if source[1].lower().startswith('saving') else ' account')
-    if re.search(r"\bto (?:my |the )?(current|savings?|joint)\s+account\b", text, re.I):
-        return None
-    m = _ACCOUNT_RE.search(text)
-    if not m:
-        return None
-    word = (m.group(1) or m.group(3)).lower()
-    return "current account" if word == "current" else "savings account"
+    for m in _ACCOUNT_RE.finditer(text):
+        # "to my joint account" is where the money goes, not where it comes from
+        if re.search(r"\b(?:to|into)\s+(?:my |our |the )?$", text[:m.start()], re.I):
+            continue
+        word = (m.group(1) or m.group(3)).lower()
+        return {"current": "current account", "joint": "joint account"}.get(word, "savings account")
+    return None
 
 
 def account_id_for(phrase: str | None, accounts: list[dict]) -> str | None:
@@ -172,6 +179,12 @@ def match_payees(text: str, payees: list[dict]) -> list[dict]:
     hits = []
     for p in payees:
         names = [p["name"].lower(), *[a.lower() for a in p.get("aliases", [])]]
+        if p.get("type") == "own":
+            # The customer's own account is a destination only after "to" / "into" ("from my savings" is the source)
+            if any(n and re.search(rf"\b(?:to|into)\s+(?:my\s+|our\s+|the\s+)?{re.escape(n)}(?![a-z])", low)
+                   for n in names):
+                hits.append(p)
+            continue
         if any(n and re.search(rf"(?<![a-z]){re.escape(n)}(?![a-z])", low) for n in names):
             hits.append(p)
     if len(hits) > 1:
@@ -230,3 +243,90 @@ def money_mentions(text: str) -> list[float]:
     for m in re.finditer(r"(?:S?\$)\s*(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?", text):
         vals.append(float(m.group(1).replace(",", "") + (f".{m.group(2)}" if m.group(2) else "")))
     return vals
+
+
+# ---------------------------------------------------------------- Repeating payments
+_FREQ = [(re.compile(r"\bevery (single )?month\b|\bmonthly\b|\beach month\b|\bper month\b|"
+                     r"\b(every|each) [\w-]+(?: day)? of (the|each|every) month\b|\bof every month\b", re.I), "monthly"),
+         (re.compile(r"\bevery (single )?week\b|\bweekly\b|\beach week\b|\bevery (mon|tue|wed|thu|fri|sat|sun)\w*day\b",
+                     re.I), "weekly")]
+_ORD_WORDS = {"first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5, "sixth": 6, "seventh": 7, "eighth": 8,
+              "ninth": 9, "tenth": 10, "fifteenth": 15, "twentieth": 20}
+_WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+
+
+def frequency_in(text: str) -> str | None:
+    """'every month' -> 'monthly', 'weekly' -> 'weekly', a one-off -> None."""
+    return next((f for rx, f in _FREQ if rx.search(text)), None)
+
+
+def repeat_day_in(text: str, frequency: str | None) -> int | None:
+    """'on the 1st' -> 1 (monthly); 'every Friday' -> 5 (weekly); None if not said."""
+    low = text.lower()
+    if frequency == "weekly":
+        return next((i + 1 for i, d in enumerate(_WEEKDAYS) if re.search(rf"\b{d}s?\b", low)), None)
+    m = re.search(r"\b(?:on the|on|every)\s+(\d{1,2})(?:st|nd|rd|th)\b|\bthe (\d{1,2})(?:st|nd|rd|th)\b", low)
+    if m:
+        d = int(m.group(1) or m.group(2))
+        return d if 1 <= d <= 31 else None
+    m = re.search(r"\b(" + "|".join(_ORD_WORDS) + r")(?: day)? of (?:the|each|every) month\b", low)
+    if m:                                       # "every first day of the month" -> 1
+        return _ORD_WORDS[m.group(1)]
+    return None
+
+
+# ---------------------------------------------------------------- Relative amounts ("half of my money")
+# These are computed by the bank's code, never by the model: the model is bad at arithmetic and a wrong share of
+# someone's savings is exactly the mistake that must not reach the confirmation card.
+_RELATIVE = [
+    (re.compile(r"\btwo[- ]thirds?\b", re.I), 2 / 3, "two thirds"),
+    (re.compile(r"\b(?:a |one )?third\b", re.I), 1 / 3, "a third"),
+    (re.compile(r"\b(?:a |one )?quarter\b", re.I), 1 / 4, "a quarter"),
+    (re.compile(r"\bhalf\b", re.I), 1 / 2, "half"),
+    # "the rest" / "whatever is left" are NOT here: the rest of what is unclear, so the agent asks how much
+    (re.compile(r"\ball (?:of )?(?:my|the|our) (?:money|savings|balance|cash)\b|\beverything (?:in|from) (?:my|the)\b|"
+                r"\bthe whole (?:amount|balance)\b|\ball of it\b", re.I), 1.0, "all"),
+]
+_PERCENT = re.compile(r"\b(\d{1,2}(?:\.\d)?)\s?(?:%|per ?cent\b)", re.I)
+_OF_IT = re.compile(r"\b(?:of|with) (?:it|that|this)\b|\bhalf (?:of )?(?:it|that)\b", re.I)
+
+
+def relative_in(text: str) -> tuple[float, str, str] | None:
+    """('half of my money') -> (0.5, 'half', 'balance'); ('with half of it') -> (0.5, 'half', 'it'); else None.
+    Only when the sentence has no plain amount of its own (then the plain amount wins)."""
+    m = _PERCENT.search(text)
+    hit = (float(m.group(1)) / 100, f"{m.group(1)}%") if m else next(
+        ((frac, label) for rx, frac, label in _RELATIVE if rx.search(text)), None)
+    if not hit:
+        return None
+    base = "it" if _OF_IT.search(text) else "balance"
+    if base == "balance" and parse_amount(_PERCENT.sub("", text)):
+        return None                               # "send 200 to my son and half to..." -> handled by the plan
+    return hit[0], hit[1], base
+
+
+# ---------------------------------------------------------------- speech-recognition slips on amounts
+# Used ONLY by the offline planner, as a stand-in for what a real model works out by itself ("a grant" in "move a
+# grant to my joint account" means "a grand"). With a model, the model reads the user's words; the kernel then checks
+# its reading (evidence.sounds_alike) instead of rewriting anything.
+_COUNT = r"(a|one|two|three|four|five|six|seven|eight|nine|ten|\d{1,3})"
+_GRAND_SLIP = re.compile(rf"\b{_COUNT}\s+(grant|grants|grind|grinds|gran|grain|grains|grond)\b(?!\s+(?:from|for|of|to apply|application|scheme)\b)", re.I)
+_MONEY_VERB = re.compile(r"\b(move|moving|send|sending|transfer|put|invest|pay|give|top ?up|buy|withdraw|deposit|"
+                         r"how about|make it)\b", re.I)
+_ANSWER_SLIP = re.compile(r"^\s*(agree|a green|a grin|a gran|a grant|a grind|a grain|uh grand|ah grand)\s*[.!]*\s*$", re.I)
+
+
+def fix_asr(text: str, asked_amount: bool = False) -> tuple[str, list[dict]]:
+    """Fix speech-recognition slips on amounts. Returns (fixed text, [{"heard", "meant"}]); unchanged if unsure."""
+    fixes: list[dict] = []
+    if asked_amount and _ANSWER_SLIP.match(text):           # a guess: ask before using it
+        heard = text.strip().rstrip(".!")
+        return "a grand", [{"heard": heard, "meant": "a grand", "sure": False}]
+    if not (_MONEY_VERB.search(text) or asked_amount):
+        return text, fixes
+
+    def sub(m):
+        meant = f"{m.group(1)} grand"
+        fixes.append({"heard": m.group(0), "meant": meant, "sure": True})
+        return meant
+    return _GRAND_SLIP.sub(sub, text), fixes

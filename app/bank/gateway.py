@@ -51,7 +51,10 @@ class ExecutionGateway:
             raise
         metadata = {"session_id": session_id, "verification": verification or {}, "card": card, "digest": digest, "authorization": auth or {"method": "demo authenticator (unsigned)"}}
         try:
-            if card["kind"] == "investment":
+            if card.get("schedule"):
+                receipt = self._bank.create_standing_instruction(user_id, card["from_account"], card["payee_id"],
+                    card["amount_cents"], card["schedule"], idempotency_key=idempotency_key, metadata=metadata)
+            elif card["kind"] == "investment":
                 receipt = self._bank.execute_investment(user_id, card["from_account"], card["payee_id"],
                     card["amount_cents"], idempotency_key=idempotency_key, metadata=metadata)
             else:
@@ -78,7 +81,8 @@ class ExecutionGateway:
         expected = {"domain": CHALLENGE_DOMAIN, "session_id": session_id, "draft_id": card["draft_id"],
                     "digest": digest, "kind": card["kind"], "payee": card["payee_name"],
                     "amount_cents": card["amount_cents"], "currency": card["currency"],
-                    "asset_class": card["asset_class"], "from_account": card["from_account"]}
+                    "asset_class": card["asset_class"], "from_account": card["from_account"],
+                    "schedule": card.get("schedule")}
         if any(signed.get(k) != v for k, v in expected.items()):
             raise GatewayError("The signature is for a different payment.", "GW_PAYLOAD_MISMATCH")
         if signed.get("expires_at", 0) + GRACE_SECONDS < time.time():

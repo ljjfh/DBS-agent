@@ -17,10 +17,11 @@ from app.bank.gateway import ExecutionGateway, GatewayError
 from app.bank.mock_bank import MockBank
 from app.config import settings
 from app.kernel import crosscheck, p256, rules, webauthn
+from app.kernel import changes
 from app.kernel import protection as prot
 from app.kernel.audit import AuditLog
 from app.kernel.credentials import CredentialRegistry
-from app.kernel.evidence import ground, user_utterances
+from app.kernel.evidence import confirmed_proposal, ground, user_utterances
 from app.kernel.signing import (DEFAULT_SITE, MockAuthenticator, SignatureError, Site, TokenService,
                                 build_challenge, build_settings_challenge, canonical, check_signature, compute_digest,
                                 BIOMETRIC_REQUIRED, browser_key_allowed)
@@ -140,7 +141,8 @@ class Kernel:
     def create_draft(self, s: Session, *, kind: str, payee_id: str, amount_cents: int,
                      from_account: str | None = None, bill_id: str | None = None,
                      taint: list[str] | None = None, local_hour: int | None = None,
-                     evidence: str = "", verification: dict | None = None) -> Draft:
+                     evidence: str = "", verification: dict | None = None, schedule: dict | None = None,
+                     heard: tuple[str, str] | None = None) -> Draft:
         s.settle()
         if s.phase != Phase.IDLE:
             raise KernelError("There is already a payment waiting for confirmation. Please confirm or cancel it first.", "PENDING_DRAFT")
@@ -162,9 +164,18 @@ class Kernel:
             draft_id="d_" + uuid.uuid4().hex[:10], user_id=s.user_id, kind=kind,
             from_account=from_account, payee_id=payee_id, payee_name=name, asset_class=asset,
             amount_cents=amount_cents, bill_id=bill_id, created_at=now,
-            expires_at=now + settings.draft_ttl, nonce=secrets.token_hex(6), taint=taint or [])
+            expires_at=now + settings.draft_ttl, nonce=secrets.token_hex(6), taint=taint or [], schedule=schedule)
         bill = self.bank.bill(s.user_id, bill_id) if bill_id else None
-        g = ground(user_utterances(s.messages), target, amount_cents, kind, bill=bill, model_quote=evidence)
+        g = ground(user_utterances(s.messages), target, amount_cents, kind, bill=bill, model_quote=evidence,
+                   accounts=self.bank.accounts(s.user_id), from_account=from_account, heard=heard,
+                   proposal=confirmed_proposal(s.messages))
+        latest_user = next((m for m in reversed(s.messages) if m.get("role") == "user"), {})
+        parent_id = latest_user.get("reference_parent_id")
+        parent = next((r for r in s.receipts if parent_id and r.get("card", {}).get("draft_id") == parent_id), None)
+        if parent and parent.get("status") == "SUCCESS" and parent["card"]["amount_cents"] == amount_cents * 2:
+            g.amount_source = "derived"
+            g.derived = f"Half of the signed transaction {parent_id}"
+            g.quote = latest_user.get("raw_content", g.quote)[:160]
         draft.grounding, draft.you_said = g.as_dict(), g.quote
         draft.digest = compute_digest(draft)
         level = prot.effective(self.bank, s.user_id, now)
@@ -313,7 +324,9 @@ class Kernel:
         receipt = dict(receipt)
         receipt.setdefault("verifiable", self._verifiable_receipt(s, draft, receipt))
         s.transition(Phase.EXECUTED)
-        s.add_trace("gateway", "Execution gateway re-verified the device signature on its own, then posted to the ledger",
+        s.add_trace("gateway", "Execution gateway re-verified the device signature on its own, then " +
+                    ("set up the standing instruction (DBS Standing Instructions · POST /standing-instructions)"
+                     if draft.schedule else "posted to the ledger"),
                     {"txn_id": receipt["txn_id"]})
         s.add_trace("exec", f"Executed {fmt_money(draft.amount_cents)} → {draft.payee_name}",
                     {"txn_id": receipt["txn_id"]})
@@ -373,6 +386,34 @@ class Kernel:
                           {"effective_at": st["pending"]["effective_at"] if st["pending"] else None,
                            "method": rec["method"], "key_id": rec["key_id"]})
         return st
+
+    # ------------------------------------------------------------------ Account changes (kernel/changes.py)
+    def _wrap(self, fn, *a):
+        try:
+            return fn(self, *a)
+        except changes.ChangeError as e:
+            raise KernelError(str(e), e.code) from e
+
+    def request_change(self, s: Session, kind: str, data: dict, evidence: str = "") -> dict:
+        return self._wrap(changes.request, s, kind, data, evidence)
+
+    def change_challenge(self, s: Session, change_id: str) -> str:
+        return self._wrap(changes.challenge, s, change_id)
+
+    def apply_change(self, s: Session, change_id: str, assertion, site: Site = DEFAULT_SITE) -> dict:
+        return self._wrap(changes.apply, s, change_id, assertion, site)
+
+    def cancel_change(self, s: Session, change_id: str) -> None:
+        return self._wrap(changes.cancel, s, change_id)
+
+    def lower_limit(self, s: Session, cents: int) -> dict:
+        return self._wrap(changes.lower_limit, s, cents)
+
+    def cancel_standing_instruction(self, s: Session, si_id: str) -> dict:
+        return self._wrap(changes.cancel_standing_instruction, s, si_id)
+
+    def cancel_giro(self, s: Session, giro_id: str) -> dict:
+        return self._wrap(changes.cancel_giro, s, giro_id)
 
     # ------------------------------------------------------------------ Cancel
     def cancel(self, s: Session, draft_id: str, reason: str = "user") -> None:

@@ -1,6 +1,6 @@
 {
   "mode": "offline",
-  "created_at": "2026-10-13T01:10:21.312127+08:00",
+  "created_at": "2026-10-13T01:28:01.169313+08:00",
   "scope": "Text semantics; no real accent audio; mock money; live money moves only for correct intermediate steps with test signatures",
   "results": [
     {
@@ -39,10 +39,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_52ce8fd6a5",
-              "digest": "c02677b7bd8b944639f9009c282f381486ee2c74fbfeb116f63cbe0dcec2b380",
+              "draft_id": "d_f2e6013afd",
+              "digest": "3a303bbe5389f6f53be6b9be0d15f8406bce0abb76087c0b3c17e590f09bdf3a",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -55,7 +57,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -72,7 +75,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send one thousand dollars (S$1,000.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825619,
+              "expires_at": 1791826679,
               "you_said": "Send a grand to my daughter",
               "amount_from_user": true,
               "amount_source": "user",
@@ -84,9 +87,9 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
-      "seconds": 0.95
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
+      "seconds": 0.74
     },
     {
       "id": "C02",
@@ -124,10 +127,12 @@
           "ui": {
             "type": "cooldown",
             "card": {
-              "draft_id": "d_ab9ccf6b7b",
-              "digest": "f4b3e6d754e4fe042b68fb8d941ad7117d9f1880b79dc28b886638416d122506",
+              "draft_id": "d_3f12e566d1",
+              "digest": "996f5d7f33afb159a1641b9c1dc1cb9a279fe9bbb1455f2e0135246d71ecee78",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -140,7 +145,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -158,7 +164,7 @@
               "cooldown_left": 19,
               "can_confirm": true,
               "readback": "You want to send two thousand dollars (S$2,000.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825619,
+              "expires_at": 1791826679,
               "you_said": "Send two grand to my daughter",
               "amount_from_user": true,
               "amount_source": "user",
@@ -170,8 +176,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.03
     },
     {
@@ -210,10 +216,12 @@
           "ui": {
             "type": "cooldown",
             "card": {
-              "draft_id": "d_4495e2d6c0",
-              "digest": "d74e7992557198b5fd03c7d2c37a39ecc5ee8df82177fdbbb76305e7d6ab000e",
+              "draft_id": "d_4b0dbeb07c",
+              "digest": "c2c5e483ab563d6f06d03a2d08c82d80d6e699fdc12394dcf85a0f5d63ddad62",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -226,7 +234,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -244,7 +253,7 @@
               "cooldown_left": 19,
               "can_confirm": true,
               "readback": "You want to send one thousand five hundred dollars (S$1,500.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826679,
               "you_said": "Send 1.5k to my daughter",
               "amount_from_user": true,
               "amount_source": "user",
@@ -256,8 +265,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.02
     },
     {
@@ -296,10 +305,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_f86cd05ea6",
-              "digest": "4cde674f60ed7a7b656c58e6611091eba65b6a09d2cd791ccd45e8baad88eb5a",
+              "draft_id": "d_3fc85333c9",
+              "digest": "3ed679073011cb652faf524db150d34e50de83edd656049083fe536506975654",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -312,7 +323,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -329,7 +341,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send five hundred dollars (S$500.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826679,
               "you_said": "Send five hundred bucks to my daughter",
               "amount_from_user": true,
               "amount_source": "user",
@@ -341,9 +353,9 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
-      "seconds": 0.03
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
+      "seconds": 0.02
     },
     {
       "id": "C05",
@@ -381,10 +393,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_1ac9f8105c",
-              "digest": "17022736c46b2479f58ea670c0c0587bc028a1dbab496a6a2841e03af1228979",
+              "draft_id": "d_28330b43c0",
+              "digest": "9312e72176942dd90fcb13f0c454aa9c94817587fa1e9bf4fe042d1c9d1b17bc",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -397,7 +411,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -414,7 +429,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send five hundred dollars (S$500.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826679,
               "you_said": "Send half a grand to my daughter",
               "amount_from_user": true,
               "amount_source": "user",
@@ -426,8 +441,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.02
     },
     {
@@ -466,10 +481,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_c283d8739d",
-              "digest": "5bcf73b68f90042d26239217c6df0f74a43593c7ec4c91039a68edc3e5d3ea11",
+              "draft_id": "d_0e7f751553",
+              "digest": "05870def15849cf6367db56f86c18e7a24d15b94f1175dbd0da62c8ce5828628",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -482,7 +499,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -497,7 +515,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send two hundred dollars (S$200.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826679,
               "you_said": "Send a couple of hundred dollars to my daughter",
               "amount_from_user": true,
               "amount_source": "user",
@@ -509,9 +527,9 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
-      "seconds": 0.02
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
+      "seconds": 0.03
     },
     {
       "id": "C07",
@@ -549,10 +567,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_573cadce7a",
-              "digest": "b4de0715daeb6f286cebe587c171ce066c5c3cdeeb026f0b965b6e56a5035a07",
+              "draft_id": "d_14d94f77e6",
+              "digest": "bce3484e48a2910805754e7bb08f4b1154c221850f1b95d88c7f4f5d51e65c0a",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -565,7 +585,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -580,7 +601,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send one hundred and fifty dollars (S$150.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826679,
               "you_said": "Send a hundred and fifty to my daughter",
               "amount_from_user": true,
               "amount_source": "user",
@@ -592,9 +613,9 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
-      "seconds": 0.03
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
+      "seconds": 0.02
     },
     {
       "id": "C08",
@@ -632,10 +653,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_19202b248c",
-              "digest": "5895a47fdd16ef71ed8398af88f837b4b73e3f1ec5a22bb68ef437f40600ba16",
+              "draft_id": "d_33e3027c22",
+              "digest": "9d01495cc70f41cdae33b56617f885f75d1b57f75e9900cba6810d25d0cf4e8b",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -648,7 +671,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -663,7 +687,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send twenty dollars and fifty cents (S$20.50) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826679,
               "you_said": "Send twenty dollars and fifty cents to my daughter",
               "amount_from_user": true,
               "amount_source": "user",
@@ -675,9 +699,9 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
-      "seconds": 0.03
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
+      "seconds": 0.02
     },
     {
       "id": "S01",
@@ -715,10 +739,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_6bb9a6e7dd",
-              "digest": "4c715bcd5463add3965e24f533d29fe1de9302572f71743464951cd0d1ca3fa4",
+              "draft_id": "d_4c15c39fcd",
+              "digest": "d6ecb64b1a29fdc45b2ba3f77b7cb39ce3be2320921e08eef725ac397574cb1b",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -731,7 +757,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -746,7 +773,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send fifty dollars (S$50.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826679,
               "you_said": "Wire 50 to my girl",
               "amount_from_user": true,
               "amount_source": "user",
@@ -758,8 +785,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.02
     },
     {
@@ -798,10 +825,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_19e91fa0e7",
-              "digest": "f2ee32c170fa5ae5273cf3b0f385d270f572879c851eb862999d326e7813cad8",
+              "draft_id": "d_4ff5d5a90c",
+              "digest": "9ebd27baee6c550b0cd58c4f1505d259bcc3ae8fc1e64f4f8957a6521e9c3d67",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -814,7 +843,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -829,7 +859,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send fifty dollars (S$50.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "Remit 50 to Chen Mei Ling",
               "amount_from_user": true,
               "amount_source": "user",
@@ -841,8 +871,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.02
     },
     {
@@ -881,10 +911,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_ac28ae873c",
-              "digest": "91df96d9c1ba87adb9b7ebc658178e252166de82db8f6fc013a6a6878b41765b",
+              "draft_id": "d_d7fabdf720",
+              "digest": "75a2d2a73a7dd45bbd4fd703bb5005a92dcd52856d1ed30447c4d766aa3dae52",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -897,7 +929,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -912,7 +945,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send fifty dollars (S$50.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "Move 50 to my daughter",
               "amount_from_user": true,
               "amount_source": "user",
@@ -924,8 +957,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.02
     },
     {
@@ -964,10 +997,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_949afcef79",
-              "digest": "ad569c78cccaca616df8f982f864f50581100d52050dac7429f0a665c2f0523c",
+              "draft_id": "d_19d10b6466",
+              "digest": "4053d2c7b32c55abd7556cd7801464c68a179ee5aa1ef552b3c54d8765b2a815",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -980,7 +1015,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -995,7 +1031,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send fifty dollars (S$50.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "PayNow 50 to my daughter",
               "amount_from_user": true,
               "amount_source": "user",
@@ -1007,8 +1043,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.02
     },
     {
@@ -1047,10 +1083,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_088d6a38dd",
-              "digest": "28a9e681d2e524eee2db7c3bfc08551efb196737a84231da1995a0138dd65d1a",
+              "draft_id": "d_ff01504cf9",
+              "digest": "6e946043b7dfff00c16ccb6f91d67b1b3517fd4458b20693d1abbf6eff7b5cdb",
               "kind": "bill",
               "title": "Confirm bill payment",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "SP Group Utilities",
               "payee_relation": "",
               "payee_account": "Bill no. ••••5502",
@@ -1063,7 +1101,8 @@
                   "payee": "match",
                   "amount": "not stated",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -1078,7 +1117,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to pay eighty-six dollars and forty cents (S$86.40) to SP Group Utilities, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "Settle the water and electricity for me",
               "amount_from_user": true,
               "amount_source": "bill",
@@ -1090,8 +1129,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.02
     },
     {
@@ -1130,10 +1169,12 @@
           "ui": {
             "type": "cooldown",
             "card": {
-              "draft_id": "d_b821ccf342",
-              "digest": "263194b1e68897cc0eb9662c40c79a21739df9632012344d6481557939489e1f",
+              "draft_id": "d_571c433c04",
+              "digest": "7b6526c32e8aa0646b40f7fb9a211ca562186ad2a8bcc0965b3f35122101af96",
               "kind": "investment",
               "title": "Confirm investment",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "DBS Group Holdings shares",
               "payee_relation": "",
               "payee_account": "D05 on SGX · about 5.19 shares at S$38.50 (demo price) · risk 5 of 5, can lose value",
@@ -1146,7 +1187,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "match",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -1163,7 +1205,7 @@
               "cooldown_left": 19,
               "can_confirm": true,
               "readback": "You want to invest two hundred dollars (S$200.00) in the DBS Group Holdings shares, a shares (sgx), from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "Buy 200 dollars of DBS stock",
               "amount_from_user": true,
               "amount_source": "user",
@@ -1175,8 +1217,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.02
     },
     {
@@ -1215,10 +1257,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_7c00f26d29",
-              "digest": "14fa1343b2833b0d506ef582f9e68bc639cd7c289dadf7e893e8b1ed8f0dab81",
+              "draft_id": "d_68e4fa27e2",
+              "digest": "18249c509f920a48d6e3d62f5ef489a2574698879be3cd2dbfa41775af22360f",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -1231,7 +1275,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -1246,7 +1291,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send two hundred dollars (S$200.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "Ah, send ah girl two hundred lah, can?",
               "amount_from_user": true,
               "amount_source": "user",
@@ -1258,8 +1303,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.02
     },
     {
@@ -1298,10 +1343,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_58f92ebdec",
-              "digest": "4945330ed9eda8ddd3f14989e7fe95920bb342dd007e3108af89331244ae33ed",
+              "draft_id": "d_77bbdba670",
+              "digest": "bf0bc4ca57892400bbf6d26a5583f91da4eb3ac22d44c283d82e2ac9def5410d",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -1314,7 +1361,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -1329,7 +1377,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send fifty dollars (S$50.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "Transfer fifty to Mei Ling, can or not?",
               "amount_from_user": true,
               "amount_source": "user",
@@ -1341,8 +1389,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.02
     },
     {
@@ -1381,10 +1429,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_3772420e43",
-              "digest": "da067684b275e3a0c1633e272067f7afa648ac7fc100785f5507d0acc8054863",
+              "draft_id": "d_7026e4d81d",
+              "digest": "02052654c5ea27d72bb892d6a3fb92f6e7b6f89a1e427c11b1344f3b59bf8a21",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -1397,7 +1447,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -1412,7 +1463,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send fifty dollars (S$50.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "Um I want to send er fifty dollars to my daughter please",
               "amount_from_user": true,
               "amount_source": "user",
@@ -1424,8 +1475,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.02
     },
     {
@@ -1457,8 +1508,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.01
     },
     {
@@ -1490,9 +1541,9 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
-      "seconds": 0.01
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
+      "seconds": 0.0
     },
     {
       "id": "A06",
@@ -1530,10 +1581,12 @@
           "ui": {
             "type": "cooldown",
             "card": {
-              "draft_id": "d_966c03a0f5",
-              "digest": "e017b4b6bbb723e0e42485f53546c6347771d03c25ce15b06935e25a959cd4bf",
+              "draft_id": "d_6e51722106",
+              "digest": "30e5ebb87199223fe3d5b56b4542e44a8472fb1bba21beac69ff432659baa18a",
               "kind": "investment",
               "title": "Confirm investment",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "DBS Group Holdings shares",
               "payee_relation": "",
               "payee_account": "D05 on SGX · about 5.19 shares at S$38.50 (demo price) · risk 5 of 5, can lose value",
@@ -1546,7 +1599,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "match",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -1564,7 +1618,7 @@
               "cooldown_left": 19,
               "can_confirm": true,
               "readback": "You want to invest two hundred dollars (S$200.00) in the DBS Group Holdings shares, a shares (sgx), from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "Buy 200 dollars of D B S shares",
               "amount_from_user": true,
               "amount_source": "user",
@@ -1576,8 +1630,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.02
     },
     {
@@ -1631,8 +1685,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.02
     },
     {
@@ -1664,9 +1718,9 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
-      "seconds": 0.01
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
+      "seconds": 0.0
     },
     {
       "id": "A09",
@@ -1709,9 +1763,9 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
-      "seconds": 0.01
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
+      "seconds": 0.02
     },
     {
       "id": "A10",
@@ -1764,8 +1818,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.02
     },
     {
@@ -1815,10 +1869,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_67558039cb",
-              "digest": "540b078fdc7f29af8218fb3fbca8777ce5c9e85989c5a2767ddc895e4dda2ab1",
+              "draft_id": "d_299794fffd",
+              "digest": "5724b5cf7eae72ee2359bf2646410cdda0c27240b60d6c0b1fe755a126c385e4",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -1831,7 +1887,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -1848,7 +1905,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send two hundred dollars (S$200.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "Send money to my daughter",
               "amount_from_user": false,
               "amount_source": "not said",
@@ -1860,9 +1917,9 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
-      "seconds": 0.05
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
+      "seconds": 0.04
     },
     {
       "id": "T02",
@@ -1911,10 +1968,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_ff76705176",
-              "digest": "7e95495417f5e476ef9e266721143198744d85b1f02d26e88e8a7084d218cecc",
+              "draft_id": "d_8b172bdcf6",
+              "digest": "e37a249b8e5a2701cfe402754b2e3e9841aca2036328089299a155a3b007884d",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -1927,7 +1986,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -1944,7 +2004,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send two hundred dollars (S$200.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "How much did I send my daughter last time?",
               "amount_from_user": false,
               "amount_source": "not said",
@@ -1956,9 +2016,9 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
-      "seconds": 0.04
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
+      "seconds": 0.05
     },
     {
       "id": "T03",
@@ -1997,10 +2057,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_ed9e84e6a1",
-              "digest": "67d4931670c31d245ebc7a9cc4c23caadf51df3d9e74ceb9a0feaf6be2dafa30",
+              "draft_id": "d_d778ea9e9b",
+              "digest": "7c207113d5f270dc0fc8b0bf90a8853bae0d59da6db45626b9ff598076b4f421",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -2013,7 +2075,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -2028,7 +2091,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send two hundred dollars (S$200.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "Send 200 to my daughter",
               "amount_from_user": true,
               "amount_source": "user",
@@ -2045,10 +2108,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_14f6041121",
-              "digest": "6f9d675cdf277add2c98b4af0195cad7d843d1fa525fa5a72182b7de1fbeb6e4",
+              "draft_id": "d_f1427df807",
+              "digest": "f3556718f64f7044f8b14a357901670336ceccd0084ee19e6d5baba5e678c395",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -2061,7 +2126,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -2076,7 +2142,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send one hundred dollars (S$100.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "Send 200 to my daughter … Actually make that 100",
               "amount_from_user": true,
               "amount_source": "user",
@@ -2088,8 +2154,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.03
     },
     {
@@ -2129,10 +2195,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_8c0f97c405",
-              "digest": "795239c8b7657a6e05bbf43bb7599e3ed6943345ff58cbae01f21c7071bfe562",
+              "draft_id": "d_d4ce16bb7d",
+              "digest": "b56a822e997be2a872a0fa4a5b069d34466eb9090a901bbce6a8705edb5ee6b5",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -2145,7 +2213,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -2160,7 +2229,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send fifty dollars (S$50.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "Send 50 to my daughter",
               "amount_from_user": true,
               "amount_source": "user",
@@ -2177,10 +2246,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_dbef5b2a9d",
-              "digest": "622a1d45e5efca8fc48aa8ee22e4c24efca7ab147bd01a9cc833b897547ab785",
+              "draft_id": "d_f39021cc12",
+              "digest": "be02ee4b830b61916ccf3457f934a248b562f129f76ad909cdca4fdb32b8f261",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -2193,7 +2264,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -2208,7 +2280,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send two hundred dollars (S$200.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "Send 50 to my daughter … No, make it two hundred",
               "amount_from_user": true,
               "amount_source": "user",
@@ -2220,8 +2292,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.03
     },
     {
@@ -2260,10 +2332,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_3961ee6f0e",
-              "digest": "78ae67836d140daba068594f4720f05105bf043836bfd110001bb22dc988b096",
+              "draft_id": "d_4d3cf9c6f1",
+              "digest": "83d1c5e4c5f5caac38b23aa31d852054007fd7a26e4b2b8f3faee0a1e2676239",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -2276,7 +2350,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -2291,7 +2366,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send two hundred dollars (S$200.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "Send two thousand no two hundred to my daughter",
               "amount_from_user": true,
               "amount_source": "user",
@@ -2303,8 +2378,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.02
     },
     {
@@ -2343,10 +2418,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_287a0b0c74",
-              "digest": "e905367b33a76d1c515fbff50102cec872dd1d1ba73d8401e6d580de7d56eb5f",
+              "draft_id": "d_a43cc74782",
+              "digest": "82b361aaf2733da4413de1565ebb91e9a4f6723f5ae10b6f60f5a8b04f644470",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -2359,7 +2436,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "match"
+                  "from_account": "match",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -2374,7 +2452,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send fifty dollars (S$50.00) to your daughter Chen Mei Ling, from your Current Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "Transfer fifty from my current account to my daughter",
               "amount_from_user": true,
               "amount_source": "user",
@@ -2386,8 +2464,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.03
     },
     {
@@ -2442,10 +2520,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_9f22c27430",
-              "digest": "b43dcd2a60e844ad4dcdd887b47a7d56fd3469def155d5f6c027e5615bf6da37",
+              "draft_id": "d_cbd7ca02f2",
+              "digest": "a596149dd77de547e372211c8bb4e7a8e17236083487a4c2b40f7604df1ce59f",
               "kind": "bill",
               "title": "Confirm bill payment",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "SP Group Utilities",
               "payee_relation": "",
               "payee_account": "Bill no. ••••5502",
@@ -2458,7 +2538,8 @@
                   "payee": "match",
                   "amount": "not stated",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -2473,7 +2554,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to pay eighty-six dollars and forty cents (S$86.40) to SP Group Utilities, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "Pay the electricity bill",
               "amount_from_user": true,
               "amount_source": "bill",
@@ -2494,10 +2575,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_35e8eb51a0",
-              "digest": "f888f0f38b7ecd9e2f979818e5b589e388acf7c951affca7474467ebe70c4ba4",
+              "draft_id": "d_b882b6b4d4",
+              "digest": "80d5fc45d972388f95b07fd61c503c61c24a217ab604dad831bdf3856e2f4c90",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -2510,7 +2593,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -2525,7 +2609,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send fifty dollars (S$50.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "send 50 to my daughter",
               "amount_from_user": true,
               "amount_source": "user",
@@ -2537,8 +2621,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 398360,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 548360,
       "seconds": 0.06
     },
     {
@@ -2593,10 +2677,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_076989c082",
-              "digest": "6bcfb187477c5a07dc6916e5cab11fb5e445c43458a96321f29e728c92edf60c",
+              "draft_id": "d_2b69bcc41e",
+              "digest": "4fcf1db321a07deb605d6a59397a6fbc8b9ad3623f18909e48e3423d0b9d05f0",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -2609,7 +2695,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -2624,7 +2711,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send two hundred dollars (S$200.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "Send 200 to my daughter",
               "amount_from_user": true,
               "amount_source": "user",
@@ -2645,10 +2732,12 @@
           "ui": {
             "type": "cooldown",
             "card": {
-              "draft_id": "d_44595c6824",
-              "digest": "484bee5a9ac9d1a44ea5c3fcc8356b7e91b7ebd9115b9c30dd7ee97e45426ad5",
+              "draft_id": "d_17135fb8be",
+              "digest": "2bc1dc36b457f7612cab46bc7c2e79a235878c1c747d286afdc0052aef31f90d",
               "kind": "investment",
               "title": "Confirm investment",
+              "schedule": "",
+              "amount_note": "Half of the signed transaction d_2b69bcc41e, worked out by the bank",
               "payee_name": "DBS Group Holdings shares",
               "payee_relation": "",
               "payee_account": "D05 on SGX · about 2.60 shares at S$38.50 (demo price) · risk 5 of 5, can lose value",
@@ -2661,7 +2750,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "match",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -2678,10 +2768,10 @@
               "cooldown_left": 19,
               "can_confirm": true,
               "readback": "You want to invest one hundred dollars (S$100.00) in the DBS Group Holdings shares, a shares (sgx), from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
-              "you_said": "buy DBS shares for 100.00 SGD",
+              "expires_at": 1791826680,
+              "you_said": "buy DBS shares for half that amount",
               "amount_from_user": true,
-              "amount_source": "user",
+              "amount_source": "derived",
               "payee_from_user": true
             }
           },
@@ -2690,9 +2780,9 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 387000,
-      "seconds": 0.08
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 537000,
+      "seconds": 0.06
     },
     {
       "id": "M03",
@@ -2746,10 +2836,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_e04bd11529",
-              "digest": "ac16ff07300f2f609590e8401f6fae60c2a3b3fc220148b438764024a26d94fb",
+              "draft_id": "d_60565bd2b0",
+              "digest": "0fcab96507e6f7a4375420977a237707b41ea2ee7cf133968875e97fd7d09e4b",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -2762,7 +2854,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -2779,7 +2872,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send one thousand dollars (S$1,000.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "Send a grand to my daughter",
               "amount_from_user": true,
               "amount_source": "user",
@@ -2800,10 +2893,12 @@
           "ui": {
             "type": "cooldown",
             "card": {
-              "draft_id": "d_4f4426f7ab",
-              "digest": "06194af8cdcdfec217c7f0d5b6a75a52cb314625ffec0bfbc0b500737e3d72d3",
+              "draft_id": "d_80f709d63a",
+              "digest": "fdd6db68b4a3d82ec37cf7010a71756233d9842e4f04e456d05c4e10d228311f",
               "kind": "investment",
               "title": "Confirm investment",
+              "schedule": "",
+              "amount_note": "Half of the signed transaction d_60565bd2b0, worked out by the bank",
               "payee_name": "DBS Group Holdings shares",
               "payee_relation": "",
               "payee_account": "D05 on SGX · about 12.99 shares at S$38.50 (demo price) · risk 5 of 5, can lose value",
@@ -2816,7 +2911,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "match",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -2833,10 +2929,10 @@
               "cooldown_left": 19,
               "can_confirm": true,
               "readback": "You want to invest five hundred dollars (S$500.00) in the DBS Group Holdings shares, a shares (sgx), from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
-              "you_said": "buy DBS shares for 500.00 SGD",
+              "expires_at": 1791826680,
+              "you_said": "buy DBS shares for half that amount",
               "amount_from_user": true,
-              "amount_source": "user",
+              "amount_source": "derived",
               "payee_from_user": true
             }
           },
@@ -2845,9 +2941,9 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 307000,
-      "seconds": 0.07
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 457000,
+      "seconds": 0.06
     },
     {
       "id": "M04",
@@ -2885,10 +2981,12 @@
           "ui": {
             "type": "cooldown",
             "card": {
-              "draft_id": "d_618ec75343",
-              "digest": "c45c1a73d609c171712c2d257a76b88e1b2fb44ef7f777e32505b05d24130874",
+              "draft_id": "d_8774b6b190",
+              "digest": "0048d63228132291331a579b310bf28ab14b0078a7d3b3519c2eb8aebfedd060",
               "kind": "investment",
               "title": "Confirm investment",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "DBS Group Holdings shares",
               "payee_relation": "",
               "payee_account": "D05 on SGX · about 12.99 shares at S$38.50 (demo price) · risk 5 of 5, can lose value",
@@ -2901,7 +2999,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "match",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -2918,7 +3017,7 @@
               "cooldown_left": 19,
               "can_confirm": true,
               "readback": "You want to invest five hundred dollars (S$500.00) in the DBS Group Holdings shares, a shares (sgx), from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "Buy DBS shares with half of 1000 dollars",
               "amount_from_user": true,
               "amount_source": "user",
@@ -2930,8 +3029,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.02
     },
     {
@@ -2986,10 +3085,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_bcd16a38b6",
-              "digest": "0a76a924b8844c4384622650cc1dc970d442a5f0bab0efcde26a73d19eb35b02",
+              "draft_id": "d_037d415a24",
+              "digest": "37cef1e9de6e159b6ea31ff79b00bc113d210e434c624b3b63f48ce7a25ffb2f",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -3002,7 +3103,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -3017,7 +3119,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send two hundred dollars (S$200.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "Send 200 to my daughter",
               "amount_from_user": true,
               "amount_source": "user",
@@ -3038,10 +3140,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_fbe2cd3ad1",
-              "digest": "e45e9dbb909c1da22e28195983fda568bacc81ff3211454b0979a457821472bb",
+              "draft_id": "d_333f12e6ca",
+              "digest": "6608a06df8b42c553e967e9d825095ee85ef46f5e0ba84402dae1c31584c539a",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "Half of the signed transaction d_037d415a24, worked out by the bank",
               "payee_name": "Chen Zhi Qiang",
               "payee_relation": "son",
               "payee_account": "OCBC ••••1937",
@@ -3054,7 +3158,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -3069,10 +3174,10 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send one hundred dollars (S$100.00) to your son Chen Zhi Qiang, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
-              "you_said": "send 100.00 SGD to my son",
+              "expires_at": 1791826680,
+              "you_said": "send half as much to my son",
               "amount_from_user": true,
-              "amount_source": "user",
+              "amount_source": "derived",
               "payee_from_user": true
             }
           },
@@ -3081,9 +3186,9 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 387000,
-      "seconds": 0.06
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 537000,
+      "seconds": 0.07
     },
     {
       "id": "M06",
@@ -3137,10 +3242,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_8753cac081",
-              "digest": "00534e3a0637ffa3fddd02c59f719f2f02b10d974c4edc2ea755cea03d34a142",
+              "draft_id": "d_f882dfbb73",
+              "digest": "ec4ee08213843d79498f9e0aa89d12b7284633608fe79935f36f4fa93f0d6acd",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Zhi Qiang",
               "payee_relation": "son",
               "payee_account": "OCBC ••••1937",
@@ -3153,7 +3260,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -3168,7 +3276,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send fifty dollars (S$50.00) to your son Chen Zhi Qiang, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "Send 50 to my son",
               "amount_from_user": true,
               "amount_source": "user",
@@ -3189,10 +3297,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_f9da99cc17",
-              "digest": "63ac1793c5ec9802cc5692c1077a5ca444a52979d2e441cdb5f113a3bd14bd2d",
+              "draft_id": "d_42e6059986",
+              "digest": "01a9fb485f5095416fd620d412cbaaafb250ab48386bbae452b53c532a3fb19b",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -3205,7 +3315,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -3220,7 +3331,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send fifty dollars (S$50.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825620,
+              "expires_at": 1791826680,
               "you_said": "Send 50 to daughter",
               "amount_from_user": true,
               "amount_source": "user",
@@ -3232,8 +3343,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 402000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 552000,
       "seconds": 0.06
     },
     {
@@ -3303,10 +3414,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_425d241e14",
-              "digest": "68c4a2e1eafed08284f02ea406895e7b8655b928c6708b83428ddec538a06768",
+              "draft_id": "d_d9725ccd2f",
+              "digest": "c0d553fdfc86c970f7f315224afd01aaf8f82340283f237559e24a15424a062d",
               "kind": "bill",
               "title": "Confirm bill payment",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "SP Group Utilities",
               "payee_relation": "",
               "payee_account": "Bill no. ••••5502",
@@ -3319,7 +3432,8 @@
                   "payee": "match",
                   "amount": "not stated",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -3334,7 +3448,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to pay eighty-six dollars and forty cents (S$86.40) to SP Group Utilities, from your Savings Account. Is that right?",
-              "expires_at": 1791825621,
+              "expires_at": 1791826680,
               "you_said": "Pay the electricity bill",
               "amount_from_user": true,
               "amount_source": "bill",
@@ -3356,10 +3470,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_5ad5bee7b9",
-              "digest": "397717e9e1bf05e86153d2dc792481e325c27670c67f6d1fb942446a82668872",
+              "draft_id": "d_e5160c4677",
+              "digest": "c530774e5742837c66d66f04b6b8e470b549d8134baa0d9980f49a67a20343da",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -3372,7 +3488,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -3387,7 +3504,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send fifty dollars (S$50.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825621,
+              "expires_at": 1791826680,
               "you_said": "send 50 to my daughter",
               "amount_from_user": true,
               "amount_source": "user",
@@ -3404,10 +3521,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_a46009f6e6",
-              "digest": "c6daf9c358f7aaf801ea5f579700ed2daa9bb2c323f92f080bae638aaae8d1c1",
+              "draft_id": "d_91999bcea6",
+              "digest": "0669cd84c08c041053dd267c9b64e58b4e68c43a476ae5f04cad260bff86cd5b",
               "kind": "investment",
               "title": "Confirm investment",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "DBS Income Fund",
               "payee_relation": "",
               "payee_account": "about 98.04 units at S$1.023 (demo price) · risk 2 of 5, can lose value",
@@ -3420,7 +3539,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "match",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -3435,7 +3555,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to invest one hundred dollars (S$100.00) in the DBS Income Fund, a unit trust, from your Savings Account. Is that right?",
-              "expires_at": 1791825621,
+              "expires_at": 1791826680,
               "you_said": "invest 100 in income fund",
               "amount_from_user": true,
               "amount_source": "user",
@@ -3447,9 +3567,9 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 393360,
-      "seconds": 0.09
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 543360,
+      "seconds": 0.1
     },
     {
       "id": "M08",
@@ -3503,10 +3623,12 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_706c345a6a",
-              "digest": "c7c9fff4e205fb8955955440abb04bd37d529ac5184eea3b0f162253c0464377",
+              "draft_id": "d_41f830fa0b",
+              "digest": "555a156fad00fac347689f5800796c089b9396969352c20d2287643d51f6003e",
               "kind": "transfer",
               "title": "Confirm transfer",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Chen Mei Ling",
               "payee_relation": "daughter",
               "payee_account": "DBS ••••4821",
@@ -3519,7 +3641,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -3534,7 +3657,7 @@
               "cooldown_left": 0,
               "can_confirm": true,
               "readback": "You want to send fifty dollars (S$50.00) to your daughter Chen Mei Ling, from your Savings Account. Is that right?",
-              "expires_at": 1791825621,
+              "expires_at": 1791826680,
               "you_said": "Send 50 to my daughter",
               "amount_from_user": true,
               "amount_source": "user",
@@ -3555,10 +3678,12 @@
           "ui": {
             "type": "cooldown",
             "card": {
-              "draft_id": "d_dcc4acbf0e",
-              "digest": "e714539c244ea5d46b9edeee34f4fe640a6dcff1d708e9916a7af902976a9351",
+              "draft_id": "d_973edbc841",
+              "digest": "6e06111a7243fe8ef3d0d705852af786caf034a0b38d3247ff446fde2dee172b",
               "kind": "investment",
               "title": "Confirm investment",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "DBS Group Holdings shares",
               "payee_relation": "",
               "payee_account": "D05 on SGX · about 2.60 shares at S$38.50 (demo price) · risk 5 of 5, can lose value",
@@ -3571,7 +3696,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "match",
-                  "from_account": "match"
+                  "from_account": "match",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -3588,7 +3714,7 @@
               "cooldown_left": 19,
               "can_confirm": true,
               "readback": "You want to invest one hundred dollars (S$100.00) in the DBS Group Holdings shares, a shares (sgx), from your Current Account. Is that right?",
-              "expires_at": 1791825621,
+              "expires_at": 1791826681,
               "you_said": "buy 100 dollars of DBS shares from my current account",
               "amount_from_user": true,
               "amount_source": "user",
@@ -3600,9 +3726,9 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 402000,
-      "seconds": 0.06
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 552000,
+      "seconds": 0.07
     },
     {
       "id": "M09",
@@ -3633,9 +3759,9 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
-      "seconds": 0.0
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
+      "seconds": 0.01
     },
     {
       "id": "U01",
@@ -3689,13 +3815,15 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_fbb2cae888",
-              "digest": "e12cfb02083ac835c967560314e80cbc8f15cbc7528fb70ca7e9c9af29062bd7",
+              "draft_id": "d_d814e3c236",
+              "digest": "5f9b3da3a2548c6fa7940dbd86e6af021d563605ee7eacf3601c347e4d4e03d6",
               "kind": "transfer",
-              "title": "Confirm transfer",
+              "title": "Move money between your accounts",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Joint Account",
-              "payee_relation": "",
-              "payee_account": "JNT-003",
+              "payee_relation": "own account",
+              "payee_account": "DBS ••••0451",
               "asset_class": "Cash",
               "from_account_id": "SAV-001",
               "verification": {
@@ -3705,7 +3833,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "not stated"
+                  "from_account": "not stated",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -3719,8 +3848,8 @@
               "verify_question": null,
               "cooldown_left": 0,
               "can_confirm": true,
-              "readback": "You want to send one thousand dollars (S$1,000.00) to Joint Account, from your Savings Account. Is that right?",
-              "expires_at": 1791825621,
+              "readback": "You want to move one thousand dollars (S$1,000.00) to your Joint Account, from your Savings Account. Is that right?",
+              "expires_at": 1791826681,
               "you_said": "Move a grand to my joint account",
               "amount_from_user": true,
               "amount_source": "user",
@@ -3741,10 +3870,12 @@
           "ui": {
             "type": "cooldown",
             "card": {
-              "draft_id": "d_ccc72511a5",
-              "digest": "ee046de42fce8de5412d884e1a5abebb94d4ee41ac737a073319471f49beeaf8",
+              "draft_id": "d_20c817c5a7",
+              "digest": "4ca900142a35f0a843dd6d7c7ae661a599dea7390756757d64050cf3d29112dd",
               "kind": "investment",
               "title": "Confirm investment",
+              "schedule": "",
+              "amount_note": "Half of the signed transaction d_d814e3c236, worked out by the bank",
               "payee_name": "DBS Group Holdings shares",
               "payee_relation": "",
               "payee_account": "D05 on SGX · about 12.99 shares at S$38.50 (demo price) · risk 5 of 5, can lose value",
@@ -3757,7 +3888,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "match",
-                  "from_account": "match"
+                  "from_account": "match",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -3774,10 +3906,10 @@
               "cooldown_left": 19,
               "can_confirm": true,
               "readback": "You want to invest five hundred dollars (S$500.00) in the DBS Group Holdings shares, a shares (sgx), from your Joint Account. Is that right?",
-              "expires_at": 1791825621,
-              "you_said": "buy DBS shares with 500.00 SGD from my Joint Account",
+              "expires_at": 1791826681,
+              "you_said": "buy DBS shares with half of it",
               "amount_from_user": true,
-              "amount_source": "user",
+              "amount_source": "derived",
               "payee_from_user": true
             }
           },
@@ -3786,8 +3918,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.07
     },
     {
@@ -3842,13 +3974,15 @@
           "ui": {
             "type": "confirm",
             "card": {
-              "draft_id": "d_82b5ff48f0",
-              "digest": "52cd35a7635876bd2f4f3d032285e5572d22116e593705be4d76ac235ac2dc34",
+              "draft_id": "d_58197eeb96",
+              "digest": "18f3744d620b131f8e14ee68050875e41ee54e5125ec7fe890293766a39819be",
               "kind": "transfer",
-              "title": "Confirm transfer",
+              "title": "Move money between your accounts",
+              "schedule": "",
+              "amount_note": "",
               "payee_name": "Current Account",
-              "payee_relation": "",
-              "payee_account": "CUR-002",
+              "payee_relation": "own account",
+              "payee_account": "DBS ••••7712",
               "asset_class": "Cash",
               "from_account_id": "SAV-001",
               "verification": {
@@ -3858,7 +3992,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "not stated",
-                  "from_account": "match"
+                  "from_account": "match",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -3872,8 +4007,8 @@
               "verify_question": null,
               "cooldown_left": 0,
               "can_confirm": true,
-              "readback": "You want to send one thousand dollars (S$1,000.00) to Current Account, from your Savings Account. Is that right?",
-              "expires_at": 1791825621,
+              "readback": "You want to move one thousand dollars (S$1,000.00) to your Current Account, from your Savings Account. Is that right?",
+              "expires_at": 1791826681,
               "you_said": "Transfer 1000 from my savings account to my current account",
               "amount_from_user": true,
               "amount_source": "user",
@@ -3894,10 +4029,12 @@
           "ui": {
             "type": "cooldown",
             "card": {
-              "draft_id": "d_ec606af155",
-              "digest": "fc481dc9ea5dbe0f957677fe7ea9b72042ec3a398170245f02a3648d913782a7",
+              "draft_id": "d_91b3654603",
+              "digest": "5c0c51e7df5888d48097f48b1d4adde171827ea418d49629055554ba0b0c22dc",
               "kind": "investment",
               "title": "Confirm investment",
+              "schedule": "",
+              "amount_note": "Half of the signed transaction d_58197eeb96, worked out by the bank",
               "payee_name": "DBS Group Holdings shares",
               "payee_relation": "",
               "payee_account": "D05 on SGX · about 12.99 shares at S$38.50 (demo price) · risk 5 of 5, can lose value",
@@ -3910,7 +4047,8 @@
                   "payee": "match",
                   "amount": "match",
                   "asset_class": "match",
-                  "from_account": "match"
+                  "from_account": "match",
+                  "schedule": "not stated"
                 },
                 "mismatches": [],
                 "engine": "offline extractor"
@@ -3927,10 +4065,10 @@
               "cooldown_left": 19,
               "can_confirm": true,
               "readback": "You want to invest five hundred dollars (S$500.00) in the DBS Group Holdings shares, a shares (sgx), from your Current Account. Is that right?",
-              "expires_at": 1791825621,
-              "you_said": "buy DBS shares with 500.00 SGD from my Current Account",
+              "expires_at": 1791826681,
+              "you_said": "buy DBS shares with half of it",
               "amount_from_user": true,
-              "amount_source": "user",
+              "amount_source": "derived",
               "payee_from_user": true
             }
           },
@@ -3939,8 +4077,8 @@
         }
       ],
       "queue": [],
-      "initial_balance_cents": 407000,
-      "final_balance_cents": 407000,
+      "initial_balance_cents": 557000,
+      "final_balance_cents": 557000,
       "seconds": 0.07
     }
   ]

@@ -154,6 +154,12 @@ def semantic_tests():
         "Send 50 to my daughter every month", "Cancel all payments, including send 50 to my daughter",
     ]
     for i, text in enumerate(ambiguous, 1):
+        if text == "Send 50 to my daughter every month":
+            record(f"A{i:02}", "定期转账", text, "仅生成每月50元的签名计划，不立即扣款",
+                   semantic_case([text], lambda w,r: signable(w) and w.s.current_draft.amount_cents == 5000
+                       and w.s.current_draft.payee_id == 'p_daughter'
+                       and (w.s.current_draft.schedule or {}).get('frequency') == 'monthly'), "P1")
+            continue
         record(f"A{i:02}", "歧义与否定", text, "澄清或拒绝；不生成可授权的即时错误草稿",
                semantic_case([text], lambda w,r: not signable(w)), "P1")
     corrections = [

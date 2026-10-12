@@ -6,6 +6,8 @@ _CANCEL = re.compile(r"\b(?:do not|don't|dont|never)\s+(?:send|pay|buy|invest|tr
 
 
 def cancelled(text):
+    if re.search(r"\b(?:giro|grio|gyro|standing (?:instruction|order)|subscription|(?:monthly|weekly) (?:allowance|transfer|payment)|regular (?:payment|transfer))\b", text, re.I):
+        return False  # protective cancellation goes through the corresponding bank API
     return bool(_CANCEL.search(text))
 
 
@@ -16,7 +18,7 @@ def correction(text):
 def problem(text):
     if cancelled(text):
         return "No payment was prepared. Please tell me when you want to make a new request."
-    if re.search(r"\b(?:tomorrow|next week|every month|monthly|schedule|scheduled)\b|\bif\b.+\b(?:send|pay|buy|invest|transfer)\b", text, re.I):
+    if re.search(r"\b(?:tomorrow|next week)\b|\bif\b.+\b(?:send|pay|buy|invest|transfer)\b", text, re.I):
         return "This demo supports immediate payments only. Please make a new request when you are ready to pay."
     if re.search(r"\b(?:USD|US dollars?|euros?|EUR|GBP|RMB|CNY)\b|[€£]", text, re.I):
         return "This demo debits SGD only. Please specify an amount in Singapore dollars."

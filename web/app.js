@@ -57,7 +57,7 @@ const NAV = [
 ];
 const KIND = {user:'User', thought:'Thought', action:'Action', observation:'Observe', rule:'Rule', guard:'Guard', judge:'Judge',
   state:'State', sign:'Sign', exec:'Execute', plan:'Plan', asr:'ASR', fallback:'Fallback', handoff:'Handoff', evidence:'Evidence', ui:'UI',
-  verify:'Verifier', gateway:'Gateway', model:'Model'};
+  verify:'Verifier', gateway:'Gateway', model:'Model', api:'DBS API'};
 
 // ---------------------------------------------------------------- Basics
 async function api(path, body){
@@ -186,6 +186,7 @@ function overview(m){
     <div class="main-grid">
       ${assistantHtml()}
       <div class="side-stack"><section class="card safety" id="safety" aria-live="polite"></section><section class="card bills" id="bills"></section>
+        <section class="card bills" id="regular"></section>
         <section class="card bills" id="holdings"></section><section class="card bills" id="cards"></section></div>
     </div>`;
   bindAssistant(); renderAccounts(); renderSafety(); renderBills(); renderHoldings();
@@ -231,6 +232,22 @@ function renderHoldings(){
       <div>${c.status === 'locked' ? '<span class="locked">Locked</span>' : `<button class="pay lock" data-card="${esc(c.name)}">Lock</button>`}</div></div>`).join('') +
     `<p class="footnote">Locking is instant. Unlock in the DBS app or call 1800 111 1111.</p>`;
   cards?.querySelectorAll('.lock').forEach(b => b.onclick = () => send(`Lock my ${b.dataset.card}`));
+  renderRegular();
+}
+// DBS Standing Instructions, GIRO and Limits APIs, in one small panel
+function renderRegular(){
+  const el = $('#regular'); const d = state.data; if(!el || !d) return;
+  const ord = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ({1: 'st', 2: 'nd', 3: 'rd'}[n % 10] || 'th'));
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const sis = (d.standing_instructions || []).map(x => `
+    <div class="bill"><span class="ico">${icon('transfer')}</span><div>${esc(x.amount)} to ${esc(x.to)}<small>${x.frequency === 'monthly'
+      ? `Every month on the ${ord(x.day)}` : `Every ${days[x.day - 1]}`} · next ${esc(x.next)}</small></div></div>`).join('');
+  const giro = (d.giro || []).map(g => `
+    <div class="bill"><span class="ico">${icon('bolt')}</span><div>${esc(g.biller)}<small>GIRO · ${g.status === 'active' ? `up to ${esc(g.max)}` : esc(g.status)}</small></div></div>`).join('');
+  const lim = d.limits || {};
+  el.innerHTML = `<h3>Regular payments <small>Daily limit ${esc(lim.daily || '')}${lim.pending ? ` → ${esc(lim.pending)} soon` : ''}</small></h3>` +
+    (sis + giro || '<p class="footnote">No regular payments.</p>') +
+    `<p class="footnote">Ask Star to set up, stop or change these, or your daily limit.</p>`;
 }
 
 // "Behind your request": the checks behind the latest request, in plain words
@@ -303,9 +320,10 @@ function bindAssistant(){
 }
 const SUGGEST = [
   ['coin', 'Has my pension come in?'], ['family', 'Send 200 to my daughter from my current account'],
-  ['users', 'Send 50 to my grandson'], ['chart', 'Invest 1000 in savings bonds'],
+  ['users', 'Send 50 to my grandson'], ['transfer', 'Move 1000 to my joint account'],
+  ['bolt', 'Pay my credit card bill'], ['family', 'Send 100 to my son every month on the 1st'],
+  ['refresh', 'What regular payments do I have?'], ['lock', 'Lower my daily transfer limit to 1000'],
   ['chart', 'Buy 300 dollars of Apple shares'], ['transfer', 'Send 350 to my son and invest 1000 in a fixed deposit'],
-  ['lock', 'I lost my wallet, lock my cards'],
   ['alert', 'The police say I must move my savings to a safe account', 'danger'],
 ];
 const SUGGEST_SENIOR = [['coin', 'Has my pension come in?'], ['bolt', 'Pay my bills'], ['family', 'Send money to my family'], ['phone', 'Talk to a real person']];
@@ -362,6 +380,10 @@ function offerNext(task){
 }
 // After a page refresh the server may still hold a payment waiting for the fingerprint: bring its card back.
 async function restorePending(){
+  if(state.data?.pending_change && !['AWAITING_AUTH', 'COOLING'].includes(state.data?.phase)){
+    push({role:'bot', text:`You have a change waiting: ${state.data.pending_change.title}. Please check it and confirm, or cancel it.`});
+    return openChange(state.data.pending_change);
+  }
   if(!['AWAITING_AUTH', 'COOLING'].includes(state.data?.phase)) return;
   try{
     const r = await api('/api/card/' + encodeURIComponent(state.sid));
@@ -403,6 +425,7 @@ function handleTurn(r){
     renderSafety(); return;
   }
   push({role:'bot', text:r.reply}); speak(r.speak);
+  if(ui.type === 'change'){ openChange(ui.card); if(ui.next_task) continueWith(ui.next_task, false); refresh(); return; }
   if(ui.card){ state.check = checksFromCard(ui.card, ui.type === 'blocked' ? 'blocked' : ui.type === 'frozen' ? 'frozen' : 'pending'); renderSafety();
     if(ui.type === 'blocked') push({type:'blocked', text: ui.card.reasons.join(' ')});
     else if(ui.type === 'frozen') push({type:'frozen', items: ui.card.verification.mismatches});
@@ -413,8 +436,55 @@ function handleTurn(r){
   refresh();
 }
 
+// ---------------------------------------------------------------- Account change card (add payee / raise limit / GIRO)
+// Same idea as a payment: code builds the card from the request, the device signs exactly this change.
+function openChange(c){
+  state.card = null; state.change = c;
+  renderChange(); const dlg = $('#confirm'); if(!dlg.open) dlg.showModal();
+  setTimeout(() => $('#c-go')?.focus(), 50);
+}
+function renderChange(){
+  const c = state.change; if(!c) return;
+  $('#confirm').innerHTML = `
+    <div class="cbody">
+      <h2 id="c-title">${esc(c.title)}</h2>
+      ${c.you_said ? `<div class="said"><span class="k">Based on what you said</span><q>${esc(c.you_said)}</q></div>` : ''}
+      ${c.rows.map(([k, v]) => `<div class="crow"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join('')}
+      <div class="risk MEDIUM"><b>Before you confirm</b><ul><li>${esc(c.note)}</li></ul></div>
+    </div>
+    <div class="cfoot">
+      <button type="button" class="btn secondary" id="c-cancel">Cancel</button>
+      <button type="button" class="btn primary" id="c-go" ${state.signMode === 'none' ? 'disabled' : ''}>${icon('fingerprint')}Confirm with fingerprint</button>
+    </div>
+    <div class="signnote">Confirmation code ${esc(c.digest.slice(0, 8))}…${esc(c.digest.slice(-4))} · Star can only ask for this change; it happens only after your device signs exactly this card.</div>`;
+  $('#c-cancel').onclick = async () => {
+    const ch = state.change; closeConfirm();
+    try{ const r = await api('/api/change/cancel', {session_id: state.sid, change_id: ch.change_id}); push({role:'bot', text:r.reply}); speak(r.speak); }catch(e){ push({role:'bot', text:e.message}); }
+    refresh();
+  };
+  $('#c-go').onclick = () => { stopSpeaking(); confirmChange(); };
+}
+async function confirmChange(){
+  const c = state.change; const btn = $('#c-go'); btn.disabled = true; btn.textContent = 'Touch the sensor…';
+  try{
+    if(state.signMode === 'device' && !state.data?.passkey?.enrolled) await mockFingerprint({what: c.title});
+    await ensureSigner();
+    const ch = await api('/api/change/challenge', {session_id: state.sid, change_id: c.change_id});
+    const assertion = await signPayload(ch.payload, ch.passkey);
+    const r = await api('/api/change/confirm', {session_id: state.sid, change_id: c.change_id, assertion});
+    closeConfirm(); addTrace(r.trace); push({role:'bot', text:r.reply, ok:true}); speak(r.speak);
+    if(r.next_task) continueWith(r.next_task);
+    refresh();
+  }catch(e){
+    const msg = e.name === 'NotAllowedError' ? 'The fingerprint check was cancelled. Nothing was changed.' : e.message;
+    addTrace(e.data?.trace); push({role:'bot', text:msg}); speak(msg);
+    if(['NO_CHANGE', 'EXPIRED'].includes(e.data?.code)) closeConfirm(); else renderChange();
+  }
+}
+
 // ---------------------------------------------------------------- Confirmation card
 function openConfirm(c){
+  state.change = null;
   state.card = c; state.verify = null; clearInterval(state.coolTimer);
   renderConfirm(); const dlg = $('#confirm'); if(!dlg.open) dlg.showModal();
   setTimeout(() => $('#c-go')?.focus(), 50);
@@ -442,9 +512,10 @@ function renderConfirm(){
         ${c.payee_from_user === false ? `<span class="flag">You didn't mention this ${c.kind === 'investment' ? 'product' : 'person'}</span>` : ''}</span></div>
       ${c.kind === 'investment' ? `<div class="crow"><span class="k">Asset</span><span class="v">${esc(c.asset_class)}</span></div>` : ''}
       <div class="crow amount ${c.amount_from_user === false ? 'unsaid' : ''}"><span class="k">Amount</span>
-        <div class="amt">${esc(c.amount)}</div><div class="words">${esc(c.amount_words)}${c.amount_source === 'bill' ? ' · exact amount from your bill' : ''}</div>
+        <div class="amt">${esc(c.amount)}</div><div class="words">${esc(c.amount_words)}${c.amount_note ? ' · ' + esc(c.amount_note) : c.amount_source === 'bill' ? ' · exact amount from your bill' : ''}</div>
         ${c.amount_from_user === false ? '<span class="flag">You didn\'t say this amount — please check it</span>' : ''}</div>
       <div class="crow"><span class="k">From</span><span class="v">${esc(c.from_account)}</span></div>
+      ${c.schedule ? `<div class="crow"><span class="k">Repeats</span><span class="v">${esc(c.schedule)}<small>Nothing is taken today. You can stop it any time.</small></span></div>` : ''}
       ${c.verification?.status === 'match' ? `<div class="vcheck">${icon('shield')}<span>A second, independent check re-read your words and found the same ${esc(Object.entries(c.verification.fields).filter(([, v]) => v === 'match').map(([k]) => ({payee:'payee', amount:'amount', from_account:'account', asset_class:'asset', type:'type'}[k] || k)).join(', '))}.</span></div>` : ''}
       ${c.risk_level !== 'LOW' ? `<div class="risk ${esc(c.risk_level)}"><b>${c.risk_level === 'MEDIUM' ? 'Please take a second look' : "For your safety, let's wait a little"}</b><ul>${c.reasons.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
       ${needVerify ? `<div class="verify"><div class="q">${esc(c.verify_question)}</div><div class="yesno">
@@ -476,7 +547,7 @@ function renderConfirm(){
   });
 }
 $('#confirm').addEventListener('cancel', e => { e.preventDefault(); cancelCard(); });
-function closeConfirm(){ clearInterval(state.coolTimer); const d = $('#confirm'); if(d.open) d.close(); state.card = null; state.uvFail = false; }
+function closeConfirm(){ clearInterval(state.coolTimer); const d = $('#confirm'); if(d.open) d.close(); state.card = null; state.change = null; state.uvFail = false; }
 async function cancelCard(){
   const c = state.card; if(!c || state.confirming) return;
   try{
@@ -580,7 +651,7 @@ function mockFingerprint(c){
     el.innerHTML = `<div class="mf-badge">Demo · simulated fingerprint sensor</div>
       <button type="button" class="mf-pad" aria-label="Touch to confirm">${icon('fingerprint')}</button>
       <b class="mf-title">Touch the sensor to confirm</b>
-      <div class="mf-what">${esc(c.amount)} ${c.kind === 'investment' ? 'in' : 'to'} ${esc(c.payee_name)}</div>
+      <div class="mf-what">${esc(c.what || `${c.amount} ${c.kind === 'investment' ? 'in' : 'to'} ${c.payee_name}`)}</div>
       <small>In the real DBS app this is Face ID or Touch ID. Here, your tap unlocks this browser's private key,
         which signs exactly this card. The bank and its payment gateway each check that signature.</small>
       <button type="button" class="btn secondary mf-cancel">Cancel</button>`;

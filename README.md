@@ -6,7 +6,7 @@ A conversational transaction agent for everyone, optimized for elderly users. Co
 Semantic robustness update: colloquial SGD amounts, amount corrections that invalidate the old card,
 and receipt-bound proportional follow-ups are covered in [the semantic regression report](qa/SEMANTIC_REPORT.md).
 Try: "Move a grand to my joint account and then buy DBS shares with half of it".
-The new Joint Account is a zero-balance, synthetic single-signatory account. Internal transfers preserve
+The Joint Account is a synthetic single-signatory account (new demo customers start with S$1,500). Internal transfers preserve
 total cash, and every step still needs its own reviewed signature. This does not implement DBS joint-account
 mandates or real securities execution. Uncertain names and amounts require clarification; real accent audio
 has not been benchmarked.
@@ -40,6 +40,37 @@ the bank is (cooling-off threshold, scam phrases stopped vs warned, late-night c
 takes effect after 24 h, so a scammer on the phone can't say "tap Standard view" and remove the protection. The hard
 safety boundary (draft only, two-engine check, device signature, gateway) is the same for everyone.
 
+## Mock DBS APIs the agent calls
+
+`app/bank/dbs_api/` has one module per API from the [DBS developer catalogue](https://www.dbs.com/dbsdevelopers/discover/index.html)
+(names and purpose follow the catalogue; the fields are ours, as the real specifications aren't public). Each module
+registers its own agent tools, so teammates can add APIs without touching shared files. Every call shows in the agent
+trace as "DBS <API> · <method> <path> (mock)".
+
+| DBS API | What the agent can do | How it is protected |
+| --- | --- | --- |
+| Deposit | List savings, current and **joint** accounts with details | read only |
+| Payees | List payees and own accounts; **add a new payee** | adding is grounded (every digit must be in the user's words) and **signed**; the first transfer to a new payee waits |
+| Limits | Check the **daily transfer limit**; lower or raise it | lowering is instant; raising is **signed and only starts after a delay**; transfers over the limit are blocked (R13) |
+| Fund Transfer | Transfer to saved people, and **between own accounts** ("move a grand to my joint account") | full payment pipeline: verifier, rules, card, signature, gateway |
+| Bill Payments | Utilities, town council, **credit card: full, minimum or an amount** | asks full or minimum if not said; more than the bill is blocked (R08) |
+| Standing Instructions | Set up "send 100 to my son **every month** on the 1st" (`draft_standing_instruction`, sharing the Fund Transfer pipeline); list; stop | the schedule is on the card and **signed**; the verifier freezes a one-off turned into a repeat (or the reverse) |
+| GIRO | List, **cancel**, set up | cancel is protective and instant (only what the user named); set-up is **signed** |
+
+Small models pick tools better from short lists, so the limits, GIRO / standing-order and add-payee tools are only
+offered when the conversation is about them.
+
+**Vague amounts.** "Buy Apple shares with half of my money", "20% of my savings", "move a grand to my joint account,
+then buy DBS shares with half of it": the bank's code works the amount out from the real balance (or the amount just
+said) and gives it to the model; the card says how it was worked out. If the model uses any other number, rule
+R53 blocks the card. "The rest" / "whatever is left" is never guessed: the agent asks for a figure.
+**Misheard words.** Speech recognition turns "a grand" into "a grant", "a grind" or even "Agree!". The model works
+out what the user meant, as a person would, and says what it read ("misheard": "a grant", "meant": "a grand"); it asks
+first when it isn't sure ("Did you mean a grand, S$1,000?"), and always asks about WHO. The kernel never rewrites the
+user's words; it only checks the model's reading: the misheard words are really in the transcript, they sound like
+what was meant, the reading adds no number, and what was meant is exactly the amount. The card then says "we heard
+“a grant” and read it as “a grand”". Money words are also sent to Tencent ASR as hotwords.
+
 ## Running it
 
 ```bash
@@ -63,7 +94,7 @@ a time with tap-to-answer choices, replies read aloud slowly, and a bigger confi
 words. Settings also has "Larger text", "Read replies aloud" and "Reset demo".
 
 ```bash
-python -m unittest discover tests     # 158 tests (kernel, passkeys, verifier, gateway, protection, Harness, HTTP)
+python -m unittest discover tests     # 195 tests (kernel, passkeys, verifier, gateway, protection, Harness, HTTP)
 python -m app.lab                    # security lab: 22 real attacks on an isolated sandbox
 python eval/run_eval.py               # core + hard suites + attack tests -> eval/report.md / .json / .html
 python eval/run_eval.py --compare --repeat 3   # the headline run: rules-only baseline vs LLM agent, 3x each

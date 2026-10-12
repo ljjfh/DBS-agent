@@ -59,7 +59,9 @@ def build_hotwords(payees: list[dict]) -> str:
     Weight 11 is a "super hotword"; Tencent recommends it only for a very few must-hit words, as too many lower
     overall accuracy, so it isn't used here.
     """
-    words: list[tuple[str, int]] = [("PayNow", 10), ("pension", 10), ("utilities", 10), ("S&CC", 8), ("CPF", 10)]
+    words: list[tuple[str, int]] = [("PayNow", 10), ("pension", 10), ("utilities", 10), ("S&CC", 8), ("CPF", 10),
+                                    ("grand", 10), ("joint account", 10), ("savings account", 8), ("GIRO", 10),
+                                    ("standing instruction", 8), ("Singtel", 8), ("shares", 8)]
     for p in payees:
         for a in [p["name"], *p.get("aliases", [])]:
             if 1 <= len(a) <= 10:

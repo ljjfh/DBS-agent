@@ -14,8 +14,11 @@ import uuid
 import requests
 
 from app.agent import fraud
-from app.agent.textparse import account_id_for, find_account, find_raw_account, match_payees, parse_amount
+from app.agent.textparse import (account_id_for, fix_asr, find_account, find_raw_account, frequency_in, match_payees,
+                                 parse_amount, repeat_day_in)
 from app.config import settings
+from app.kernel.evidence import confirmed_proposal
+from app.models import fmt_money
 
 
 class LLMError(Exception):
@@ -72,11 +75,19 @@ _RX = {
     "invest": r"\binvest|\bbuy\b.*\b(fund|etf|bonds?|shares?|stocks?|units)\b|unit trust|savings bonds?|"
               r"\b(top up|put)\b.*\b(fund|etf|bonds?|deposit)\b|fixed deposit|time deposit|"
               r"\b(buy|put|top up)\b.{0,30}\b(apple|microsoft|singtel|dbs shares|dbs stock)\b",
-    "bill": r"\bbills?\b|utilit|electric|water|s&cc|town council|conservancy",
+    "bill": r"\bbills?\b|utilit|electric|water|s&cc|town council|conservancy|credit card|card statement",
     "pay": r"\b(?:pay|settle)\b",
     "transfer": r"\b(transfer|send|wire|remit|move|paynow)\b|\bgive\b(?! me\b)",
+    # DBS Limits / Payees / GIRO / Standing Instructions APIs
+    "limits": r"\blimits?\b",
+    "add_payee": r"\b(add|register|save|new)\b.{0,25}\bpayees?\b|\badd\b.{0,60}\b(account (number|no)|as a payee)",
+    "giro_setup": r"\b(set ?up|start|apply( for)?|arrange|use|pay (it |them )?by)\b.{0,30}\bgiro\b",
+    "regular": r"\bgiro\b|standing (instruction|order)s?|regular (payment|transfer)s?|recurring|"
+               r"automatic (payment|deduction)s?|direct debit|subscriptions?|\b(monthly|weekly) (transfer|allowance|payment)",
+    "stop": r"\b(stop|cancel|end|terminate|remove)\b",
     "income": r"pension|\bcpf\b|payout|(come|came|gone) in|arrived|received",
-    "balance": r"balance|how much (money )?(do i have|have i got|is (there )?in|is left|left)",
+    "balance": r"balance|how much (money )?(do i have|have i got|is (there )?in|is left|left)|"
+               r"\b(what|which|my) (bank )?accounts\b",
     "spending": r"\bspen[dt]|spending|expenses|transactions|history",
 }
 
@@ -92,6 +103,16 @@ def detect_intent(text: str) -> str:
         return "handoff"
     if _has("card", text):
         return "card"
+    if _has("limits", text):
+        return "limits"
+    if _has("add_payee", text):
+        return "add_payee"
+    if _has("giro_setup", text):
+        return "giro_setup"
+    if _has("regular", text) and _has("stop", text):
+        return "regular_cancel"
+    if _has("regular", text) and not (_has("transfer", text) and parse_amount(text)):
+        return "regular"
     if _has("portfolio", text):
         return "portfolio"
     if _has("invest", text):
@@ -169,10 +190,102 @@ class OfflineLLM:
             parts = "; ".join(f"{h['name']} {h['value']} ({h['gain_or_loss']})" for h in p["holdings"])
             return self._say(f"Your investments are worth {p['total_value']} in total: {parts}.")
 
+        if intent == "limits":
+            amt = parse_amount(text)
+            if amt and re.search(r"\b(lower|reduce|decrease|cut|drop|set|change|raise|increase|higher|up|make)\b", text, re.I):
+                if "set_daily_limit" not in results:
+                    if "set_daily_limit" not in allowed:
+                        return self._say("I can't change limits right now. Please finish what's on the card first.")
+                    return self._call("set_daily_limit", {"amount": amt, "evidence": self._last_user(messages)},
+                                      "The user wants a different daily transfer limit; lowering is instant, raising "
+                                      "needs their signature.")
+                if "change_id" in results["set_daily_limit"]["data"]:
+                    return self._say(f"A higher limit needs your fingerprint, and for your safety it only starts after "
+                                     f"a waiting time. Please check the card.")
+                return self._say(f"Done. Your daily transfer limit is now S${amt:,.0f}, starting right away.")
+            if "get_limits" not in results:
+                return self._call("get_limits", {}, "The user asks about their transfer limit.")
+            d = results["get_limits"]["data"]
+            return self._say(f"Your daily limit for transfers to other people is {d['daily_transfer_limit']}. "
+                             f"You've used {d['used_today']} today, so {d['left_today']} is left.")
+
+        if intent in ("regular", "regular_cancel"):
+            if "list_standing_instructions" not in results:
+                return self._call("list_standing_instructions", {}, "Look up the user's regular transfers.")
+            if "list_giro" not in results:
+                return self._call("list_giro", {}, "And their GIRO arrangements.")
+            sis, giros = results["list_standing_instructions"]["data"], results["list_giro"]["data"]
+            low = text.lower()
+            if intent == "regular":
+                parts = [f"{x['amount']} to your {x['relation']} {x['to']} {x['when']}" for x in sis]
+                parts += [f"GIRO for {g['biller']}" for g in giros]
+                if not parts:
+                    return self._say("You have no regular payments set up.")
+                return self._say("Your regular payments are: " + "; ".join(parts) + ". Would you like to change any?")
+            for done in ("cancel_giro", "cancel_standing_instruction"):
+                if done in results:
+                    what = results[done]["data"]["cancelled"]
+                    what = f"the {what[0].lower()}{what[1:]}" if done == "cancel_standing_instruction" else f"the GIRO for {what}"
+                    return self._say(f"Done. I've stopped {what}. You can set it up again any time.")
+            g_hits = [g for g in giros if any(re.search(rf"(?<![a-z]){re.escape(a)}(?![a-z])", low)
+                                              for a in [g["biller"].lower(), *g.get("aliases", [])])]
+            s_hits = [x for x in sis if x["relation"] and re.search(rf"\b{re.escape(x['relation'])}\b", low)
+                      or x["to"].lower() in low]
+            if len(g_hits) == 1 and ("giro" in low or not s_hits):
+                return self._call("cancel_giro", {"giro_id": g_hits[0]["giro_id"]}, "Cancel the GIRO the user named.")
+            if len(s_hits) == 1:
+                return self._call("cancel_standing_instruction", {"si_id": s_hits[0]["si_id"]},
+                                  "Stop the regular transfer the user named.")
+            opts = [f"the {x['amount']} {x['when']} to {x['to']}" for x in sis] + [f"GIRO for {g['biller']}" for g in giros]
+            return self._say("Which one should I stop: " + ", or ".join(opts) + "?")
+
+        if intent == "add_payee":
+            if "request_add_payee" in results:
+                return self._say("Please check the card and every digit of the account number. If it's right, "
+                                 "confirm with your fingerprint.")
+            raw = " ".join(m["content"] for m in messages if m["role"] == "user")[-400:]
+            num = find_raw_account(text)
+            bank_m = re.search(r"\b(DBS|POSB|OCBC|UOB|Maybank|Citibank|HSBC|Standard Chartered|Trust|GXS)\b", raw, re.I)
+            name_m = re.search(r"\bpayee[:,]?\s+(?:called |named )?([A-Z][a-zA-Z'-]+(?:\s+[A-Z][a-zA-Z'-]+){0,3})", raw) or \
+                re.search(r"\badd\s+(?:my \w+\s+)?([A-Z][a-zA-Z'-]+(?:\s+[A-Z][a-zA-Z'-]+){0,3})", raw)
+            name = name_m.group(1) if name_m else ""
+            name = re.sub(r"\s+(DBS|POSB|OCBC|UOB|Maybank|Citibank|HSBC)$", "", name)
+            if not (num and name and bank_m):
+                return self._say("To add a new payee I need their name, their bank and their account number. "
+                                 "What are they?")
+            if "request_add_payee" not in allowed:
+                return self._say("For your safety I can't add a payee in this conversation.")
+            rel = re.search(r"\bmy (friend|neighbou?r|niece|nephew|cousin|sister|brother|helper|doctor)\b", raw, re.I)
+            return self._call("request_add_payee", {"name": name, "bank": bank_m.group(1).upper() if len(bank_m.group(1)) <= 5
+                                                    else bank_m.group(1), "account_number": num,
+                                                    "relation": rel.group(1).lower() if rel else "",
+                                                    "evidence": self._last_user(messages)},
+                              "Ask to add the payee the user described; they must sign it.")
+
+        if intent == "giro_setup":
+            if "request_giro_setup" in results:
+                return self._say("Please check the card. If it's right, confirm with your fingerprint.")
+            if "list_payees" not in results:
+                return self._call("list_payees", {}, "Find the billing organisation the user means.")
+            billers = [p for p in results["list_payees"]["data"] if p.get("type") == "biller"]
+            hits = match_payees(text, billers)
+            if len(hits) != 1:
+                return self._say("Which bill should be paid by GIRO: " + ", ".join(p["name"] for p in billers) + "?")
+            if "request_giro_setup" not in allowed:
+                return self._say("For your safety I can't set up GIRO in this conversation.")
+            args = {"biller_payee_id": hits[0]["payee_id"], "evidence": self._last_user(messages)}
+            if parse_amount(text):
+                args["max_amount"] = parse_amount(text)
+            return self._call("request_giro_setup", args, "Ask to set up GIRO for this biller; the user signs it.")
+
         if intent == "balance":
             if "get_balance" not in results:
                 return self._call("get_balance", {}, "The user wants their balance; look up the account.")
-            a = results["get_balance"]["data"][0]
+            accts = results["get_balance"]["data"]
+            if re.search(r"\baccounts\b", text, re.I):
+                return self._say("You have " + "; ".join(f"your {a['name']} ({a['number']}) with {a['balance']}"
+                                                          for a in accts) + ".")
+            a = accts[0]
             return self._say(f"Your {a['name']} has {a['balance']}.")
 
         if intent in ("income", "spending"):
@@ -206,10 +319,26 @@ class OfflineLLM:
                 if "draft_bill_payment" not in allowed:
                     return self._say("You still have a payment waiting for confirmation. "
                                      "Please confirm or cancel it first.")
+                pay = "full"
+                if picked.get("minimum_due"):                       # credit card: full, minimum or an amount
+                    amt = parse_amount(text)
+                    if re.search(r"\bmin(imum)?\b", text, re.I):
+                        pay = "minimum"
+                    elif re.search(r"\b(full|whole|everything|all of it|statement balance|in full)\b", text, re.I):
+                        pay = "full"
+                    elif amt and f"S${amt:,.2f}" != picked["amount"]:
+                        pay = "amount"
+                    elif not amt:
+                        return self._say(f"Your {picked['title']} is {picked['amount']}, and the minimum payment is "
+                                         f"{picked['minimum_due']}. Would you like to pay the full amount or the minimum?")
                 acct = self._account(text, results)
                 if acct == "LOOKUP":
                     return self._call("get_balance", {}, "The user named an account to pay from; look it up.")
                 args = {"bill_id": picked["bill_id"], "evidence": self._last_user(messages)}
+                if pay != "full":
+                    args["pay"] = pay
+                if pay == "amount":
+                    args["amount"] = parse_amount(text)
                 if acct:
                     args["from_account"] = acct
                 return self._call("draft_bill_payment", args,
@@ -236,7 +365,9 @@ class OfflineLLM:
                 return self._say(f"You have {len(hits)} {rel}s saved. Do you mean {opts}?" if rel != "payees"
                                  else f"Which one do you mean: {opts}?")
             payee = hits[0]
-            amount = parse_amount(text)
+            amount, slip = self._amount(text, messages)
+            if slip and not slip["sure"]:
+                return self._say(f"Did you mean {slip['meant']}, {fmt_money(round(amount * 100))}?")
             if amount is None and re.search(r"\b(?:usual amount|same again)\b", text, re.I):
                 if "get_recent_transactions" not in results:
                     return self._call("get_recent_transactions", {}, "Read the previous payment before reusing its amount.")
@@ -249,18 +380,27 @@ class OfflineLLM:
             acct = self._account(text, results)
             if acct == "LOOKUP":
                 return self._call("get_balance", {}, "The user named an account to pay from; look up the account ids.")
-            if "draft_transfer" not in results:
-                if "draft_transfer" not in allowed:
+            freq = frequency_in(text)
+            tool = "draft_standing_instruction" if freq else "draft_transfer"   # "every month" -> its own API
+            if tool not in results:
+                if tool not in allowed:
                     return self._say("For your safety I can't set up a transfer in this conversation. If someone "
                                      "claiming to be the police or the bank asked you to send money, please hang up "
                                      "and call the ScamShield helpline 1799.")
                 args = {"payee_id": payee["payee_id"], "amount": amount, "evidence": self._last_user(messages)}
+                if slip:
+                    args.update(misheard=slip["heard"], meant=slip["meant"])
                 if acct:
                     args["from_account"] = acct
-                return self._call("draft_transfer", args,
+                if freq:
+                    args["frequency"] = freq
+                    if repeat_day_in(text, freq):
+                        args["day"] = repeat_day_in(text, freq)
+                return self._call(tool, args,
                                   f"\"{payee['relation']}\" is {payee['name']} ({payee['payee_id']}), amount "
-                                  f"{amount:g}{' from ' + acct if acct else ''}; draft the transfer.")
-            return self._draft_done(results["draft_transfer"])
+                                  f"{amount:g}{' from ' + acct if acct else ''}"
+                                  f"{', ' + freq if freq else ''}; draft the {'standing instruction' if freq else 'transfer'}.")
+            return self._draft_done(results[tool])
 
         if intent == "invest":
             if "list_investments" not in results:
@@ -275,7 +415,9 @@ class OfflineLLM:
                 opts = ", ".join(f"{p['name']} ({p['asset_class']})" for p in (hits or data["products"]))
                 return self._say(f"Which would you like to invest in: {opts}?")
             prod = hits[0]
-            amount = parse_amount(text)
+            amount, slip = self._amount(text, messages)
+            if slip and not slip["sure"]:
+                return self._say(f"Did you mean {slip['meant']}, {fmt_money(round(amount * 100))}?")
             if amount is None:
                 return self._say(f"How much would you like to invest in the {prod['name']}?")
             acct = self._account(text, results)
@@ -287,14 +429,17 @@ class OfflineLLM:
                                      "guaranteed or very high returns are a common scam. Please talk to your family or "
                                      "call the ScamShield helpline 1799.")
                 args = {"product_id": prod["product_id"], "amount": amount, "evidence": self._last_user(messages)}
+                if slip:
+                    args.update(misheard=slip["heard"], meant=slip["meant"])
                 if acct:
                     args["from_account"] = acct
                 return self._call("draft_investment", args,
                                   f"Product {prod['name']} ({prod['asset_class']}), amount {amount:g}; draft the investment.")
             return self._draft_done(results["draft_investment"])
 
-        return self._say("I can check your balance, check if your pension has arrived, pay your bills, send "
-                         "money to family, or invest in a fund or bond. What would you like to do?")
+        return self._say("I can check your balance, pay your bills, send money to family or between your accounts, "
+                         "set up or stop regular payments and GIRO, change your daily limit, or invest. "
+                         "What would you like to do?")
 
     # ------------------------------------------------------------------ helpers
     @staticmethod
@@ -315,12 +460,14 @@ class OfflineLLM:
         if d["risk_level"] == "BLOCK":
             why = d["reasons"][0] if d["reasons"] else ""
             return OfflineLLM._say(f"I can't process this one: {why}")
-        return OfflineLLM._say(f"Please check the card: {d['amount']} {'in' if d.get('kind') == 'investment' else 'to'} {d['payee']}. "
+        return OfflineLLM._say(f"Please check the card: {d['amount']} {'in' if d.get('kind') == 'investment' else 'to'} {d['payee']}"
+                               + (f", {d['repeats'][0].lower()}{d['repeats'][1:]}" if d.get("repeats") else "") + ". "
                                f"If it's right, confirm with your fingerprint.")
 
     @staticmethod
     def _pick_bill(text: str, bills: list[dict]) -> dict | None:
-        rules = [(r"electric|water|utilit|\bsp\b", "p_sp"), (r"s&cc|town council|conservancy", "p_tc")]
+        rules = [(r"electric|water|utilit|\bsp\b", "p_sp"), (r"s&cc|town council|conservancy", "p_tc"),
+                 (r"credit card|card bill|card statement|live fresh", "p_cc")]
         for rx, pid in rules:
             if re.search(rx, text, re.I):
                 b = next((b for b in bills if b["payee_id"] == pid), None)
@@ -359,6 +506,31 @@ class OfflineLLM:
             if m["role"] == "tool":
                 out[names.get(m["tool_call_id"], "?")] = json.loads(m["content"])
         return out
+
+    def _amount(self, text: str, messages: list[dict]) -> tuple[float | None, dict | None]:
+        """The amount, and the speech slip it came from if any. A model reads slips by itself; this planner uses
+        textparse.fix_asr as a stand-in. "Yes" to our own "Did you mean a grand, S$1,000?" gives that amount."""
+        amount = parse_amount(text) or self._bank_amount(messages)
+        if amount:
+            return amount, None
+        last = self._last_user(messages)
+        last_i = max(i for i, m in enumerate(messages) if m["role"] == "user")
+        prev = next((m["content"] for m in reversed(messages[:last_i]) if m["role"] == "assistant"
+                     and m.get("content") and not m.get("tool_calls")), "")
+        asked = bool(re.search(r"\bhow much\b", prev, re.I))
+        for t in (last, text):
+            fixed, slips = fix_asr(t, asked_amount=asked and t is last)
+            if slips and parse_amount(fixed):
+                return parse_amount(fixed), slips[0]
+        proposal = confirmed_proposal(messages)
+        return (parse_amount(proposal) if proposal else None), None
+
+    @staticmethod
+    def _bank_amount(messages: list[dict]) -> float | None:
+        """'Use amount 812.50 exactly' from the session state (a relative amount the bank worked out)."""
+        sysmsg = messages[0]["content"] if messages and messages[0]["role"] == "system" else ""
+        m = re.search(r"Use amount (\d+(?:\.\d+)?) exactly", sysmsg)
+        return float(m.group(1)) if m else None
 
     @staticmethod
     def _last_user(messages: list[dict]) -> str:

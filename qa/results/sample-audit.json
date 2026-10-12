@@ -1,9 +1,9 @@
 {
-  "session_id": "84c80e85178a469a9c3b72f86107fd9e",
+  "session_id": "8a1b26b20bd544fa9fa6f7e4ac81725d",
   "integrity": {
     "ok": true,
     "records": 130,
-    "head": "4621feeef35e09fe2864d4f2abce8e3c9e03f8961b05ad1b1d0be87efb40771d"
+    "head": "45e200fed0b139623cd5827c54b4ba0c2a6248a847c527ffcb9753e5df105cd9"
   },
   "entries": [
     {
@@ -11,10 +11,10 @@
         "text": "What is my balance?"
       },
       "event": "user.utterance",
-      "hash": "93b62b180236dd82d80a74148239564ba0c6bc8794dfc60b6e1dbccf481129cb",
-      "prev_hash": "c341d4d789cbb977a0ea4396eb2651239a9db6ee3bab0a6ca0cdcf3e9bd33cfa",
-      "session_id": "84c80e85178a469a9c3b72f86107fd9e",
-      "ts": 1791825013.51
+      "hash": "348f586e9f5d3050e17af088859b797f0d98266178856bfd23b223d19b9ca8e3",
+      "prev_hash": "a3231292db2eb551806519c9e8a2aed8ba505d404782722cf92de7990c88f1ba",
+      "session_id": "8a1b26b20bd544fa9fa6f7e4ac81725d",
+      "ts": 1791826073.668
     },
     {
       "data": {
@@ -24,10 +24,10 @@
         "tool": "get_balance"
       },
       "event": "tool.call",
-      "hash": "c0e14c8406dcdb05309b4bcc87f52e78d5310a35e8bfbf018184c4b79277ee4e",
-      "prev_hash": "93b62b180236dd82d80a74148239564ba0c6bc8794dfc60b6e1dbccf481129cb",
-      "session_id": "84c80e85178a469a9c3b72f86107fd9e",
-      "ts": 1791825013.517
+      "hash": "0a7ac0f44d1e1001ee0d4eb424822acc46e44b34ab915c04cec400c3dd9628a2",
+      "prev_hash": "348f586e9f5d3050e17af088859b797f0d98266178856bfd23b223d19b9ca8e3",
+      "session_id": "8a1b26b20bd544fa9fa6f7e4ac81725d",
+      "ts": 1791826073.68
     },
     {
       "data": {
@@ -36,10 +36,10 @@
         "ui": "text"
       },
       "event": "agent.reply",
-      "hash": "4621feeef35e09fe2864d4f2abce8e3c9e03f8961b05ad1b1d0be87efb40771d",
-      "prev_hash": "c0e14c8406dcdb05309b4bcc87f52e78d5310a35e8bfbf018184c4b79277ee4e",
-      "session_id": "84c80e85178a469a9c3b72f86107fd9e",
-      "ts": 1791825013.523
+      "hash": "45e200fed0b139623cd5827c54b4ba0c2a6248a847c527ffcb9753e5df105cd9",
+      "prev_hash": "0a7ac0f44d1e1001ee0d4eb424822acc46e44b34ab915c04cec400c3dd9628a2",
+      "session_id": "8a1b26b20bd544fa9fa6f7e4ac81725d",
+      "ts": 1791826073.686
     }
   ]
 }
