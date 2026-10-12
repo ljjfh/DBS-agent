@@ -14,9 +14,11 @@ import uuid
 import requests
 
 from app.agent import fraud
-from app.agent.textparse import (account_id_for, find_account, find_raw_account, frequency_in, match_payees,
+from app.agent.textparse import (account_id_for, fix_asr, find_account, find_raw_account, frequency_in, match_payees,
                                  parse_amount, repeat_day_in)
 from app.config import settings
+from app.kernel.evidence import confirmed_proposal
+from app.models import fmt_money
 
 
 class LLMError(Exception):
@@ -361,7 +363,9 @@ class OfflineLLM:
                 return self._say(f"You have {len(hits)} {rel}s saved. Do you mean {opts}?" if rel != "payees"
                                  else f"Which one do you mean: {opts}?")
             payee = hits[0]
-            amount = parse_amount(text) or self._bank_amount(messages)
+            amount, slip = self._amount(text, messages)
+            if slip and not slip["sure"]:
+                return self._say(f"Did you mean {slip['meant']}, {fmt_money(round(amount * 100))}?")
             if amount is None:
                 return self._say(f"How much would you like to send to your {payee['relation']} {payee['name']}?")
             acct = self._account(text, results)
@@ -373,6 +377,8 @@ class OfflineLLM:
                                      "claiming to be the police or the bank asked you to send money, please hang up "
                                      "and call the ScamShield helpline 1799.")
                 args = {"payee_id": payee["payee_id"], "amount": amount, "evidence": self._last_user(messages)}
+                if slip:
+                    args.update(misheard=slip["heard"], meant=slip["meant"])
                 if acct:
                     args["from_account"] = acct
                 freq = frequency_in(text)
@@ -398,7 +404,9 @@ class OfflineLLM:
                 opts = ", ".join(f"{p['name']} ({p['asset_class']})" for p in (hits or data["products"]))
                 return self._say(f"Which would you like to invest in: {opts}?")
             prod = hits[0]
-            amount = parse_amount(text) or self._bank_amount(messages)
+            amount, slip = self._amount(text, messages)
+            if slip and not slip["sure"]:
+                return self._say(f"Did you mean {slip['meant']}, {fmt_money(round(amount * 100))}?")
             if amount is None:
                 return self._say(f"How much would you like to invest in the {prod['name']}?")
             acct = self._account(text, results)
@@ -410,6 +418,8 @@ class OfflineLLM:
                                      "guaranteed or very high returns are a common scam. Please talk to your family or "
                                      "call the ScamShield helpline 1799.")
                 args = {"product_id": prod["product_id"], "amount": amount, "evidence": self._last_user(messages)}
+                if slip:
+                    args.update(misheard=slip["heard"], meant=slip["meant"])
                 if acct:
                     args["from_account"] = acct
                 return self._call("draft_investment", args,
@@ -483,6 +493,24 @@ class OfflineLLM:
             if m["role"] == "tool":
                 out[names.get(m["tool_call_id"], "?")] = json.loads(m["content"])
         return out
+
+    def _amount(self, text: str, messages: list[dict]) -> tuple[float | None, dict | None]:
+        """The amount, and the speech slip it came from if any. A model reads slips by itself; this planner uses
+        textparse.fix_asr as a stand-in. "Yes" to our own "Did you mean a grand, S$1,000?" gives that amount."""
+        amount = parse_amount(text) or self._bank_amount(messages)
+        if amount:
+            return amount, None
+        last = self._last_user(messages)
+        last_i = max(i for i, m in enumerate(messages) if m["role"] == "user")
+        prev = next((m["content"] for m in reversed(messages[:last_i]) if m["role"] == "assistant"
+                     and m.get("content") and not m.get("tool_calls")), "")
+        asked = bool(re.search(r"\bhow much\b", prev, re.I))
+        for t in (last, text):
+            fixed, slips = fix_asr(t, asked_amount=asked and t is last)
+            if slips and parse_amount(fixed):
+                return parse_amount(fixed), slips[0]
+        proposal = confirmed_proposal(messages)
+        return (parse_amount(proposal) if proposal else None), None
 
     @staticmethod
     def _bank_amount(messages: list[dict]) -> float | None:

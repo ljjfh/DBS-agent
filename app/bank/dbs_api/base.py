@@ -18,6 +18,11 @@ from typing import Callable
 from pydantic import BaseModel
 
 
+MISHEARD_DESC = ("Only if speech recognition clearly misheard the AMOUNT: the user's words exactly as transcribed, "
+                 "e.g. 'a grant' (else omit)")
+MEANT_DESC = "What you're sure they meant, e.g. 'a grand'. The card shows both so the user can check."
+
+
 class NoArgs(BaseModel):
     pass
 

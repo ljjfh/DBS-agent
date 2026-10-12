@@ -296,22 +296,37 @@ class TestNamedAccountDefault(ApiBase):
 
 
 class TestSpeechSlips(ApiBase):
-    """Seen live: "a grand" came through speech recognition as "a grant", "a grind" and even "Agree!"."""
+    """Seen live: "a grand" came through speech recognition as "a grant", "a grind" and even "Agree!".
+    The model works out what was meant; the kernel only checks that reading, it never rewrites the user's words."""
 
-    def test_a_grant_is_a_grand(self):
+    def test_a_grant_is_read_as_a_grand_and_shown_on_the_card(self):
         r = self.turn("I want to move a grant to my joint account.")
         d = self.s.current_draft
-        self.assertEqual((d.payee_id, d.amount_cents), ("own:JNT-003", 100000))
+        self.assertEqual((d.payee_id, d.amount_cents, d.grounding["amount_source"]), ("own:JNT-003", 100000, "heard"))
         self.assertIn("“a grant”", r.ui["card"]["amount_note"])
-        self.assertTrue(any("Speech fix" in t["label"] for t in self.s.trace if t["kind"] == "evidence"))
+        self.assertEqual(self.s.messages[0]["content"], "I want to move a grant to my joint account.")  # not rewritten
 
-    def test_agree_as_the_answer_to_how_much(self):
-        r = self.turn("I want to move money to my joint account")
-        self.assertIn("how much", r.reply.lower())
-        self.turn("Agree!")
-        self.assertEqual(self.s.current_draft.amount_cents, 100000)
+    def test_unsure_reading_is_asked_then_confirmed(self):
+        self.turn("I want to move money to my joint account")
+        r = self.turn("Agree!")
+        self.assertIn("Did you mean a grand", r.reply)
+        self.assertIsNone(self.s.current_draft)
+        r = self.turn("Yes")
+        d = self.s.current_draft
+        self.assertEqual((d.amount_cents, d.grounding["amount_source"]), (100000, "confirmed"))
+        self.assertIn("you said yes", r.ui["card"]["amount_note"].lower())
 
-    def test_real_grants_are_left_alone(self):
+    def test_a_reading_that_adds_a_number_is_not_accepted(self):
+        d = self.model_drafts("Move a grant to my joint account", "draft_transfer",
+                              {"payee_id": "own:JNT-003", "amount": 10000, "misheard": "a grant", "meant": "ten grand"})
+        self.assertEqual(d.grounding["amount_source"], "not said")
+
+    def test_misheard_words_must_be_in_the_transcript(self):
+        d = self.model_drafts("Move money to my joint account", "draft_transfer",
+                              {"payee_id": "own:JNT-003", "amount": 1000, "misheard": "a grant", "meant": "a grand"})
+        self.assertEqual(d.grounding["amount_source"], "not said")
+
+    def test_offline_stand_in_leaves_real_grants_alone(self):
         from app.agent.textparse import fix_asr
         for t in ("I got a grant from the government", "Can I apply for a grant?", "Pay my grandson 50", "Agree!"):
             self.assertEqual(fix_asr(t)[0], t)

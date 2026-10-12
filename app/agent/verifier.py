@@ -34,6 +34,8 @@ You are NOT shown what the assistant prepared. Extract the ONE transaction the c
 Rules:
 - Use only what the customer actually said. Never guess. Use null for anything they did not state.
 - amount: a number in SGD ("fifty dollars" -> 50, "1.5k" -> 1500). If they corrected themselves, use the final value.
+  If a money word was plainly misrecognised in a payment request ("move a grant to my account" -> a grand -> 1000),
+  use the amount they meant; if you can't be sure, null.
 - payee: who or what they want to pay, in their words or the matching saved name (e.g. "daughter", "Chen Wei",
   "electricity bill", "Asia dividend fund").
 - asset_class: "cash" for transfers and bills; for investments the kind of product if stated or obvious from the

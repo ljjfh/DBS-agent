@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field, ValidationError
 from app.agent import fraud
 from app.agent.textparse import account_id_for, find_account
 from app.bank import dbs_api
-from app.bank.dbs_api.base import NoArgs, Tool, bind
+from app.bank.dbs_api.base import MEANT_DESC, MISHEARD_DESC, NoArgs, Tool, bind
 from app.bank.mock_bank import MockBank, USD_SGD, price_sgd_cents
 from app.kernel.changes import ChangeError
 from app.kernel import protection as prot
@@ -50,6 +50,8 @@ class DraftInvestmentArgs(BaseModel):
     from_account: Optional[str] = Field(default=None, description=_FROM)
     evidence: str = Field(default="", max_length=200,
                           description="Quote the user's exact words that asked for this investment")
+    misheard: str = Field(default="", max_length=40, description=MISHEARD_DESC)
+    meant: str = Field(default="", max_length=40, description=MEANT_DESC)
 
 
 class QueueArgs(BaseModel):
@@ -274,7 +276,8 @@ class ToolGateway:
         acct = self._account(s, a.from_account)
         self._run_judge(s, f"Invest {fmt_money(to_cents(a.amount))} in {prod['name']} ({prod['asset_class']})")
         d = self.kernel.create_draft(s, kind="investment", payee_id=a.product_id, amount_cents=to_cents(a.amount),
-                                     from_account=acct, evidence=a.evidence, verification=self._verification(s))
+                                     from_account=acct, evidence=a.evidence, verification=self._verification(s),
+                                     heard=(a.misheard, a.meant))
         return self._draft_result(d)
 
     def _run_judge(self, s: Session, summary: str):

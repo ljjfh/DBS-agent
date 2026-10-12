@@ -281,8 +281,9 @@ def relative_in(text: str) -> tuple[float, str, str] | None:
 
 
 # ---------------------------------------------------------------- speech-recognition slips on amounts
-# "a grand" is often heard as "a grant" / "a grind"; as a whole answer to "how much?", even as "Agree" / "a green".
-# Only fixed where it can only mean money, and the card always shows (and reads out) the amount for the user to check.
+# Used ONLY by the offline planner, as a stand-in for what a real model works out by itself ("a grant" in "move a
+# grant to my joint account" means "a grand"). With a model, the model reads the user's words; the kernel then checks
+# its reading (evidence.sounds_alike) instead of rewriting anything.
 _COUNT = r"(a|one|two|three|four|five|six|seven|eight|nine|ten|\d{1,3})"
 _GRAND_SLIP = re.compile(rf"\b{_COUNT}\s+(grant|grants|grind|grinds|gran|grain|grains|grond)\b(?!\s+(?:from|for|of|to apply|application|scheme)\b)", re.I)
 _MONEY_VERB = re.compile(r"\b(move|moving|send|sending|transfer|put|invest|pay|give|top ?up|buy|withdraw|deposit|"
@@ -293,14 +294,14 @@ _ANSWER_SLIP = re.compile(r"^\s*(agree|a green|a grin|a gran|a grant|a grind|a g
 def fix_asr(text: str, asked_amount: bool = False) -> tuple[str, list[dict]]:
     """Fix speech-recognition slips on amounts. Returns (fixed text, [{"heard", "meant"}]); unchanged if unsure."""
     fixes: list[dict] = []
-    if asked_amount and _ANSWER_SLIP.match(text):
+    if asked_amount and _ANSWER_SLIP.match(text):           # a guess: ask before using it
         heard = text.strip().rstrip(".!")
-        return "a grand", [{"heard": heard, "meant": "a grand"}]
+        return "a grand", [{"heard": heard, "meant": "a grand", "sure": False}]
     if not (_MONEY_VERB.search(text) or asked_amount):
         return text, fixes
 
     def sub(m):
         meant = f"{m.group(1)} grand"
-        fixes.append({"heard": m.group(0), "meant": meant})
+        fixes.append({"heard": m.group(0), "meant": meant, "sure": True})
         return meant
     return _GRAND_SLIP.sub(sub, text), fixes

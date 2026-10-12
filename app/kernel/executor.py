@@ -21,7 +21,7 @@ from app.kernel import changes
 from app.kernel import protection as prot
 from app.kernel.audit import AuditLog
 from app.kernel.credentials import CredentialRegistry
-from app.kernel.evidence import ground, user_utterances
+from app.kernel.evidence import confirmed_proposal, ground, user_utterances
 from app.kernel.signing import (DEFAULT_SITE, MockAuthenticator, SignatureError, Site, TokenService,
                                 build_challenge, build_settings_challenge, canonical, check_signature, compute_digest,
                                 BIOMETRIC_REQUIRED, browser_key_allowed)
@@ -122,7 +122,8 @@ class Kernel:
     def create_draft(self, s: Session, *, kind: str, payee_id: str, amount_cents: int,
                      from_account: str | None = None, bill_id: str | None = None,
                      taint: list[str] | None = None, local_hour: int | None = None,
-                     evidence: str = "", verification: dict | None = None, schedule: dict | None = None) -> Draft:
+                     evidence: str = "", verification: dict | None = None, schedule: dict | None = None,
+                     heard: tuple[str, str] | None = None) -> Draft:
         s.settle()
         if s.phase != Phase.IDLE:
             raise KernelError("There is already a payment waiting for confirmation. Please confirm or cancel it first.", "PENDING_DRAFT")
@@ -142,11 +143,9 @@ class Kernel:
             expires_at=now + settings.draft_ttl, nonce=secrets.token_hex(6), taint=taint or [], schedule=schedule)
         bill = self.bank.bill(s.user_id, bill_id) if bill_id else None
         g = ground(user_utterances(s.messages), target, amount_cents, kind, bill=bill, model_quote=evidence,
-                   accounts=self.bank.accounts(s.user_id), from_account=from_account)
+                   accounts=self.bank.accounts(s.user_id), from_account=from_account, heard=heard,
+                   proposal=confirmed_proposal(s.messages))
         draft.grounding, draft.you_said = g.as_dict(), g.quote
-        heard = next((f for f in reversed(s.speech_fixes) if f.get("cents") == amount_cents), None)
-        if heard:                                   # the amount came from a speech slip we corrected: show it on the card
-            draft.grounding["heard"] = f"we heard “{heard['heard']}” and read it as “{heard['meant']}”"
         draft.digest = compute_digest(draft)
         level = prot.effective(self.bank, s.user_id, now)
         ctx = rules.RuleContext(now=now, scam_level=s.scam_level, scam_reasons=list(s.scam_reasons),

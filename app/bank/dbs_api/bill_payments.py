@@ -5,7 +5,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
-from app.bank.dbs_api.base import NoArgs, Tool
+from app.bank.dbs_api.base import MEANT_DESC, MISHEARD_DESC, NoArgs, Tool
 from app.kernel.executor import KernelError
 from app.models import fmt_money, to_cents
 
@@ -18,6 +18,8 @@ class DraftBillArgs(BaseModel):
     amount: Optional[float] = Field(default=None, gt=0, description="Only with pay='amount': what the user said")
     from_account: Optional[str] = Field(default=None, description="account_id, ONLY if the user said which account")
     evidence: str = Field(default="", max_length=200, description="Quote the user's exact words that asked for this payment")
+    misheard: str = Field(default="", max_length=40, description=MISHEARD_DESC)
+    meant: str = Field(default="", max_length=40, description=MEANT_DESC)
 
 
 def get_bills(gw, s, _):
@@ -52,7 +54,8 @@ def draft_bill_payment(gw, s, a: DraftBillArgs):
         cents = bill["amount_cents"]
     acct = gw._account(s, a.from_account)
     d = gw.kernel.create_draft(s, kind="bill", payee_id=bill["payee_id"], from_account=acct, amount_cents=cents,
-                               bill_id=a.bill_id, evidence=a.evidence, verification=gw._verification(s))
+                               bill_id=a.bill_id, evidence=a.evidence, verification=gw._verification(s),
+                               heard=(a.misheard, a.meant))
     return gw._draft_result(d)
 
 

@@ -10,7 +10,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
-from app.bank.dbs_api.base import Tool
+from app.bank.dbs_api.base import MEANT_DESC, MISHEARD_DESC, Tool
 from app.bank.dbs_api.standing_instructions import make_schedule
 from app.kernel.executor import KernelError
 from app.models import fmt_money, to_cents
@@ -28,6 +28,8 @@ class DraftTransferArgs(BaseModel):
         default=None, ge=1, le=31, description="monthly: the day of the month the user said (e.g. 1); weekly: "
                                                "1=Monday..7=Sunday; omit if the user didn't say")
     evidence: str = Field(default="", max_length=200, description="Quote the user's exact words that asked for this payment")
+    misheard: str = Field(default="", max_length=40, description=MISHEARD_DESC)
+    meant: str = Field(default="", max_length=40, description=MEANT_DESC)
     note: str = Field(default="", max_length=60)
 
 
@@ -50,7 +52,7 @@ def draft_transfer(gw, s, a: DraftTransferArgs):
     gw._run_judge(s, what)
     d = gw.kernel.create_draft(s, kind="transfer", payee_id=a.payee_id, amount_cents=to_cents(a.amount),
                                from_account=acct, evidence=a.evidence, verification=gw._verification(s),
-                               schedule=schedule)
+                               schedule=schedule, heard=(a.misheard, a.meant))
     return gw._draft_result(d)
 
 
