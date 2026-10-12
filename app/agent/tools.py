@@ -137,7 +137,7 @@ class ToolGateway:
     # Tools in a group are only offered when the conversation is about that topic: a 27B model picks tools more
     # reliably from a short list. (Calling one anyway still works: call() checks the tier, not the group.)
     _GROUPS = {
-        "regular": re.compile(r"giro|standing (instruction|order)|regular|recurring|repeat|every (month|week)|monthly|"
+        "regular": re.compile(r"giro|grio|gyro|standing (instruction|order)|regular|recurring|repeat|every (month|week)|monthly|"
                               r"weekly|automatic|auto[- ]?(pay|deduct)|deduct|direct debit|subscription|schedul|allowance|"
                               r"(each|every|per|of the) month",
                               re.I),
