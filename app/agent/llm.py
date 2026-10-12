@@ -371,8 +371,10 @@ class OfflineLLM:
             acct = self._account(text, results)
             if acct == "LOOKUP":
                 return self._call("get_balance", {}, "The user named an account to pay from; look up the account ids.")
-            if "draft_transfer" not in results:
-                if "draft_transfer" not in allowed:
+            freq = frequency_in(text)
+            tool = "draft_standing_instruction" if freq else "draft_transfer"   # "every month" -> its own API
+            if tool not in results:
+                if tool not in allowed:
                     return self._say("For your safety I can't set up a transfer in this conversation. If someone "
                                      "claiming to be the police or the bank asked you to send money, please hang up "
                                      "and call the ScamShield helpline 1799.")
@@ -381,15 +383,15 @@ class OfflineLLM:
                     args.update(misheard=slip["heard"], meant=slip["meant"])
                 if acct:
                     args["from_account"] = acct
-                freq = frequency_in(text)
-                if freq:                                     # "every month" -> a standing instruction
-                    args["repeat"] = freq
+                if freq:
+                    args["frequency"] = freq
                     if repeat_day_in(text, freq):
-                        args["repeat_day"] = repeat_day_in(text, freq)
-                return self._call("draft_transfer", args,
+                        args["day"] = repeat_day_in(text, freq)
+                return self._call(tool, args,
                                   f"\"{payee['relation']}\" is {payee['name']} ({payee['payee_id']}), amount "
-                                  f"{amount:g}{' from ' + acct if acct else ''}; draft the transfer.")
-            return self._draft_done(results["draft_transfer"])
+                                  f"{amount:g}{' from ' + acct if acct else ''}"
+                                  f"{', ' + freq if freq else ''}; draft the {'standing instruction' if freq else 'transfer'}.")
+            return self._draft_done(results[tool])
 
         if intent == "invest":
             if "list_investments" not in results:

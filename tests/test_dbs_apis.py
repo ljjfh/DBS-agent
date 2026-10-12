@@ -102,10 +102,24 @@ class TestStandingInstructions(ApiBase):
                             for x in self.bank.standing_instructions("u_chen")))
 
     def test_model_cannot_quietly_make_a_one_off_repeat(self):
-        d = self.model_drafts("Send 100 to my son", "draft_transfer",
-                              {"payee_id": "p_son", "amount": 100, "repeat": "monthly"})
+        d = self.model_drafts("Send 100 to my son", "draft_standing_instruction",
+                              {"payee_id": "p_son", "amount": 100, "frequency": "monthly"})
         self.assertEqual(d.verification["status"], "mismatch")          # frozen by the independent check
         self.assertEqual(self.s.phase, Phase.FROZEN)
+
+    def test_uses_the_standing_instructions_api(self):
+        # seen live: "every first day of the month" went through draft_transfer
+        r = self.turn("I want to send 300 dollars to my daughter every first day of the month.")
+        self.assertIn("DBS Standing Instructions · POST /standing-instructions (draft) (mock)", self.apis(r))
+        d = self.s.current_draft
+        self.assertEqual((d.amount_cents, d.schedule["frequency"], d.schedule["day"]), (30000, "monthly", 1))
+        self.assertEqual(d.verification["fields"]["schedule"], "match")
+
+    def test_draft_transfer_points_regular_payments_to_their_api(self):
+        self.s.messages.append({"role": "user", "content": "send 100 to my son every month"})
+        res = self.gw.call(self.s, "draft_transfer", {"payee_id": "p_son", "amount": 100, "repeat": "monthly"})
+        self.assertFalse(res["ok"])
+        self.assertIn("draft_standing_instruction", json.dumps(res))
 
     def test_list_and_stop(self):
         r = self.turn("What regular payments do I have?")
@@ -204,7 +218,7 @@ class TestToolOffering(ApiBase):
     def test_every_api_call_shows_in_the_trace(self):
         r = self.turn("Send 100 to my son every month on the 1st")
         self.assertEqual(self.apis(r), ["DBS Payees · GET /payees (mock)",
-                                        "DBS Fund Transfer · POST /fund-transfers (draft) (mock)"])
+                                        "DBS Standing Instructions · POST /standing-instructions (draft) (mock)"])
 
 
 class _ClaimsItsDone:

@@ -46,7 +46,7 @@ trace as "DBS <API> · <method> <path> (mock)".
 | Limits | Check the **daily transfer limit**; lower or raise it | lowering is instant; raising is **signed and only starts after a delay**; transfers over the limit are blocked (R13) |
 | Fund Transfer | Transfer to saved people, and **between own accounts** ("move a grand to my joint account") | full payment pipeline: verifier, rules, card, signature, gateway |
 | Bill Payments | Utilities, town council, **credit card: full, minimum or an amount** | asks full or minimum if not said; more than the bill is blocked (R08) |
-| Standing Instructions | Set up "send 100 to my son **every month** on the 1st"; list; stop | the schedule is on the card and **signed**; the verifier freezes a one-off turned into a repeat (or the reverse) |
+| Standing Instructions | Set up "send 100 to my son **every month** on the 1st" (`draft_standing_instruction`, sharing the Fund Transfer pipeline); list; stop | the schedule is on the card and **signed**; the verifier freezes a one-off turned into a repeat (or the reverse) |
 | GIRO | List, **cancel**, set up | cancel is protective and instant (only what the user named); set-up is **signed** |
 
 Small models pick tools better from short lists, so the limits, GIRO / standing-order and add-payee tools are only
@@ -86,7 +86,7 @@ a time with tap-to-answer choices, replies read aloud slowly, and a bigger confi
 words. Settings also has "Larger text", "Read replies aloud" and "Reset demo".
 
 ```bash
-python -m unittest discover tests     # 193 tests (kernel, passkeys, verifier, gateway, protection, Harness, HTTP)
+python -m unittest discover tests     # 195 tests (kernel, passkeys, verifier, gateway, protection, Harness, HTTP)
 python -m app.lab                    # security lab: 22 real attacks on an isolated sandbox
 python eval/run_eval.py               # core + hard suites + attack tests -> eval/report.md / .json / .html
 python eval/run_eval.py --compare --repeat 3   # the headline run: rules-only baseline vs LLM agent, 3x each

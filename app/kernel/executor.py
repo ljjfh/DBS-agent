@@ -296,7 +296,9 @@ class Kernel:
         receipt = dict(receipt)
         receipt["verifiable"] = self._verifiable_receipt(s, draft, receipt)
         s.transition(Phase.EXECUTED)
-        s.add_trace("gateway", "Execution gateway re-verified the device signature on its own, then posted to the ledger",
+        s.add_trace("gateway", "Execution gateway re-verified the device signature on its own, then " +
+                    ("set up the standing instruction (DBS Standing Instructions · POST /standing-instructions)"
+                     if draft.schedule else "posted to the ledger"),
                     {"txn_id": receipt["txn_id"]})
         s.add_trace("exec", f"Executed {fmt_money(draft.amount_cents)} → {draft.payee_name}",
                     {"txn_id": receipt["txn_id"]})

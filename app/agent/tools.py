@@ -138,7 +138,8 @@ class ToolGateway:
     # reliably from a short list. (Calling one anyway still works: call() checks the tier, not the group.)
     _GROUPS = {
         "regular": re.compile(r"giro|standing (instruction|order)|regular|recurring|repeat|every (month|week)|monthly|"
-                              r"weekly|automatic|auto[- ]?(pay|deduct)|deduct|direct debit|subscription|schedul|allowance",
+                              r"weekly|automatic|auto[- ]?(pay|deduct)|deduct|direct debit|subscription|schedul|allowance|"
+                              r"(each|every|per|of the) month",
                               re.I),
         "limits": re.compile(r"\blimits?\b|\bcap\b|maximum (per|a) day", re.I),
         "add_payee": re.compile(r"\b(add|new|register|save)\b.{0,30}\b(payee|recipient|person|account)\b|"

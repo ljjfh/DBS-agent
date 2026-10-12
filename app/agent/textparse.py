@@ -228,8 +228,12 @@ def money_mentions(text: str) -> list[float]:
 
 
 # ---------------------------------------------------------------- Repeating payments
-_FREQ = [(re.compile(r"\bevery (single )?month\b|\bmonthly\b|\beach month\b|\bper month\b", re.I), "monthly"),
-         (re.compile(r"\bevery (single )?week\b|\bweekly\b|\beach week\b", re.I), "weekly")]
+_FREQ = [(re.compile(r"\bevery (single )?month\b|\bmonthly\b|\beach month\b|\bper month\b|"
+                     r"\b(every|each) [\w-]+(?: day)? of (the|each|every) month\b|\bof every month\b", re.I), "monthly"),
+         (re.compile(r"\bevery (single )?week\b|\bweekly\b|\beach week\b|\bevery (mon|tue|wed|thu|fri|sat|sun)\w*day\b",
+                     re.I), "weekly")]
+_ORD_WORDS = {"first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5, "sixth": 6, "seventh": 7, "eighth": 8,
+              "ninth": 9, "tenth": 10, "fifteenth": 15, "twentieth": 20}
 _WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
 
@@ -247,6 +251,9 @@ def repeat_day_in(text: str, frequency: str | None) -> int | None:
     if m:
         d = int(m.group(1) or m.group(2))
         return d if 1 <= d <= 31 else None
+    m = re.search(r"\b(" + "|".join(_ORD_WORDS) + r")(?: day)? of (?:the|each|every) month\b", low)
+    if m:                                       # "every first day of the month" -> 1
+        return _ORD_WORDS[m.group(1)]
     return None
 
 

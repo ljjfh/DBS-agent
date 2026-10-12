@@ -371,7 +371,8 @@ class Agent:
     def _what_happened(s: Session, d) -> str:
         if not d:
             return ""
-        verb = {"transfer": "draft_transfer", "bill": "draft_bill_payment", "investment": "draft_investment"}[d.kind]
+        verb = "draft_standing_instruction" if d.schedule else \
+            {"transfer": "draft_transfer", "bill": "draft_bill_payment", "investment": "draft_investment"}[d.kind]
         state = {Phase.FROZEN: "frozen by the verifier", Phase.BLOCKED: "blocked by the rules",
                  Phase.COOLING: "in cooling-off"}.get(s.phase, "shown on the confirmation card")
         return (f"\n[system note: {verb} was called and created draft {d.draft_id}: {fmt_money(d.amount_cents)} "
