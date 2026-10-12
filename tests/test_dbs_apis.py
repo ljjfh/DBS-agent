@@ -355,3 +355,16 @@ class TestOddAnswerPointer(ApiBase):
         self.assertIn('answered "Agree!", which has no number', state_summary(self.s, self.bank))
         self.s.messages[-1]["content"] = "300"
         self.assertNotIn("which has no number", state_summary(self.s, self.bank))
+
+    def test_model_may_ask_back_without_a_tool(self):
+        from app.agent.loop import Agent
+
+        class AsksBack:
+            name = "stub"
+
+            def chat(self, messages, tools=None, **_):
+                return {"role": "assistant", "content": "Did you mean a grand, S$1,000?", "tool_calls": []}
+        self.turn("I want to move money to my joint account")
+        r = Agent(self.bank, self.gw, self.audit, AsksBack()).run_turn(self.s, "Agree!")
+        self.assertEqual(r.reply, "Did you mean a grand, S$1,000?")
+        self.assertFalse(any(t["kind"] == "fallback" for t in self.s.trace))

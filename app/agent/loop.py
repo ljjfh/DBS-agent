@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 
 from app.agent import fraud, presenter
 from app.agent.llm import LLMError, OfflineLLM, detect_intent
-from app.agent.prompts import SYSTEM_PROMPT, state_summary
+from app.agent.prompts import SYSTEM_PROMPT, _unexpected_answer, state_summary
 from app.agent.textparse import money_mentions, parse_amount, relative_in
 from app.kernel.evidence import derived_amounts, user_utterances
 from app.agent.tools import ToolGateway
@@ -334,7 +334,10 @@ class Agent:
                 no_draft = s.current_draft_id == draft_before and (s.pending_change or {}).get("change_id") == change_before
                 claims = no_draft and bool(_CLAIMS_PREPARED.search(reply)) and \
                     any(t.tier == "draft" for t in self.gateway.available(s))
-                skipped = tools_used == 0 and intent in _DATA_INTENTS
+                # Asking back while the user is answering our own question ("how much?" -> "Agree!" -> "Did you
+                # mean a grand?") is a clarification, not a skipped lookup
+                clarifying = reply.endswith("?") and bool(_unexpected_answer(s.messages))
+                skipped = tools_used == 0 and intent in _DATA_INTENTS and not clarifying
                 if (claims or skipped) and not nudged:
                     nudged = True
                     why = ("said it prepared a payment without calling a draft tool" if claims
