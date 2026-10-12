@@ -75,7 +75,7 @@ a time with tap-to-answer choices, replies read aloud slowly, and a bigger confi
 words. Settings also has "Larger text", "Read replies aloud" and "Reset demo".
 
 ```bash
-python -m unittest discover tests     # 178 tests (kernel, passkeys, verifier, gateway, protection, Harness, HTTP)
+python -m unittest discover tests     # 179 tests (kernel, passkeys, verifier, gateway, protection, Harness, HTTP)
 python -m app.lab                    # security lab: 22 real attacks on an isolated sandbox
 python eval/run_eval.py               # core + hard suites + attack tests -> eval/report.md / .json / .html
 python eval/run_eval.py --compare --repeat 3   # the headline run: rules-only baseline vs LLM agent, 3x each

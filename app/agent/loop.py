@@ -39,6 +39,11 @@ _AND = re.compile(r",?\s+\band\b\s+(?:also\s+)?", re.I)
 _CLAIMS_PREPARED = re.compile(r"\b(i'?ve|i have|i)\s+(just\s+)?(prepared|drafted|set up|created|arranged)\b.{0,40}"
                               r"\b(transfer|payment|investment|card)\b|\bhere'?s your (transfer|payment|investment)\b", re.I)
 _MONEY_INTENTS = ("transfer", "bill_pay", "invest", "add_payee", "giro_setup")
+# "John Tan has been added", "your limit is now raised", "GIRO is set up": only true after the user signs the card
+_CLAIMS_CHANGED = re.compile(r"\b(has|have|had) been (added|set up|raised|increased|changed|registered|approved)\b|"
+                             r"\b(is|are) now (added|set up|raised|active|registered|one of your payees)\b|"
+                             r"\b(added|registered) (him|her|them|it|\w+(?: \w+)?) (as|to) (a |your )?(new )?payees?\b|"
+                             r"\bnow (one of )?your payees?\b|\bi'?ve (added|raised|increased|set up)\b", re.I)
 _NOTE = re.compile(r"\s*\[system note:[^\]]*\]", re.I)
 NUDGE = ("[Harness check] No draft exists: you did not call any draft tool in this turn, so nothing has been prepared. "
          "Do not say it is prepared. If you know who/what and how much, call list_payees (or list_investments) and then "
@@ -452,6 +457,13 @@ class Agent:
             if not reply or any(all(abs(v * 100 - a) > 0.5 for a in allowed) for v in mentioned):
                 s.add_trace("guard", "Amount in model reply doesn't match the draft; using the code template", {"model_reply": reply})
                 return template
+        pc = s.pending_change
+        if pc and reply and _CLAIMS_CHANGED.search(reply):
+            # An account change only happens after the user signs its card: never let the model say it's done
+            s.add_trace("guard", "Model claimed an account change was made before the user signed it; corrected",
+                        {"model_reply": reply})
+            return (f"Nothing has changed yet: {pc['card']['title'].lower()} is waiting for you. Please check the card "
+                    "and confirm it with your fingerprint, or cancel it.")
         if not draft and not changed and reply and _CLAIMS_PREPARED.search(reply):
             pend = s.current_draft if s.phase in (Phase.AWAITING_AUTH, Phase.COOLING) else None
             s.add_trace("guard", "Model claimed it prepared a payment, but no draft was made this turn; corrected",

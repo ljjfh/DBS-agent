@@ -89,6 +89,10 @@ def state_summary(session, bank) -> str:
             lines.append("You asked the user to choose between: " +
                          ", ".join(f"{o['name']} (payee_id {o['payee_id']})" for o in pc["options"]) +
                          f". Their request was: \"{pc['request']}\".")
+    pc = session.pending_change
+    if pc:
+        lines.append(f"Waiting for the user's fingerprint on a card: {pc['card']['title']}. It is NOT done yet; it "
+                     "only happens when they confirm the card. Never say it has been added, raised or set up.")
     if session.plan:
         lines.append("The user also queued these tasks (handle them after the current one): " + "; ".join(session.plan))
     return "\n".join(lines)

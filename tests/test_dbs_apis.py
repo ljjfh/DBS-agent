@@ -205,3 +205,22 @@ class TestToolOffering(ApiBase):
         r = self.turn("Send 100 to my son every month on the 1st")
         self.assertEqual(self.apis(r), ["DBS Payees · GET /payees (mock)",
                                         "DBS Fund Transfer · POST /fund-transfers (draft) (mock)"])
+
+
+class _ClaimsItsDone:
+    """A model that says the payee was added although nobody signed anything (seen with the live model)."""
+    name = "stub"
+
+    def chat(self, messages, tools=None, **_):
+        return {"role": "assistant", "content": "Thanks for confirming! John Tan has been added to your payees.",
+                "tool_calls": []}
+
+
+class TestNoFalseClaims(ApiBase):
+    def test_unsigned_change_is_never_reported_as_done(self):
+        from app.agent.loop import Agent
+        self.turn("Add a new payee John Tan, OCBC account 123-456789-0")
+        self.assertIsNotNone(self.s.pending_change)
+        r = Agent(self.bank, self.gw, self.audit, _ClaimsItsDone()).run_turn(self.s, "Yes, that's right")
+        self.assertIn("Nothing has changed yet", r.reply)
+        self.assertFalse(any(p["name"] == "John Tan" for p in self.bank.payees("u_chen")))
