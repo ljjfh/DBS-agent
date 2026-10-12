@@ -127,7 +127,8 @@ async def audit_export(request: Request):
 async def health(_: Request):
     return JSONResponse({"llm": getattr(runtime.llm, "name", "?"), "model": settings.llm_model if settings.llm_enabled
                          else "offline-rules", "asr": "tencent" if settings.asr_enabled else "browser-fallback",
-                         "verifier": runtime.verifier.name, "public_demo": settings.public_demo})
+                         "verifier": runtime.verifier.name, "public_demo": settings.public_demo,
+                         "browser_key": settings.allow_browser_key})
 
 
 async def world(request: Request):

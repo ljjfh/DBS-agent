@@ -429,7 +429,7 @@ function openConfirm(c){
 function renderConfirm(){
   const c = state.card; if(!c) return;
   const needVerify = !!c.verify_question, cooling = c.cooldown_left > 0;
-  const canGo = c.can_confirm && !cooling && (!needVerify || state.verify === true);
+  const canGo = c.can_confirm && !cooling && (!needVerify || state.verify === true) && state.signMode !== 'none';
   const rel = c.payee_relation ? ` (${esc(c.payee_relation)})` : '';
   $('#confirm').innerHTML = `
     <div class="cbody">
@@ -447,13 +447,15 @@ function renderConfirm(){
       ${needVerify ? `<div class="verify"><div class="q">${esc(c.verify_question)}</div><div class="yesno">
         <button type="button" data-v="yes" aria-pressed="${state.verify === true}">Yes</button>
         <button type="button" data-v="no" aria-pressed="${state.verify === false}">No / Not sure</button></div></div>` : ''}
+      ${state.uvFail ? `<div class="uvhelp">${icon('fingerprint')}<div><b>Your fingerprint wasn't checked</b><small>A password manager signed without asking for your fingerprint, face or PIN, so the bank refused it. Set it up again and choose <b>Windows Hello / this device</b> when asked where to save it.</small>
+        <button type="button" class="btn secondary" id="c-repk">Set up fingerprint again</button></div></div>` : ''}
       ${cooling ? `<div class="cool">Please wait ${c.cooldown_left} more second${c.cooldown_left === 1 ? '' : 's'}<small>A good moment to call your family and check.</small></div>` : ''}
     </div>
     <div class="cfoot">
       <button type="button" class="btn secondary" id="c-cancel">Cancel</button>
-      <button type="button" class="btn primary" id="c-go" ${canGo ? '' : 'disabled'}>${icon('fingerprint')}${state.signMode === 'device' ? 'Confirm on this device' : 'Confirm with fingerprint'}</button>
+      <button type="button" class="btn primary" id="c-go" ${canGo ? '' : 'disabled'}>${icon('fingerprint')}${state.signMode === 'none' ? "Can't sign in this browser" : state.signMode === 'device' ? 'Confirm on this device' : 'Confirm with fingerprint'}</button>
     </div>
-    <div class="signnote">Confirmation code ${esc(c.digest.slice(0, 8))}…${esc(c.digest.slice(-4))} · ${state.signMode === 'device'
+    <div class="signnote">Confirmation code ${esc(c.digest.slice(0, 8))}…${esc(c.digest.slice(-4))} · ${state.signMode === 'none' ? esc(NO_SIGNER) : state.signMode === 'device'
       ? "this browser signs exactly this card with a key that never leaves it. (This device has no fingerprint or face sensor available here, so no biometric check.)"
       : "your device checks your fingerprint or face, then signs exactly this card. The bank and its payment gateway each verify the signature."}</div>`;
   $('#confirm').querySelectorAll('.yesno button').forEach(b => b.onclick = () => {
@@ -463,9 +465,15 @@ function renderConfirm(){
   });
   $('#c-cancel').onclick = cancelCard;
   $('#c-go').onclick = () => { stopSpeaking(); confirmCard(); };
+  $('#c-repk') && ($('#c-repk').onclick = async () => {
+    try{
+      await api('/api/passkey/remove', {session_id: state.sid}); await refresh(); await enrolPasskey();
+      state.uvFail = false; renderConfirm(); toast('Fingerprint set up again. Check the card and confirm.');
+    }catch(e){ toast(e.name === 'NotAllowedError' ? 'Set-up was cancelled. Nothing changed.' : e.message); }
+  });
 }
 $('#confirm').addEventListener('cancel', e => { e.preventDefault(); cancelCard(); });
-function closeConfirm(){ clearInterval(state.coolTimer); const d = $('#confirm'); if(d.open) d.close(); state.card = null; }
+function closeConfirm(){ clearInterval(state.coolTimer); const d = $('#confirm'); if(d.open) d.close(); state.card = null; state.uvFail = false; }
 async function cancelCard(){
   const c = state.card; if(!c) return; closeConfirm();
   try{
@@ -492,7 +500,9 @@ async function confirmCard(){
     const msg = e.name === 'NotAllowedError' ? 'The fingerprint check was cancelled or timed out. Nothing was sent.'
       : e.name === 'SecurityError' ? `Fingerprint signing needs a website name, not an address like ${location.hostname}. Please open http://localhost:${location.port || 80} and try again. Nothing was sent.`
       : e.message;
-    addTrace(e.data?.trace); push({role:'bot', text:msg}); speak(msg);
+    addTrace(e.data?.trace);
+    if(e.data?.code === 'UV_REQUIRED'){ state.uvFail = true; push({role:'bot', text:UV_HELP}); speak(UV_HELP); }
+    else { push({role:'bot', text:msg}); speak(msg); }
     if(['NOT_AWAITING_AUTH', 'RECHECK_BLOCKED'].includes(e.data?.code) || String(e.data?.code || '').startsWith('GW_')) closeConfirm(); else renderConfirm();
   }
 }
@@ -501,18 +511,31 @@ async function confirmCard(){
 // A passkey lives in the device's secure hardware and is unlocked by the OS's own biometric prompt (Touch ID,
 // Face ID, Windows Hello). We ask for userVerification "required" and sign SHA-256 of the exact payment payload.
 // Devices without one fall back to a non-extractable browser key (no biometric; the UI says so).
+const NO_SIGNER = "This browser can't check your fingerprint or face, so it can't sign payments. On iPhone open the link in Safari, " +
+  "on Android or a computer in Chrome (not inside an app like WeChat), on a device with a screen lock. Nothing was sent.";
+const UV_HELP = "Your device signed without checking your fingerprint, face or PIN, so the bank refused it. Nothing was sent. " +
+  "This happens when a password manager (for example Microsoft Password Manager in Edge) holds the passkey. Tap " +
+  "\u201cSet up fingerprint again\u201d, and when your computer asks where to save it, choose Windows Hello / this device.";
 const b64u = buf => b64(buf).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), ch => ch.charCodeAt(0));
 const IP_HOST = /^(\d{1,3}(\.\d{1,3}){3}|\[.*\])$/;
+// 'passkey'     this device's own fingerprint / face / PIN (Touch ID, Face ID, Windows Hello, Android)
+// 'passkey-any' no built-in sensor: the browser offers a phone (scan a QR code) or a security key instead
+// 'device'      a plain browser key, no biometric: local development only (the server refuses it online)
+// 'none'        this browser can't sign payments (e.g. an in-app browser): open the page in Safari / Chrome
+const browserKeyAllowed = () => state.health.browser_key !== false;
+const passkeyMode = () => state.signMode === 'passkey' || state.signMode === 'passkey-any';
 async function detectSignMode(){
-  if(IP_HOST.test(location.hostname)) return 'device';     // passkeys need a domain name, not an IP address
+  if(IP_HOST.test(location.hostname)) return browserKeyAllowed() ? 'device' : 'none';   // passkeys need a domain name
   try{
-    if(window.PublicKeyCredential && window.isSecureContext && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()) return 'passkey';
+    if(window.PublicKeyCredential && window.isSecureContext)
+      return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable() ? 'passkey' : 'passkey-any';
   }catch{}
-  return 'device';
+  return browserKeyAllowed() ? 'device' : 'none';
 }
 async function ensureSigner(){
-  if(state.signMode === 'passkey'){
+  if(state.signMode === 'none') throw new Error(NO_SIGNER);
+  if(passkeyMode()){
     if(!state.data?.passkey?.enrolled){ toast('First time: your device will ask you to save a passkey for Star.'); await enrolPasskey(); }
   }else if(!state.data?.passkey?.enrolled){
     await ensureDeviceKey();
@@ -523,8 +546,11 @@ async function enrolPasskey(){
   const cred = await navigator.credentials.create({publicKey: {
     challenge: unb64u(o.challenge), rp: {id: o.rp_id, name: o.rp_name},
     user: {id: unb64u(o.user_id), name: o.user_name, displayName: o.display_name},
-    pubKeyCredParams: [{type: 'public-key', alg: -7}, {type: 'public-key', alg: -257}],   // ES256 (Mac, phones) or RS256 (some Windows Hello) timeout: 60000, attestation: 'none',
-    authenticatorSelection: {authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged'},
+    pubKeyCredParams: [{type: 'public-key', alg: -7}, {type: 'public-key', alg: -257}],   // ES256 (Mac, phones) or RS256 (some Windows Hello)
+    timeout: 60000, attestation: 'none',
+    // A built-in sensor when there is one; otherwise let the browser offer a phone (QR code) or a security key
+    authenticatorSelection: {...(state.signMode === 'passkey' ? {authenticatorAttachment: 'platform'} : {}),
+                             userVerification: 'required', residentKey: 'discouraged'},
     excludeCredentials: o.exclude.map(id => ({type: 'public-key', id: unb64u(id)})),
   }});
   const r = await api('/api/passkey/register', {session_id: state.sid, credential_id: b64u(cred.rawId),
@@ -533,7 +559,7 @@ async function enrolPasskey(){
   await refresh(); return r;
 }
 async function signPayload(payload, passkey){
-  if(passkey?.enrolled && state.signMode !== 'passkey')
+  if(passkey?.enrolled && !passkeyMode())
     throw new Error('Your account signs payments with the fingerprint or face check on the device where you set it up. ' +
       'Please use that device (or remove the passkey in Settings for this demo).');
   if(passkey?.enrolled){
@@ -663,10 +689,11 @@ function settingsPage(m){
       <p class="footnote">Always on for everyone: Star only drafts, every draft is checked against your words by two separate engines, your device signs every payment, and the payment gateway refuses anything unsigned.</p>
     </section>
     <section class="card settings page-gap">
-      <div class="setting"><div>Fingerprint / face signing (passkey)<small>${state.signMode === 'passkey'
+      <div class="setting"><div>Fingerprint / face signing (passkey)<small>${passkeyMode()
         ? (pk.enrolled ? `Set up for this site. Key ${esc((pk.key_ids || [])[0] || '')}. Your device's own fingerprint or face check signs every payment.` : 'Available on this device. Set it up now, or the first time you confirm a payment.')
-        : "This browser can't use a fingerprint or face sensor here. Payments are signed with a browser key instead (no biometric check)."}</small></div>
-        ${state.signMode === 'passkey' && !pk.enrolled ? `<button class="btn primary" id="pk-setup">${icon('fingerprint')}Set up</button>` : ''}
+        : state.signMode === 'none' ? esc(NO_SIGNER)
+        : "This browser can't use a fingerprint or face sensor here. Payments are signed with a browser key instead (no biometric check; local development only)."}</small></div>
+        ${passkeyMode() && !pk.enrolled ? `<button class="btn primary" id="pk-setup">${icon('fingerprint')}Set up</button>` : ''}
         ${pk.enrolled ? `<button class="btn secondary" id="pk-remove">Remove (demo)</button>` : ''}</div>
     </section>
     <section class="card settings page-gap">

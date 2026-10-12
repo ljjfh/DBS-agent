@@ -25,6 +25,7 @@ class CredentialRegistry:
         self._lock = threading.Lock()
         self._passkeys: dict[str, list[dict]] = {}
         self._device_keys: dict[str, dict] = {}
+        self.allow_browser_key: bool | None = None     # None = follow the server setting (ALLOW_BROWSER_KEY)
         if path and path.exists():
             try:
                 self._passkeys = json.loads(path.read_text(encoding="utf-8"))

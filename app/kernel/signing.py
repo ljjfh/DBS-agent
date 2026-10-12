@@ -25,6 +25,8 @@ from app.config import settings
 from app.kernel import p256, webauthn
 from app.models import Draft
 
+BIOMETRIC_REQUIRED = ("This payment needs your fingerprint, face or device PIN. Open the page in Safari (iPhone) or "
+                      "Chrome (Android, Windows, Mac) on a device with screen lock, not inside an app like WeChat.")
 CHALLENGE_DOMAIN = "STAR-DCTA-AUTH-V1"   # binds signatures to this purpose so they can't be reused elsewhere
 SETTINGS_DOMAIN = "STAR-SETTINGS-V1"     # signed account-setting changes (lowering the protection level)
 
@@ -43,6 +45,13 @@ class SignatureError(Exception):
     def __init__(self, message: str, code: str):
         super().__init__(message)
         self.code = code
+
+
+def browser_key_allowed(registry) -> bool:
+    """A registry can carry its own policy (the security lab's sandbox simulates a browser-key device); otherwise the
+    server setting decides."""
+    own = getattr(registry, "allow_browser_key", None)
+    return settings.allow_browser_key if own is None else bool(own)
 
 
 def check_signature(registry, *, user_id: str, session_id: str, payload: str, assertion: dict, site: Site,
@@ -72,6 +81,8 @@ def check_signature(registry, *, user_id: str, session_id: str, payload: str, as
     if registry.passkeys(user_id, site.rp_id):
         raise SignatureError("This account uses fingerprint / face signing. A plain browser key isn't enough.",
                              "PASSKEY_REQUIRED")
+    if not browser_key_allowed(registry):
+        raise SignatureError(BIOMETRIC_REQUIRED, "BIOMETRIC_REQUIRED")
     jwk = registry.device_key(session_id)
     if not jwk:
         raise SignatureError("This device has no registered signing key yet.", "NO_KEY")

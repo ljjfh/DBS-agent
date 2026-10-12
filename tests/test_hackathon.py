@@ -675,6 +675,32 @@ class TestGateway(Base):
         self.kernel.commit(self.s, d.draft_id, tok)
         self.assertTrue(any(e["event"] == "gateway.posted" for e in self.audit.for_session("h")))
 
+    def test_online_demo_needs_a_biometric(self):
+        """Online (PUBLIC_DEMO) a plain browser key can't sign: no new browser keys, and both the kernel and the
+        gateway refuse a browser-key signature, so a device without a fingerprint/face check can never pay."""
+        d, tok = self.signed_draft()                                     # signed while browser keys were allowed
+        self.registry.allow_browser_key = False
+        try:
+            with self.assertRaises(KernelError) as e:                    # the gateway re-checks at execution time
+                self.kernel.commit(self.s, d.draft_id, tok)
+            self.assertEqual(e.exception.code, "GW_BIOMETRIC_REQUIRED")
+            other = Session(session_id="h2")
+            _, jwk = p256.generate_keypair()
+            with self.assertRaises(KernelError) as e:
+                self.kernel.register_key(other, jwk)
+            self.assertEqual(e.exception.code, "BIOMETRIC_REQUIRED")
+        finally:
+            self.registry.allow_browser_key = None
+
+    def test_security_lab_still_runs_online(self):
+        """The lab's sandbox simulates a browser-key device on purpose, so it keeps working on the online demo."""
+        from unittest import mock
+        from app import lab
+        from app.config import settings
+        with mock.patch.object(settings, "allow_browser_key", False):
+            results = lab.run_lab()
+        self.assertTrue(results and all(r["blocked"] for r in results), [r for r in results if not r["blocked"]])
+
     def test_gateway_rejects_unsigned(self):
         d, _ = self.signed_draft()
         with self.assertRaises(GatewayError) as e:

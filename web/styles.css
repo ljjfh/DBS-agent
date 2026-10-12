@@ -266,6 +266,9 @@ dialog.confirm::backdrop{background:#1b1f2980}
 .yesno{display:flex;gap:10px}
 .yesno button{flex:1;padding:11px;border-radius:8px;border:1.5px solid var(--line);background:#fff;font-weight:700}
 .yesno button[aria-pressed="true"]{border-color:var(--side);background:var(--side);color:#fff}
+.uvhelp{display:flex;gap:10px;align-items:flex-start;margin:12px 0;padding:12px 14px;border-radius:10px;background:var(--bad-bg);color:var(--ink,#1b1f24)}
+.uvhelp svg{flex:none;color:var(--bad);margin-top:2px}
+.uvhelp small{display:block;margin:4px 0 10px;color:inherit;opacity:.85;line-height:1.45}
 .cool{text-align:center;margin:12px 0;font-weight:700;color:var(--bad)}
 .cool small{display:block;font-weight:400}
 .cfoot{display:flex;gap:12px;padding:16px 26px 20px;background:#f6f7f9;border-top:1px solid #e1e5e9;margin-top:14px}

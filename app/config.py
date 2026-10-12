@@ -76,6 +76,10 @@ class Settings:
     allowed_hosts = _hosts()
     # A shared online demo: every browser is its own demo customer, and nobody can reset everyone's world
     public_demo = _f("PUBLIC_DEMO", "0").lower() in ("1", "true", "yes")
+    # Signing without a biometric (a plain browser key) is a local-development convenience only. On a shared demo
+    # every payment needs the device's fingerprint / face / PIN check (a passkey), as the DBS brief requires.
+    allow_browser_key = _f("ALLOW_BROWSER_KEY", "0" if _f("PUBLIC_DEMO", "0").lower() in ("1", "true", "yes")
+                           else "1").lower() in ("1", "true", "yes")
     draft_ttl = int(_f("DRAFT_TTL", "600"))
 
     # ---- Tencent Cloud ASR (SentenceRecognition) ----

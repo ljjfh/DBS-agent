@@ -22,7 +22,8 @@ from app.kernel.audit import AuditLog
 from app.kernel.credentials import CredentialRegistry
 from app.kernel.evidence import ground, user_utterances
 from app.kernel.signing import (DEFAULT_SITE, MockAuthenticator, SignatureError, Site, TokenService,
-                                build_challenge, build_settings_challenge, canonical, check_signature, compute_digest)
+                                build_challenge, build_settings_challenge, canonical, check_signature, compute_digest,
+                                BIOMETRIC_REQUIRED, browser_key_allowed)
 from app.kernel.state import Session
 from app.models import Draft, Phase, RiskLevel, fmt_money
 
@@ -52,6 +53,8 @@ class Kernel:
     # ------------------------------------------------------------------ Credentials
     def register_key(self, s: Session, jwk: dict) -> str:
         """Register the browser's public signing key for this session (once). Returns the key id."""
+        if not browser_key_allowed(self.registry):
+            raise KernelError(BIOMETRIC_REQUIRED, "BIOMETRIC_REQUIRED")
         try:
             p256.public_point(jwk)
         except p256.InvalidKey as e:
