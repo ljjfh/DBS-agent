@@ -141,7 +141,8 @@ class Kernel:
             amount_cents=amount_cents, bill_id=bill_id, created_at=now,
             expires_at=now + settings.draft_ttl, nonce=secrets.token_hex(6), taint=taint or [], schedule=schedule)
         bill = self.bank.bill(s.user_id, bill_id) if bill_id else None
-        g = ground(user_utterances(s.messages), target, amount_cents, kind, bill=bill, model_quote=evidence)
+        g = ground(user_utterances(s.messages), target, amount_cents, kind, bill=bill, model_quote=evidence,
+                   accounts=self.bank.accounts(s.user_id), from_account=from_account)
         draft.grounding, draft.you_said = g.as_dict(), g.quote
         draft.digest = compute_digest(draft)
         level = prot.effective(self.bank, s.user_id, now)

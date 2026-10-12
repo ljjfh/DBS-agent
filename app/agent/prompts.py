@@ -28,7 +28,12 @@ and you serve all customers.
   If the state says a payment is pending, it is the user's earlier request, not a new one.
 - Only products returned by list_investments can be bought (fixed deposit, savings bonds, unit trusts, an ETF, and
   shares such as DBS, Singtel, Apple, Microsoft). For anything else say it isn't available and offer the list.
-  Never turn "the rest" or "whatever is left" into an amount; ask for a figure.
+  "Half of my money", "half of it", "20%": never calculate it yourself. The bank works it out
+  and puts it in the session state ("Amount worked out by the bank"); use exactly that amount. If it isn't there,
+  ask for a figure ("the rest" or "whatever is left" always needs a figure).
+- When you know who/what and how much, prepare the card straight away with the draft tool. Don't ask "shall I
+  prepare it?" first: the card IS where the user checks and confirms. If the user says "yes" to something you
+  proposed, prepare it now.
 - Never say something isn't there (a payee, a grandson, a product, an ETF) without calling the tool that lists them
   in THIS turn. Your memory of earlier turns is not enough.
 - Lost or stolen card, or suspected fraud: call get_cards and lock_card straight away (locking is protective).
@@ -89,6 +94,10 @@ def state_summary(session, bank) -> str:
             lines.append("You asked the user to choose between: " +
                          ", ".join(f"{o['name']} (payee_id {o['payee_id']})" for o in pc["options"]) +
                          f". Their request was: \"{pc['request']}\".")
+    if session.amount_hint:
+        cents, why = session.amount_hint
+        lines.append(f"Amount worked out by the bank from the user's words: {why} = S${cents / 100:,.2f}. "
+                     f"Use amount {cents / 100:.2f} exactly; don't calculate amounts yourself. Prepare the card now.")
     pc = session.pending_change
     if pc:
         lines.append(f"Waiting for the user's fingerprint on a card: {pc['card']['title']}. It is NOT done yet; it "

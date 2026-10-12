@@ -361,7 +361,7 @@ class OfflineLLM:
                 return self._say(f"You have {len(hits)} {rel}s saved. Do you mean {opts}?" if rel != "payees"
                                  else f"Which one do you mean: {opts}?")
             payee = hits[0]
-            amount = parse_amount(text)
+            amount = parse_amount(text) or self._bank_amount(messages)
             if amount is None:
                 return self._say(f"How much would you like to send to your {payee['relation']} {payee['name']}?")
             acct = self._account(text, results)
@@ -398,7 +398,7 @@ class OfflineLLM:
                 opts = ", ".join(f"{p['name']} ({p['asset_class']})" for p in (hits or data["products"]))
                 return self._say(f"Which would you like to invest in: {opts}?")
             prod = hits[0]
-            amount = parse_amount(text)
+            amount = parse_amount(text) or self._bank_amount(messages)
             if amount is None:
                 return self._say(f"How much would you like to invest in the {prod['name']}?")
             acct = self._account(text, results)
@@ -483,6 +483,13 @@ class OfflineLLM:
             if m["role"] == "tool":
                 out[names.get(m["tool_call_id"], "?")] = json.loads(m["content"])
         return out
+
+    @staticmethod
+    def _bank_amount(messages: list[dict]) -> float | None:
+        """'Use amount 812.50 exactly' from the session state (a relative amount the bank worked out)."""
+        sysmsg = messages[0]["content"] if messages and messages[0]["role"] == "system" else ""
+        m = re.search(r"Use amount (\d+(?:\.\d+)?) exactly", sysmsg)
+        return float(m.group(1)) if m else None
 
     @staticmethod
     def _last_user(messages: list[dict]) -> str:

@@ -138,7 +138,10 @@ def evaluate(draft: Draft, bank: MockBank, ctx: RuleContext | None = None) -> Ri
 
     # ---- Evidence grounding: the model must not be the only source of the payee / amount ----
     g = ctx.grounding
-    if g is not None and payee is not None:
+    if g is not None and payee is not None and g.amount_source == "derived mismatch":
+        raise_to(RiskLevel.BLOCK, "R53_WRONG_SHARE",
+                 f"You asked for {g.derived}, but this is {fmt_money(draft.amount_cents)}. I won't prepare a different amount.")
+    elif g is not None and payee is not None:
         if not g.payee and not g.amount:
             raise_to(RiskLevel.BLOCK, "R52_NOT_REQUESTED",
                      "I can't find this payment in anything you said, so I won't prepare it.")

@@ -21,7 +21,8 @@ from dataclasses import dataclass, field
 from app.agent import fraud, presenter
 from app.agent.llm import LLMError, OfflineLLM, detect_intent
 from app.agent.prompts import SYSTEM_PROMPT, state_summary
-from app.agent.textparse import money_mentions, parse_amount
+from app.agent.textparse import money_mentions, parse_amount, relative_in
+from app.kernel.evidence import derived_amounts, user_utterances
 from app.agent.tools import ToolGateway
 from app.bank.mock_bank import MockBank
 from app.config import settings
@@ -200,6 +201,13 @@ class Agent:
                 any(t.tier == "draft" for t in self.gateway.available(s)):
             s.verifier_job = verifier.start(s)       # second engine starts now, alongside the ReAct loop
             s.add_trace("verify", f"Independent verifier started in parallel ({verifier.name}); it sees only your words")
+        # "half of my money" / "with half of it" / "whatever is left": the bank's code works the amount out
+        s.amount_hint = None
+        if relative_in(OfflineLLM._effective_text(s.messages)):    # also "Yes" after "that is S$812.50, shall I?"
+            cands = derived_amounts(user_utterances(s.messages), self.bank.accounts(s.user_id), None)
+            if cands:
+                s.amount_hint = cands[0]
+                s.add_trace("evidence", f"Amount worked out by the bank: {cands[0][1]} = {fmt_money(cands[0][0])}")
         history = s.messages[-settings.max_history_turns * 2:]
         draft_before = s.current_draft_id
         change_before = (s.pending_change or {}).get("change_id")

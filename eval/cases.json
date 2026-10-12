@@ -914,5 +914,63 @@
    "change": "add_payee",
    "no_draft": true
   }
+ },
+ {
+  "id": "vague1",
+  "category": "Vague amounts",
+  "turns": [
+   "I want to buy Apple stock with half of my money from my savings account"
+  ],
+  "expect": {
+   "payee_id": "s_aapl",
+   "amount": 1625,
+   "kind": "investment"
+  }
+ },
+ {
+  "id": "vague2",
+  "category": "Vague amounts",
+  "turns": [
+   "Put 20% of my savings into the DBS Income Fund"
+  ],
+  "expect": {
+   "payee_id": "f_income",
+   "amount": 650
+  }
+ },
+ {
+  "id": "vague3",
+  "category": "Vague amounts",
+  "turns": [
+   "Invest whatever is left in DBS shares"
+  ],
+  "expect": {
+   "no_draft": true,
+   "ask": true
+  }
+ },
+ {
+  "id": "joint1",
+  "category": "Vague amounts",
+  "turns": [
+   "Move a grand to my joint account"
+  ],
+  "expect": {
+   "payee_id": "own:JNT-003",
+   "amount": 1000,
+   "from_account": "SAV-001"
+  }
+ },
+ {
+  "id": "joint2",
+  "category": "Vague amounts",
+  "turns": [
+   "Send 80 to my daughter from our joint account"
+  ],
+  "expect": {
+   "payee_id": "p_daughter",
+   "amount": 80,
+   "from_account": "JNT-003"
+  }
  }
 ]

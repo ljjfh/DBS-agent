@@ -55,7 +55,8 @@ def build_card(d: Draft, bank: MockBank, phase: Phase) -> dict:
         "title": ("Confirm regular transfer" if sched else "Move money between your accounts" if own else
                   {"transfer": "Confirm transfer", "bill": "Confirm bill payment", "investment": "Confirm investment"}[d.kind]),
         "schedule": sched.get("label", ""),
-        "amount_note": (("minimum payment due" if d.amount_cents == bill.get("min_due_cents") else
+        "amount_note": (f"{d.grounding['derived']}, worked out by the bank" if d.grounding.get("amount_source") == "derived"
+                        else ("minimum payment due" if d.amount_cents == bill.get("min_due_cents") else
                          "full statement balance" if d.amount_cents == bill["amount_cents"] else
                          f"part of your statement of {fmt_money(bill['amount_cents'])}")
                         if bill and "min_due_cents" in bill else ""),

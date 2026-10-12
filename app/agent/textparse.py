@@ -87,6 +87,8 @@ def parse_amount(text: str) -> float | None:
     """Extract an amount (SGD) from one sentence. Returns None if there isn't one. Never guesses."""
     for m in _MONEY_RE.finditer(text):
         digits, cents, unit = m.group(1), m.group(2), (m.group(3) or "").lower()
+        if is_percent(text, m.end(1) + (len(cents) + 1 if cents else 0)):
+            continue                                  # "20%" is a share, not S$20
         # Skip long numbers that look like account numbers, phone numbers or dates
         raw = digits.replace(",", "")
         if len(raw) >= 7 and not unit:
@@ -118,6 +120,10 @@ def parse_amount(text: str) -> float | None:
     return None
 
 
+def is_percent(text: str, end: int) -> bool:
+    return bool(re.match(r"\s?(%|per ?cent\b|percent\b)", text[end:], re.I))
+
+
 def find_raw_account(text: str) -> str | None:
     m = re.search(r"(?<!\d)(\d[\d\- ]{6,}\d)(?!\d)", text)
     if not m:
@@ -126,17 +132,20 @@ def find_raw_account(text: str) -> str | None:
     return digits if len(digits) >= 7 else None
 
 
-_ACCOUNT_RE = re.compile(r"\b(current|savings?)\s+(account|acct|a/c)\b|\bfrom (?:my |the )?(current|savings?)\b", re.I)
+_ACCOUNT_RE = re.compile(r"\b(current|savings?|joint)\s+(account|acct|a/c)\b|\bfrom (?:my |the |our )?(current|savings?|joint)\b",
+                         re.I)
 
 
 def find_account(text: str) -> str | None:
     """Which of the customer's accounts they named ("from my current account"), as words; None if not said.
     ("savings bonds" is a product, not the savings account.)"""
-    m = _ACCOUNT_RE.search(text)
-    if not m:
-        return None
-    word = (m.group(1) or m.group(3)).lower()
-    return "current account" if word == "current" else "savings account"
+    for m in _ACCOUNT_RE.finditer(text):
+        # "to my joint account" is where the money goes, not where it comes from
+        if re.search(r"\b(?:to|into)\s+(?:my |our |the )?$", text[:m.start()], re.I):
+            continue
+        word = (m.group(1) or m.group(3)).lower()
+        return {"current": "current account", "joint": "joint account"}.get(word, "savings account")
+    return None
 
 
 def account_id_for(phrase: str | None, accounts: list[dict]) -> str | None:
@@ -239,3 +248,33 @@ def repeat_day_in(text: str, frequency: str | None) -> int | None:
         d = int(m.group(1) or m.group(2))
         return d if 1 <= d <= 31 else None
     return None
+
+
+# ---------------------------------------------------------------- Relative amounts ("half of my money")
+# These are computed by the bank's code, never by the model: the model is bad at arithmetic and a wrong share of
+# someone's savings is exactly the mistake that must not reach the confirmation card.
+_RELATIVE = [
+    (re.compile(r"\btwo[- ]thirds?\b", re.I), 2 / 3, "two thirds"),
+    (re.compile(r"\b(?:a |one )?third\b", re.I), 1 / 3, "a third"),
+    (re.compile(r"\b(?:a |one )?quarter\b", re.I), 1 / 4, "a quarter"),
+    (re.compile(r"\bhalf\b", re.I), 1 / 2, "half"),
+    # "the rest" / "whatever is left" are NOT here: the rest of what is unclear, so the agent asks how much
+    (re.compile(r"\ball (?:of )?(?:my|the|our) (?:money|savings|balance|cash)\b|\beverything (?:in|from) (?:my|the)\b|"
+                r"\bthe whole (?:amount|balance)\b|\ball of it\b", re.I), 1.0, "all"),
+]
+_PERCENT = re.compile(r"\b(\d{1,2}(?:\.\d)?)\s?(?:%|per ?cent\b)", re.I)
+_OF_IT = re.compile(r"\b(?:of|with) (?:it|that|this)\b|\bhalf (?:of )?(?:it|that)\b", re.I)
+
+
+def relative_in(text: str) -> tuple[float, str, str] | None:
+    """('half of my money') -> (0.5, 'half', 'balance'); ('with half of it') -> (0.5, 'half', 'it'); else None.
+    Only when the sentence has no plain amount of its own (then the plain amount wins)."""
+    m = _PERCENT.search(text)
+    hit = (float(m.group(1)) / 100, f"{m.group(1)}%") if m else next(
+        ((frac, label) for rx, frac, label in _RELATIVE if rx.search(text)), None)
+    if not hit:
+        return None
+    base = "it" if _OF_IT.search(text) else "balance"
+    if base == "balance" and parse_amount(_PERCENT.sub("", text)):
+        return None                               # "send 200 to my son and half to..." -> handled by the plan
+    return hit[0], hit[1], base

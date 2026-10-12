@@ -53,6 +53,7 @@ class Session:
     passkey_reg: dict | None = None                          # pending passkey registration challenge
     pending_choice: dict | None = None                       # "which one?" we just asked: request + candidate payees
     pending_change: dict | None = None                       # signed account change waiting for the fingerprint
+    amount_hint: tuple | None = None                         # (cents, "half of your Savings Account (S$...)") this turn
     created_at: float = field(default_factory=time.time)
 
     # ---------- State machine ----------

@@ -224,3 +224,60 @@ class TestNoFalseClaims(ApiBase):
         r = Agent(self.bank, self.gw, self.audit, _ClaimsItsDone()).run_turn(self.s, "Yes, that's right")
         self.assertIn("Nothing has changed yet", r.reply)
         self.assertFalse(any(p["name"] == "John Tan" for p in self.bank.payees("u_chen")))
+
+
+class TestVagueAmounts(ApiBase):
+    """"Half of my money", "20% of my savings", "half of it": the bank computes the amount, never the model."""
+
+    def test_half_of_my_money(self):
+        r = self.turn("I want to buy Apple stock with half of my money from my savings account")
+        d = self.s.current_draft
+        self.assertEqual((d.payee_id, d.amount_cents, d.grounding["amount_source"]), ("s_aapl", 162500, "derived"))
+        self.assertIn("half of your Savings Account", r.ui["card"]["amount_note"])
+
+    def test_percent_of_savings(self):
+        self.turn("Put 20% of my savings into the DBS Income Fund")
+        d = self.s.current_draft
+        self.assertEqual((d.payee_id, d.amount_cents, d.grounding["amount_source"]), ("f_income", 65000, "derived"))
+
+    def test_wrong_share_is_blocked(self):
+        # the live model once used the whole balance for "half of my money"
+        d = self.model_drafts("buy Apple shares with half of my money", "draft_investment",
+                              {"product_id": "s_aapl", "amount": 3250})
+        self.assertEqual(d.grounding["amount_source"], "derived mismatch")
+        self.assertIn("R53_WRONG_SHARE", d.risk.rule_hits)
+        self.assertEqual(d.risk.level, RiskLevel.BLOCK)
+
+    def test_half_of_it_uses_the_amount_just_said(self):
+        self.turn("Move a grand to my joint account")
+        self.assertEqual(self.s.current_draft.amount_cents, 100000)
+        self.pay()
+        self.turn("Now buy DBS shares with half of it from my joint account")
+        d = self.s.current_draft
+        self.assertEqual((d.payee_id, d.amount_cents, d.from_account), ("s_d05", 50000, "JNT-003"))
+        self.assertEqual(d.grounding["amount_source"], "derived")
+
+    def test_yes_after_a_proposal_prepares_the_card(self):
+        self.s.amount_hint = None
+        self.s.messages.append({"role": "user", "content": "Can I buy Apple stock with half of my money?"})
+        self.s.messages.append({"role": "assistant", "content": "Half of your Savings Account is S$1,625.00. "
+                                                                 "Shall I prepare it?"})
+        r = self.turn("Yes, that's right.")
+        self.assertIn(r.ui["type"], ("confirm", "cooldown"))          # a card, not more talk
+        self.assertEqual(self.s.current_draft.amount_cents, 162500)
+
+
+class TestJointAccount(ApiBase):
+    def test_to_joint_is_destination_not_source(self):
+        from app.agent.textparse import find_account
+        self.assertIsNone(find_account("Move a grand to my joint account"))
+        self.assertEqual(find_account("pay from our joint account"), "joint account")
+        self.assertEqual(find_account("Send 50 to my daughter from my current account"), "current account")
+
+    def test_pay_from_joint_account(self):
+        self.turn("Send 80 to my daughter from my joint account")
+        d = self.s.current_draft
+        self.assertEqual((d.payee_id, d.from_account), ("p_daughter", "JNT-003"))
+        jnt = self.bal("JNT-003")
+        self.pay()
+        self.assertEqual(self.bal("JNT-003"), jnt - 8000)
