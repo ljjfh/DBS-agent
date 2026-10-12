@@ -293,3 +293,25 @@ class TestNamedAccountDefault(ApiBase):
     def test_to_my_joint_is_not_the_source(self):
         d = self.model_drafts("Move 100 to my joint account", "draft_transfer", {"payee_id": "own:JNT-003", "amount": 100})
         self.assertNotEqual(d.from_account, "JNT-003")
+
+
+class TestSpeechSlips(ApiBase):
+    """Seen live: "a grand" came through speech recognition as "a grant", "a grind" and even "Agree!"."""
+
+    def test_a_grant_is_a_grand(self):
+        r = self.turn("I want to move a grant to my joint account.")
+        d = self.s.current_draft
+        self.assertEqual((d.payee_id, d.amount_cents), ("own:JNT-003", 100000))
+        self.assertIn("“a grant”", r.ui["card"]["amount_note"])
+        self.assertTrue(any("Speech fix" in t["label"] for t in self.s.trace if t["kind"] == "evidence"))
+
+    def test_agree_as_the_answer_to_how_much(self):
+        r = self.turn("I want to move money to my joint account")
+        self.assertIn("how much", r.reply.lower())
+        self.turn("Agree!")
+        self.assertEqual(self.s.current_draft.amount_cents, 100000)
+
+    def test_real_grants_are_left_alone(self):
+        from app.agent.textparse import fix_asr
+        for t in ("I got a grant from the government", "Can I apply for a grant?", "Pay my grandson 50", "Agree!"):
+            self.assertEqual(fix_asr(t)[0], t)

@@ -56,6 +56,9 @@ offered when the conversation is about them.
 then buy DBS shares with half of it": the bank's code works the amount out from the real balance (or the amount just
 said) and gives it to the model; the card says how it was worked out. If the model uses any other number, rule
 R53 blocks the card. "The rest" / "whatever is left" is never guessed: the agent asks for a figure.
+Speech slips on amounts ("a grant" / "a grind" for "a grand", or "Agree!" as the answer to "how much?") are fixed
+by code, logged in the trace and shown on the card ("we heard “a grant” and read it as “a grand”"); money words
+are also sent to Tencent ASR as hotwords.
 
 ## Running it
 
@@ -80,7 +83,7 @@ a time with tap-to-answer choices, replies read aloud slowly, and a bigger confi
 words. Settings also has "Larger text", "Read replies aloud" and "Reset demo".
 
 ```bash
-python -m unittest discover tests     # 188 tests (kernel, passkeys, verifier, gateway, protection, Harness, HTTP)
+python -m unittest discover tests     # 191 tests (kernel, passkeys, verifier, gateway, protection, Harness, HTTP)
 python -m app.lab                    # security lab: 22 real attacks on an isolated sandbox
 python eval/run_eval.py               # core + hard suites + attack tests -> eval/report.md / .json / .html
 python eval/run_eval.py --compare --repeat 3   # the headline run: rules-only baseline vs LLM agent, 3x each

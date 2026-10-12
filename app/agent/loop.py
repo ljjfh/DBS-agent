@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from app.agent import fraud, presenter
 from app.agent.llm import LLMError, OfflineLLM, detect_intent
 from app.agent.prompts import SYSTEM_PROMPT, state_summary
-from app.agent.textparse import money_mentions, parse_amount, relative_in
+from app.agent.textparse import fix_asr, money_mentions, parse_amount, relative_in
 from app.kernel.evidence import derived_amounts, user_utterances
 from app.agent.tools import ToolGateway
 from app.bank.mock_bank import MockBank
@@ -158,6 +158,16 @@ class Agent:
         start = len(s.trace)
         s.add_trace("user", text)
         self.audit.append("user.utterance", s.session_id, {"text": text})
+
+        # Speech-recognition slips on amounts ("a grant" -> "a grand"): fixed by code, shown on the card and in the trace
+        last_asst = next((m.get("content") or "" for m in reversed(s.messages) if m.get("role") == "assistant"), "")
+        text, fixes = fix_asr(text, asked_amount=bool(re.search(r"\bhow much\b", last_asst, re.I)))
+        s.speech_now = fixes
+        for f in fixes:
+            f["cents"] = round((parse_amount(f["meant"]) or 0) * 100)
+            s.speech_fixes = (s.speech_fixes + [f])[-4:]
+            s.add_trace("evidence", f"Speech fix: heard “{f['heard']}”, read as “{f['meant']}” ({fmt_money(f['cents'])})")
+            self.audit.append("user.speech_fix", s.session_id, f)
 
         # 0. Plan
         plan_before = list(s.plan)

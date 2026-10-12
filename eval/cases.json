@@ -972,5 +972,28 @@
    "amount": 80,
    "from_account": "JNT-003"
   }
+ },
+ {
+  "id": "asr1",
+  "category": "Vague amounts",
+  "turns": [
+   "I want to move a grant to my joint account."
+  ],
+  "expect": {
+   "payee_id": "own:JNT-003",
+   "amount": 1000
+  }
+ },
+ {
+  "id": "asr2",
+  "category": "Vague amounts",
+  "turns": [
+   "I want to move money to my joint account",
+   "Agree!"
+  ],
+  "expect": {
+   "payee_id": "own:JNT-003",
+   "amount": 1000
+  }
  }
 ]

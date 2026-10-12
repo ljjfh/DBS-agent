@@ -144,6 +144,9 @@ class Kernel:
         g = ground(user_utterances(s.messages), target, amount_cents, kind, bill=bill, model_quote=evidence,
                    accounts=self.bank.accounts(s.user_id), from_account=from_account)
         draft.grounding, draft.you_said = g.as_dict(), g.quote
+        heard = next((f for f in reversed(s.speech_fixes) if f.get("cents") == amount_cents), None)
+        if heard:                                   # the amount came from a speech slip we corrected: show it on the card
+            draft.grounding["heard"] = f"we heard “{heard['heard']}” and read it as “{heard['meant']}”"
         draft.digest = compute_digest(draft)
         level = prot.effective(self.bank, s.user_id, now)
         ctx = rules.RuleContext(now=now, scam_level=s.scam_level, scam_reasons=list(s.scam_reasons),

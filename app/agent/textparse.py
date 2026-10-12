@@ -278,3 +278,29 @@ def relative_in(text: str) -> tuple[float, str, str] | None:
     if base == "balance" and parse_amount(_PERCENT.sub("", text)):
         return None                               # "send 200 to my son and half to..." -> handled by the plan
     return hit[0], hit[1], base
+
+
+# ---------------------------------------------------------------- speech-recognition slips on amounts
+# "a grand" is often heard as "a grant" / "a grind"; as a whole answer to "how much?", even as "Agree" / "a green".
+# Only fixed where it can only mean money, and the card always shows (and reads out) the amount for the user to check.
+_COUNT = r"(a|one|two|three|four|five|six|seven|eight|nine|ten|\d{1,3})"
+_GRAND_SLIP = re.compile(rf"\b{_COUNT}\s+(grant|grants|grind|grinds|gran|grain|grains|grond)\b(?!\s+(?:from|for|of|to apply|application|scheme)\b)", re.I)
+_MONEY_VERB = re.compile(r"\b(move|moving|send|sending|transfer|put|invest|pay|give|top ?up|buy|withdraw|deposit|"
+                         r"how about|make it)\b", re.I)
+_ANSWER_SLIP = re.compile(r"^\s*(agree|a green|a grin|a gran|a grant|a grind|a grain|uh grand|ah grand)\s*[.!]*\s*$", re.I)
+
+
+def fix_asr(text: str, asked_amount: bool = False) -> tuple[str, list[dict]]:
+    """Fix speech-recognition slips on amounts. Returns (fixed text, [{"heard", "meant"}]); unchanged if unsure."""
+    fixes: list[dict] = []
+    if asked_amount and _ANSWER_SLIP.match(text):
+        heard = text.strip().rstrip(".!")
+        return "a grand", [{"heard": heard, "meant": "a grand"}]
+    if not (_MONEY_VERB.search(text) or asked_amount):
+        return text, fixes
+
+    def sub(m):
+        meant = f"{m.group(1)} grand"
+        fixes.append({"heard": m.group(0), "meant": meant})
+        return meant
+    return _GRAND_SLIP.sub(sub, text), fixes
