@@ -152,6 +152,12 @@ def match_payees(text: str, payees: list[dict]) -> list[dict]:
     hits = []
     for p in payees:
         names = [p["name"].lower(), *[a.lower() for a in p.get("aliases", [])]]
+        if p.get("type") == "own":
+            # The customer's own account is a destination only after "to" / "into" ("from my savings" is the source)
+            if any(n and re.search(rf"\b(?:to|into)\s+(?:my\s+|our\s+|the\s+)?{re.escape(n)}(?![a-z])", low)
+                   for n in names):
+                hits.append(p)
+            continue
         if any(n and re.search(rf"(?<![a-z]){re.escape(n)}(?![a-z])", low) for n in names):
             hits.append(p)
     if len(hits) > 1:
@@ -210,3 +216,26 @@ def money_mentions(text: str) -> list[float]:
     for m in re.finditer(r"(?:S?\$)\s*(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?", text):
         vals.append(float(m.group(1).replace(",", "") + (f".{m.group(2)}" if m.group(2) else "")))
     return vals
+
+
+# ---------------------------------------------------------------- Repeating payments
+_FREQ = [(re.compile(r"\bevery (single )?month\b|\bmonthly\b|\beach month\b|\bper month\b", re.I), "monthly"),
+         (re.compile(r"\bevery (single )?week\b|\bweekly\b|\beach week\b", re.I), "weekly")]
+_WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+
+
+def frequency_in(text: str) -> str | None:
+    """'every month' -> 'monthly', 'weekly' -> 'weekly', a one-off -> None."""
+    return next((f for rx, f in _FREQ if rx.search(text)), None)
+
+
+def repeat_day_in(text: str, frequency: str | None) -> int | None:
+    """'on the 1st' -> 1 (monthly); 'every Friday' -> 5 (weekly); None if not said."""
+    low = text.lower()
+    if frequency == "weekly":
+        return next((i + 1 for i, d in enumerate(_WEEKDAYS) if re.search(rf"\b{d}s?\b", low)), None)
+    m = re.search(r"\b(?:on the|on|every)\s+(\d{1,2})(?:st|nd|rd|th)\b|\bthe (\d{1,2})(?:st|nd|rd|th)\b", low)
+    if m:
+        d = int(m.group(1) or m.group(2))
+        return d if 1 <= d <= 31 else None
+    return None

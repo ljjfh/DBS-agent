@@ -17,6 +17,7 @@ from app.bank.gateway import ExecutionGateway, GatewayError
 from app.bank.mock_bank import MockBank
 from app.config import settings
 from app.kernel import crosscheck, p256, rules, webauthn
+from app.kernel import changes
 from app.kernel import protection as prot
 from app.kernel.audit import AuditLog
 from app.kernel.credentials import CredentialRegistry
@@ -121,7 +122,7 @@ class Kernel:
     def create_draft(self, s: Session, *, kind: str, payee_id: str, amount_cents: int,
                      from_account: str | None = None, bill_id: str | None = None,
                      taint: list[str] | None = None, local_hour: int | None = None,
-                     evidence: str = "", verification: dict | None = None) -> Draft:
+                     evidence: str = "", verification: dict | None = None, schedule: dict | None = None) -> Draft:
         s.settle()
         if s.phase != Phase.IDLE:
             raise KernelError("There is already a payment waiting for confirmation. Please confirm or cancel it first.", "PENDING_DRAFT")
@@ -138,7 +139,7 @@ class Kernel:
             draft_id="d_" + uuid.uuid4().hex[:10], user_id=s.user_id, kind=kind,
             from_account=from_account, payee_id=payee_id, payee_name=name, asset_class=asset,
             amount_cents=amount_cents, bill_id=bill_id, created_at=now,
-            expires_at=now + settings.draft_ttl, nonce=secrets.token_hex(6), taint=taint or [])
+            expires_at=now + settings.draft_ttl, nonce=secrets.token_hex(6), taint=taint or [], schedule=schedule)
         bill = self.bank.bill(s.user_id, bill_id) if bill_id else None
         g = ground(user_utterances(s.messages), target, amount_cents, kind, bill=bill, model_quote=evidence)
         draft.grounding, draft.you_said = g.as_dict(), g.quote
@@ -336,6 +337,34 @@ class Kernel:
                           {"effective_at": st["pending"]["effective_at"] if st["pending"] else None,
                            "method": rec["method"], "key_id": rec["key_id"]})
         return st
+
+    # ------------------------------------------------------------------ Account changes (kernel/changes.py)
+    def _wrap(self, fn, *a):
+        try:
+            return fn(self, *a)
+        except changes.ChangeError as e:
+            raise KernelError(str(e), e.code) from e
+
+    def request_change(self, s: Session, kind: str, data: dict, evidence: str = "") -> dict:
+        return self._wrap(changes.request, s, kind, data, evidence)
+
+    def change_challenge(self, s: Session, change_id: str) -> str:
+        return self._wrap(changes.challenge, s, change_id)
+
+    def apply_change(self, s: Session, change_id: str, assertion, site: Site = DEFAULT_SITE) -> dict:
+        return self._wrap(changes.apply, s, change_id, assertion, site)
+
+    def cancel_change(self, s: Session, change_id: str) -> None:
+        return self._wrap(changes.cancel, s, change_id)
+
+    def lower_limit(self, s: Session, cents: int) -> dict:
+        return self._wrap(changes.lower_limit, s, cents)
+
+    def cancel_standing_instruction(self, s: Session, si_id: str) -> dict:
+        return self._wrap(changes.cancel_standing_instruction, s, si_id)
+
+    def cancel_giro(self, s: Session, giro_id: str) -> dict:
+        return self._wrap(changes.cancel_giro, s, giro_id)
 
     # ------------------------------------------------------------------ Cancel
     def cancel(self, s: Session, draft_id: str, reason: str = "user") -> None:

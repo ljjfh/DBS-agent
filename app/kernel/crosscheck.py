@@ -140,4 +140,18 @@ def compare(draft: Draft, extracted: dict, bank) -> dict:
     else:
         fields["from_account"] = "not stated"
 
+    # ---- One-off or repeating (standing instruction): the agent must never turn one into the other
+    said_freq = str(ex.get("frequency") or "").lower().strip()
+    said_freq = said_freq if said_freq in ("monthly", "weekly") else ""
+    have_freq = (draft.schedule or {}).get("frequency", "")
+    if said_freq or have_freq:
+        ok = said_freq == have_freq
+        fields["schedule"] = "match" if ok else "mismatch"
+        if not ok:
+            why.append(f"Repeat: you asked for a {said_freq} payment, but this is a one-off." if said_freq and not have_freq
+                       else f"Repeat: this sets up a {have_freq} payment, but you didn't ask for a repeating one."
+                       if not said_freq else f"Repeat: you asked for {said_freq}, but this is {have_freq}.")
+    else:
+        fields["schedule"] = "not stated"
+
     return {"status": "mismatch" if why else "match", "fields": fields, "mismatches": why}

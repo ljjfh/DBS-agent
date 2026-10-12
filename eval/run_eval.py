@@ -167,6 +167,12 @@ def run_case(case: dict, stats: dict, verbose: bool = False) -> dict:
             check("warns", WARN_RX.search(" ".join(replies)), result.reply)
         if exp.get("no_false_claim"):
             check("no_false_claim", not DONE_RX.search(result.reply), result.reply)
+        if "schedule" in exp:            # standing instruction: one-off (null) or monthly / weekly
+            got = (d.schedule or {}).get("frequency") if d else None
+            check("schedule", got == exp["schedule"], got)
+        if "change" in exp:              # signed account change requested (add_payee / raise_limit / giro_setup)
+            got = (s.pending_change or {}).get("kind")
+            check("change", got == exp["change"], got)
         if "plan_len" in exp:
             check("plan_len", len(s.plan) == exp["plan_len"], s.plan)
     # Hard metric: the Agent on its own can never move money

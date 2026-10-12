@@ -21,9 +21,37 @@ _WORLD = {
             "risk_profile": {"label": "Conservative", "max_product_risk": 2},
             # Protection level is an ACCOUNT setting, not a screen setting (see kernel/protection.py)
             "protection": {"level": "enhanced", "pending": None},
+            # DBS Deposit API: savings, current and a joint account (with her daughter)
             "accounts": [
-                {"account_id": "SAV-001", "name": "Savings Account", "balance_cents": 325000, "currency": "SGD"},
-                {"account_id": "CUR-002", "name": "Current Account", "balance_cents": 82000, "currency": "SGD"},
+                {"account_id": "SAV-001", "name": "Savings Account", "balance_cents": 325000, "currency": "SGD",
+                 "type": "savings", "product": "POSB Passbook Savings", "masked": "POSB ••••3307",
+                 "interest_pct": 0.05, "holders": ["Mdm Chen"]},
+                {"account_id": "CUR-002", "name": "Current Account", "balance_cents": 82000, "currency": "SGD",
+                 "type": "current", "product": "DBS Current Account", "masked": "DBS ••••7712",
+                 "interest_pct": 0.0, "holders": ["Mdm Chen"]},
+                {"account_id": "JNT-003", "name": "Joint Account", "balance_cents": 150000, "currency": "SGD",
+                 "type": "joint", "product": "DBS Multiplier (joint)", "masked": "DBS ••••0451",
+                 "interest_pct": 0.08, "holders": ["Mdm Chen", "Chen Mei Ling"]},
+            ],
+            # DBS Limits API: daily limit for transfers to other people (own-account moves and bills don't count)
+            "limits": {"daily_transfer_cents": 300000, "pending": None},
+            # DBS Standing Instructions API: scheduled transfers to saved payees
+            "standing_instructions": [
+                {"si_id": "SI-0001", "payee_id": "p_daughter", "amount_cents": 20000, "frequency": "monthly",
+                 "day": 28, "from_account": "SAV-001", "next_date": "2026-10-28", "status": "active",
+                 "description": "Monthly allowance to Chen Mei Ling"},
+            ],
+            # DBS GIRO API: billing organisations allowed to deduct automatically
+            "giro": [
+                {"giro_id": "GIRO-01", "biller": "StarHub Mobile", "aliases": ["starhub", "mobile", "phone bill", "handphone"],
+                 "reference": "••••8821", "limit_cents": 8000, "frequency": "monthly", "from_account": "SAV-001",
+                 "last_deduction": "2026-09-15 · S$42.90", "status": "active"},
+                {"giro_id": "GIRO-02", "biller": "ActiveSG Gym", "aliases": ["gym", "activesg", "active sg", "fitness"],
+                 "reference": "••••1190", "limit_cents": 3000, "frequency": "monthly", "from_account": "SAV-001",
+                 "last_deduction": "2026-10-01 · S$25.00", "status": "active"},
+                {"giro_id": "GIRO-03", "biller": "Income Insurance", "aliases": ["income insurance", "insurance", "ntuc income"],
+                 "reference": "••••5536", "limit_cents": 15000, "frequency": "monthly", "from_account": "SAV-001",
+                 "last_deduction": "2026-10-05 · S$118.40", "status": "active"},
             ],
             "payees": [
                 {"payee_id": "p_daughter", "name": "Chen Mei Ling", "relation": "daughter", "type": "person",
@@ -43,12 +71,18 @@ _WORLD = {
                 {"payee_id": "p_tc", "name": "Bukit Timah Town Council", "relation": "bill", "type": "biller",
                  "aliases": ["s&cc", "town council", "conservancy"],
                  "masked_account": "Bill no. ••••0718"},
+                {"payee_id": "p_cc", "name": "DBS Cards", "relation": "bill", "type": "biller",
+                 "aliases": ["credit card", "card bill", "live fresh", "credit card bill"],
+                 "masked_account": "Live Fresh Card ••••3304"},
             ],
             "bills": [
                 {"bill_id": "b_sp_oct", "payee_id": "p_sp", "title": "October utilities bill",
                  "amount_cents": 8640, "due": "2026-10-20", "status": "unpaid"},
                 {"bill_id": "b_tc_oct", "payee_id": "p_tc", "title": "October town council charges (S&CC)",
                  "amount_cents": 4200, "due": "2026-10-31", "status": "unpaid"},
+                # Credit card: pay the full statement, the minimum, or an amount in between (DBS Bill Payments API)
+                {"bill_id": "b_cc_oct", "payee_id": "p_cc", "title": "DBS Live Fresh Card statement",
+                 "amount_cents": 124050, "min_due_cents": 5000, "due": "2026-10-25", "status": "unpaid"},
             ],
             # units x current demo price = value; cost = what was paid
             "holdings": [
@@ -162,8 +196,18 @@ class MockBank:
     def account(self, user_id: str, account_id: str) -> dict | None:
         return next((a for a in self.accounts(user_id) if a["account_id"] == account_id), None)
 
+    _OWN_ALIASES = {"savings": ["savings account", "my savings account", "my savings"],
+                    "current": ["current account", "my current account"],
+                    "joint": ["joint account", "my joint account", "joint acc", "joint"]}
+
+    def own_accounts_as_payees(self, user_id: str) -> list[dict]:
+        """The customer's own accounts as transfer targets (DBS Fund Transfer API: own-account transfers)."""
+        return [{"payee_id": f"own:{a['account_id']}", "name": a["name"], "relation": "own account", "type": "own",
+                 "aliases": self._OWN_ALIASES.get(a.get("type", ""), []), "masked_account": a.get("masked", ""),
+                 "account_id": a["account_id"]} for a in self.accounts(user_id)]
+
     def payees(self, user_id: str) -> list[dict]:
-        return self.user(user_id)["payees"]
+        return self.user(user_id)["payees"] + self.own_accounts_as_payees(user_id)
 
     def payee(self, user_id: str, payee_id: str) -> dict | None:
         return next((p for p in self.payees(user_id) if p["payee_id"] == payee_id), None)
@@ -177,6 +221,28 @@ class MockBank:
 
     def transactions(self, user_id: str, limit: int = 10) -> list[dict]:
         return self.user(user_id)["transactions"][:limit]
+
+    def limits(self, user_id: str) -> dict:
+        lim = self.user(user_id)["limits"]
+        p = lim.get("pending")
+        if p and p["effective_at"] <= time.time():          # a scheduled raise takes effect
+            lim["daily_transfer_cents"], lim["pending"] = p["to_cents"], None
+        return lim
+
+    def transferred_today(self, user_id: str) -> int:
+        """Sum of today's transfers to other people (what the daily limit counts)."""
+        today = time.strftime("%Y-%m-%d")
+        own = {f"own:{a['account_id']}" for a in self.accounts(user_id)}
+        people = {p["payee_id"] for p in self.user(user_id)["payees"] if p["type"] == "person"}
+        return sum(-t["amount_cents"] for t in self.user(user_id)["transactions"]
+                   if t["date"] == today and t["amount_cents"] < 0 and t.get("payee_id") in people
+                   and t.get("payee_id") not in own)
+
+    def standing_instructions(self, user_id: str) -> list[dict]:
+        return self.user(user_id)["standing_instructions"]
+
+    def giro(self, user_id: str) -> list[dict]:
+        return self.user(user_id)["giro"]
 
     def payee_history(self, user_id: str, payee_id: str) -> list[int]:
         """Past amounts paid to this payee (positive, in cents). Used by the risk rules; never shown to the model."""
@@ -265,12 +331,22 @@ class MockBank:
                 raise ValueError("Insufficient balance")
             payee = self.payee(user_id, payee_id)
             acct["balance_cents"] -= amount_cents
-            self.user(user_id)["transactions"].insert(0, {
-                "date": time.strftime("%Y-%m-%d"), "desc": f"Transfer to {payee['name']}" if payee["type"] == "person"
+            today = time.strftime("%Y-%m-%d")
+            txns = self.user(user_id)["transactions"]
+            if payee["type"] == "own":                       # own-account transfer: the money arrives in the other account
+                self.account(user_id, payee["account_id"])["balance_cents"] += amount_cents
+                txns.insert(0, {"date": today, "desc": f"From {acct['name']}", "amount_cents": amount_cents,
+                                "payee_id": None})
+            txns.insert(0, {
+                "date": today, "desc": f"Transfer to {payee['name']}" if payee["type"] in ("person", "own")
                 else payee["name"], "amount_cents": -amount_cents, "payee_id": payee_id})
             if bill_id:
                 b = self.bill(user_id, bill_id)
-                if b:
+                if b and "min_due_cents" in b and amount_cents < b["amount_cents"]:
+                    b["amount_cents"] -= amount_cents              # card bill paid in part: the rest stays due
+                    b["min_due_cents"] = 0
+                    b["paid_cents"] = b.get("paid_cents", 0) + amount_cents
+                elif b:
                     b["status"] = "paid"
             receipt = {"txn_id": "TXN-" + uuid.uuid4().hex[:10].upper(), "status": "SUCCESS",
                        "amount_cents": amount_cents, "payee_id": payee_id,
@@ -278,6 +354,68 @@ class MockBank:
             self.executed[idempotency_key] = receipt
             self.recent_exec_times.setdefault(user_id, []).append(time.time())
             return receipt
+
+    def create_standing_instruction(self, user_id: str, from_account: str, payee_id: str, amount_cents: int,
+                                    schedule: dict, idempotency_key: str) -> dict:
+        """Set up a scheduled transfer (DBS Standing Instructions API). No money moves until the first date."""
+        with self._lock:
+            if idempotency_key in self.executed:
+                return {**self.executed[idempotency_key], "idempotent_replay": True}
+            payee = self.payee(user_id, payee_id)
+            if payee is None or self.account(user_id, from_account) is None:
+                raise ValueError("Payee or account not found")
+            si = {"si_id": "SI-" + uuid.uuid4().hex[:4].upper(), "payee_id": payee_id, "amount_cents": amount_cents,
+                  "frequency": schedule["frequency"], "day": schedule["day"], "from_account": from_account,
+                  "next_date": schedule["first_date"], "status": "active",
+                  "description": f"{schedule['frequency'].capitalize()} transfer to {payee['name']}"}
+            self.standing_instructions(user_id).append(si)
+            receipt = {"txn_id": si["si_id"], "status": "SCHEDULED", "amount_cents": amount_cents, "payee_id": payee_id,
+                       "first_date": si["next_date"], "balance_after_cents": self.account(user_id, from_account)["balance_cents"],
+                       "executed_at": time.time()}
+            self.executed[idempotency_key] = receipt
+            return receipt
+
+    # Protective and signed account changes (called by the kernel only)
+    def cancel_standing_instruction(self, user_id: str, si_id: str) -> dict:
+        with self._lock:
+            si = next((x for x in self.standing_instructions(user_id) if x["si_id"] == si_id), None)
+            if si is None:
+                raise ValueError("Standing instruction not found")
+            si["status"] = "cancelled"
+            return dict(si)
+
+    def cancel_giro(self, user_id: str, giro_id: str) -> dict:
+        with self._lock:
+            g = next((x for x in self.giro(user_id) if x["giro_id"] == giro_id), None)
+            if g is None:
+                raise ValueError("GIRO arrangement not found")
+            g["status"] = "cancelled"
+            return dict(g)
+
+    def add_giro(self, user_id: str, biller: str, aliases: list[str], limit_cents: int | None, from_account: str) -> dict:
+        with self._lock:
+            g = {"giro_id": "GIRO-" + uuid.uuid4().hex[:3].upper(), "biller": biller, "aliases": aliases,
+                 "reference": "pending", "limit_cents": limit_cents, "frequency": "per bill", "from_account": from_account,
+                 "last_deduction": "none yet", "status": "pending approval"}
+            self.giro(user_id).append(g)
+            return dict(g)
+
+    def add_payee(self, user_id: str, name: str, bank_name: str, account_number: str, relation: str) -> dict:
+        with self._lock:
+            p = {"payee_id": "p_" + uuid.uuid4().hex[:6], "name": name, "relation": relation or "payee",
+                 "type": "person", "aliases": [name.lower(), *([relation.lower()] if relation else [])],
+                 "masked_account": f"{bank_name} ••••{account_number[-4:]}", "added_at": time.time()}
+            self.user(user_id)["payees"].append(p)
+            return dict(p)
+
+    def set_daily_limit(self, user_id: str, cents: int, effective_at: float | None = None) -> dict:
+        with self._lock:
+            lim = self.user(user_id)["limits"]
+            if effective_at is None:
+                lim["daily_transfer_cents"], lim["pending"] = cents, None
+            else:
+                lim["pending"] = {"to_cents": cents, "effective_at": effective_at}
+            return dict(lim)
 
 
 bank = MockBank()

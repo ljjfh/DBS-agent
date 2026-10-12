@@ -80,8 +80,8 @@ def ground(utterances: list[str], payee: dict | None, amount_cents: int, kind: s
         names += [bill.get("title", "")]
     payee_ok = bool(payee) and any(_mentions(u, names) for u in utterances)
 
-    if kind == "bill" and bill is not None:
-        amount_ok, source = True, "bill"        # authoritative amount from the bill, not from the model
+    if kind == "bill" and bill is not None and amount_cents in (bill.get("amount_cents"), bill.get("min_due_cents")):
+        amount_ok, source = True, "bill"        # authoritative amount from the bill (full or minimum), not the model
     else:
         amount_ok = any(amount_cents in amounts_in(u) for u in utterances)
         source = "user" if amount_ok else "not said"

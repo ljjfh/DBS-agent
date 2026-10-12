@@ -114,6 +114,17 @@ async def state(request: Request):
                       "gain": ("+" if r["gain_cents"] >= 0 else "−") + fmt_money(abs(r["gain_cents"]))}
                      for r in bank.portfolio(uid)],
         "cards": [{k: c[k] for k in ("card_id", "name", "masked", "status")} for c in bank.cards(uid)],
+        "limits": {"daily": fmt_money(bank.limits(uid)["daily_transfer_cents"]),
+                   "used_today": fmt_money(bank.transferred_today(uid)),
+                   "pending": (fmt_money(bank.limits(uid)["pending"]["to_cents"]) if bank.limits(uid).get("pending") else None)},
+        "standing_instructions": [{"si_id": x["si_id"], "to": (bank.payee(uid, x["payee_id"]) or {}).get("name", ""),
+                                   "amount": fmt_money(x["amount_cents"]), "frequency": x["frequency"], "day": x["day"],
+                                   "next": x["next_date"]}
+                                  for x in bank.standing_instructions(uid) if x["status"] == "active"],
+        "giro": [{"giro_id": g["giro_id"], "biller": g["biller"], "status": g["status"],
+                  "max": fmt_money(g["limit_cents"]) if g.get("limit_cents") else "Each bill"}
+                 for g in bank.giro(uid) if g["status"] != "cancelled"],
+        "pending_change": (s.pending_change or {}).get("card"),
         "scam_level": s.scam_level.value,
     })
 
@@ -230,6 +241,43 @@ async def protection_change(request: Request):
     return JSONResponse(st)
 
 
+# ---- Account changes (add payee, raise limit, set up GIRO): signed on the device like a payment
+async def change_challenge(request: Request):
+    body = await _json(request, "change_id")
+    s = runtime.sessions.get(body.get("session_id"))
+    try:
+        payload = runtime.kernel.change_challenge(s, body["change_id"])
+    except KernelError as e:
+        return _err(str(e), e.code)
+    return JSONResponse({"payload": payload, "passkey": runtime.kernel.passkey_status(s.user_id, _site(request))})
+
+
+async def change_confirm(request: Request):
+    body = await _json(request, "change_id")
+    s = runtime.sessions.get(body.get("session_id"))
+    start = len(s.trace)
+    try:
+        out = runtime.kernel.apply_change(s, body["change_id"], body.get("assertion"), _site(request))
+    except KernelError as e:
+        return JSONResponse({"error": str(e), "code": e.code, "trace": s.trace[start:]}, status_code=400)
+    _say(s, out["reply"])
+    next_task = s.plan.pop(0) if s.plan else None
+    return JSONResponse({"reply": out["reply"], "speak": out["reply"], "method": out["method"], "next_task": next_task,
+                         "trace": s.trace[start:]})
+
+
+async def change_cancel(request: Request):
+    body = await _json(request, "change_id")
+    s = runtime.sessions.get(body.get("session_id"))
+    try:
+        runtime.kernel.cancel_change(s, body["change_id"])
+    except KernelError as e:
+        return _err(str(e), e.code)
+    msg = "OK, cancelled. Nothing was changed."
+    _say(s, msg)
+    return JSONResponse({"reply": msg, "speak": msg})
+
+
 async def demo_model_mistake(request: Request):
     """Live demo: one turn with a model that writes the wrong amount, through the REAL verifier, kernel and gateway."""
     from app.agent.loop import Agent
@@ -334,6 +382,9 @@ routes = [
     Route("/api/passkey/register", passkey_register, methods=["POST"]),
     Route("/api/passkey/remove", passkey_remove, methods=["POST"]),
     Route("/api/protection/challenge", protection_challenge, methods=["POST"]),
+    Route("/api/change/challenge", change_challenge, methods=["POST"]),
+    Route("/api/change/confirm", change_confirm, methods=["POST"]),
+    Route("/api/change/cancel", change_cancel, methods=["POST"]),
     Route("/api/protection", protection_change, methods=["POST"]),
     Route("/api/lab", run_security_lab, methods=["POST"]),
     Route("/api/demo/model-mistake", demo_model_mistake, methods=["POST"]),

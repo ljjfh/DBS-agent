@@ -52,6 +52,7 @@ class Session:
     setting_challenges: dict[str, str] = field(default_factory=dict)  # signed settings changes (protection level)
     passkey_reg: dict | None = None                          # pending passkey registration challenge
     pending_choice: dict | None = None                       # "which one?" we just asked: request + candidate payees
+    pending_change: dict | None = None                       # signed account change waiting for the fingerprint
     created_at: float = field(default_factory=time.time)
 
     # ---------- State machine ----------

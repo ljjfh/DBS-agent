@@ -92,7 +92,7 @@ main{width:100%;max-width:1480px;margin:0 auto;padding:28px 32px 40px}
 .hero p{color:#ffe5e9;font-size:13px;margin-top:8px}
 .hero .date{color:#ffdde3;font-size:11px;align-self:flex-end;white-space:nowrap}
 
-.accounts{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:18px;margin-bottom:22px}
+.accounts{display:grid;grid-template-columns:1.25fr repeat(3,minmax(0,1fr));gap:16px;margin-bottom:22px}
 .balance{background:#2d3035;color:#fff;border-radius:10px;padding:22px 24px;min-height:160px;position:relative;overflow:hidden}
 .balance:after{content:"";position:absolute;right:-45px;top:32px;width:190px;height:190px;border:1px solid #ffffff09;border-radius:50%;
   box-shadow:0 0 0 22px #ffffff04,0 0 0 45px #ffffff03}
@@ -357,7 +357,7 @@ body.senior .flag{font-size:16px}
 body.senior .risk{font-size:18px}
 
 /* ---------------- Responsive ---------------- */
-@media (max-width:1180px){.accounts{grid-template-columns:1fr 1fr}.accounts .balance{grid-column:1/-1}.main-grid{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:1180px){.accounts{grid-template-columns:repeat(3,minmax(0,1fr))}.accounts .balance{grid-column:1/-1}.main-grid{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:820px){
   .layout{grid-template-columns:minmax(0,1fr)}
   .sidebar{position:fixed;bottom:0;top:auto;left:0;right:0;height:auto;flex-direction:row;padding:6px 8px;background:#fff;border-top:1px solid var(--line);z-index:15}

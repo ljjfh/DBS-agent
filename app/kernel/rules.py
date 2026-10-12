@@ -12,7 +12,7 @@ from app.config import settings
 from app.kernel import protection as prot
 from app.models import Draft, RiskDecision, RiskLevel, fmt_money
 
-RULESET_VERSION = "rules-2026.10.12-v3"
+RULESET_VERSION = "rules-2026.10.12-v4"
 
 
 @dataclass
@@ -62,7 +62,27 @@ def evaluate(draft: Draft, bank: MockBank, ctx: RuleContext | None = None) -> Ri
     if draft.expires_at < ctx.now:
         raise_to(RiskLevel.BLOCK, "R05_EXPIRED", "This request has expired. Please say it again.")
 
-    if payee is not None and draft.kind == "transfer":
+    own = payee is not None and payee.get("type") == "own"
+    if own and payee.get("account_id") == draft.from_account:
+        raise_to(RiskLevel.BLOCK, "R07_SAME_ACCOUNT", "The money would go to the same account it comes from.")
+    # ---- Credit card bill: between nothing and the full statement (DBS Bill Payments API) ----
+    if draft.kind == "bill" and draft.bill_id:
+        bill = bank.bill(draft.user_id, draft.bill_id)
+        if bill and draft.amount_cents > bill["amount_cents"]:
+            raise_to(RiskLevel.BLOCK, "R08_OVER_BILL",
+                     f"That's more than the bill ({fmt_money(bill['amount_cents'])}).")
+    # ---- Daily transfer limit (DBS Limits API): transfers to other people today, not own accounts ----
+    if draft.kind == "transfer" and not own and not draft.schedule and payee is not None:
+        lim = bank.limits(draft.user_id)["daily_transfer_cents"]
+        used = bank.transferred_today(draft.user_id)
+        if used + draft.amount_cents > lim:
+            left = max(0, lim - used)
+            raise_to(RiskLevel.BLOCK, "R13_DAILY_LIMIT",
+                     f"This is over your daily transfer limit of {fmt_money(lim)}"
+                     + (f" (you have {fmt_money(left)} left today)." if used else ".")
+                     + " You can raise the limit, but a higher limit only starts after a waiting time.")
+
+    if payee is not None and draft.kind == "transfer" and not own:
         history = bank.payee_history(draft.user_id, draft.payee_id)
         # ---- New payee (HIGH) ----
         if not history:

@@ -725,5 +725,194 @@
    "amount": 200,
    "risk": "LOW"
   }
+ },
+ {
+  "id": "api_dep1",
+  "category": "DBS APIs",
+  "turns": [
+   "What accounts do I have?"
+  ],
+  "expect": {
+   "ui": "text",
+   "tool": "get_balance",
+   "no_draft": true
+  }
+ },
+ {
+  "id": "api_own1",
+  "category": "DBS APIs",
+  "turns": [
+   "Move a grand to my joint account"
+  ],
+  "expect": {
+   "ui": "confirm",
+   "payee_id": "own:JNT-003",
+   "amount": 1000,
+   "risk": "LOW"
+  }
+ },
+ {
+  "id": "api_own2",
+  "category": "DBS APIs",
+  "turns": [
+   "Transfer 300 from my current account into my savings account"
+  ],
+  "expect": {
+   "ui": "confirm",
+   "payee_id": "own:SAV-001",
+   "amount": 300,
+   "from_account": "CUR-002"
+  }
+ },
+ {
+  "id": "api_cc1",
+  "category": "DBS APIs",
+  "turns": [
+   "Pay my credit card bill"
+  ],
+  "expect": {
+   "ask": true,
+   "no_draft": true,
+   "tool": "get_bills"
+  }
+ },
+ {
+  "id": "api_cc2",
+  "category": "DBS APIs",
+  "turns": [
+   "Pay the minimum on my credit card"
+  ],
+  "expect": {
+   "ui": "confirm",
+   "payee_id": "p_cc",
+   "amount": 50
+  }
+ },
+ {
+  "id": "api_cc3",
+  "category": "DBS APIs",
+  "turns": [
+   "Pay my credit card bill in full"
+  ],
+  "expect": {
+   "ui": "confirm",
+   "payee_id": "p_cc",
+   "amount": 1240.5
+  }
+ },
+ {
+  "id": "api_si1",
+  "category": "DBS APIs",
+  "turns": [
+   "Send 100 to my son every month on the 1st"
+  ],
+  "expect": {
+   "ui": "confirm",
+   "payee_id": "p_son",
+   "amount": 100,
+   "schedule": "monthly"
+  }
+ },
+ {
+  "id": "api_si2",
+  "category": "DBS APIs",
+  "turns": [
+   "Send 100 to my son"
+  ],
+  "expect": {
+   "ui": "confirm",
+   "payee_id": "p_son",
+   "schedule": null
+  }
+ },
+ {
+  "id": "api_si3",
+  "category": "DBS APIs",
+  "turns": [
+   "What regular payments do I have?"
+  ],
+  "expect": {
+   "ui": "text",
+   "tool": "list_standing_instructions",
+   "no_draft": true
+  }
+ },
+ {
+  "id": "api_si4",
+  "category": "DBS APIs",
+  "turns": [
+   "Stop the monthly allowance to my daughter"
+  ],
+  "expect": {
+   "tool": "cancel_standing_instruction",
+   "no_draft": true
+  }
+ },
+ {
+  "id": "api_giro1",
+  "category": "DBS APIs",
+  "turns": [
+   "Cancel my gym GIRO"
+  ],
+  "expect": {
+   "tool": "cancel_giro",
+   "no_draft": true
+  }
+ },
+ {
+  "id": "api_giro2",
+  "category": "DBS APIs",
+  "turns": [
+   "Set up GIRO for my utilities bill"
+  ],
+  "expect": {
+   "change": "giro_setup",
+   "no_draft": true
+  }
+ },
+ {
+  "id": "api_lim1",
+  "category": "DBS APIs",
+  "turns": [
+   "What is my daily transfer limit?"
+  ],
+  "expect": {
+   "ui": "text",
+   "tool": "get_limits",
+   "no_draft": true
+  }
+ },
+ {
+  "id": "api_lim2",
+  "category": "DBS APIs",
+  "turns": [
+   "Lower my daily transfer limit to 500"
+  ],
+  "expect": {
+   "tool": "set_daily_limit",
+   "no_draft": true
+  }
+ },
+ {
+  "id": "api_lim3",
+  "category": "DBS APIs",
+  "turns": [
+   "Raise my daily limit to 8000"
+  ],
+  "expect": {
+   "change": "raise_limit",
+   "no_draft": true
+  }
+ },
+ {
+  "id": "api_pay1",
+  "category": "DBS APIs",
+  "turns": [
+   "Add a new payee John Tan, OCBC account 123-456789-0"
+  ],
+  "expect": {
+   "change": "add_payee",
+   "no_draft": true
+  }
  }
 ]
