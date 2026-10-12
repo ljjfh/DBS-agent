@@ -3,9 +3,10 @@
 A conversational transaction agent for everyone, optimized for elderly users. Core principle:
 **the LLM understands, the code decides, and the user authorizes.**
 
-> Prototype, not an official DBS product. The bank API is mocked. On a computer or phone with Touch ID / Face ID /
-> Windows Hello, every payment is signed with a **passkey after the device's own fingerprint or face check**; elsewhere
-> it falls back to a non-extractable browser key (no biometric, and the screen says so). The DBS logo and digibank
+> Prototype, not an official DBS product. The bank API is mocked. **The fingerprint sensor is simulated by default**
+> (the DBS brief allows mock biometrics): a clearly labelled sensor screen, and the user's tap unlocks a
+> non-extractable browser key that signs the exact card, which the kernel and the payment gateway both verify. Settings
+> → "Real Face ID / fingerprint" switches to a real **passkey** (Touch ID / Face ID / Windows Hello). The DBS logo and digibank
 > look are used for the hackathon demo only. What is real and what is simulated: [docs/SECURITY.md](docs/SECURITY.md).
 
 ## The five DBS challenge requirements, and where they live
@@ -130,21 +131,24 @@ back for confirmation, and authorization only accepts the biometric check.
 2. The card shows exactly what will happen, including **"Based on what you said: …"** and the verifier's result.
 3. On confirm, the browser asks for a **challenge** (the exact card + nonce + expiry). With a passkey, the browser
    calls `navigator.credentials.get` with `challenge = SHA-256(challenge)` and `userVerification: "required"`: the OS
-   shows its own fingerprint / face prompt. Without one, a non-extractable WebCrypto key signs instead.
+   shows its own fingerprint / face prompt. By default (simulated sensor) the user taps the demo fingerprint screen
+   and a non-extractable WebCrypto key signs the same challenge.
 4. The kernel verifies (`kernel/webauthn.py` / `kernel/p256.py`, pure Python; uses `cryptography` if installed),
    consumes the challenge once, re-runs the rules, and hands the signed instruction to the **execution gateway**,
    which verifies everything again on its own before posting to the ledger.
 5. The user can download a **signed receipt** and check it offline, passkey signatures included:
    `python scripts/verify_receipt.py receipt-TXN-XXXX.json`
 
-The first payment on a new device asks your Mac / phone to save a passkey for "localhost" (one extra fingerprint
-touch). Settings → "Fingerprint / face signing" shows it and can remove it for the demo. Passkeys need `localhost`
+With **Settings → "Real Face ID / fingerprint"** on, the first payment asks your Mac / phone to save a passkey (one
+extra fingerprint touch); turning it off removes it and brings back the simulated sensor. Passkeys need `localhost`
 or HTTPS; Chrome and Safari both work.
 
 **On Windows** the prompt is **Windows Hello**: fingerprint, face, or the Windows Hello PIN (all three count as
 "user verified"). Set it up first in Settings → Accounts → Sign-in options, then use Chrome or Edge on
 `http://localhost:8000`. Both key types Windows Hello may create (ES256 and RSA/RS256) are supported. A PC without
-Windows Hello set up falls back to the browser key, and Settings says "no fingerprint or face sensor available".
+Windows Hello set up is offered a phone (QR code) or a security key instead. If Edge saves the passkey in Microsoft
+Password Manager, it may sign without a fingerprint check; the server refuses that and the card offers "Set up
+fingerprint again" (choose Windows Hello / this device).
 
 Open **Security lab** in the sidebar to run 22 real attacks: unsigned, attacker key, tampered amount, replay,
 expiry, cooling-off bypass, balance drained before execution, payment never asked for, hidden instructions, audit

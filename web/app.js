@@ -264,7 +264,7 @@ function checksFromCard(card, phase, method){
     : lvl === 'HIGH' ? (phase === 'done' ? ['pass', 'Cooling-off completed', card.reasons.join(' ')]
       : ['pending', 'Cooling-off before you can confirm', card.reasons.join(' ')])
     : ['fail', 'Stopped by the rules', card.reasons.join(' ')];
-  const auth = phase === 'done' ? ['pass', method === 'passkey' ? 'Signed with your fingerprint / face' : 'Signed on this device',
+  const auth = phase === 'done' ? ['pass', method === 'passkey' ? 'Signed with your fingerprint / face' : 'Signed after your (simulated) fingerprint',
       'Checked by the bank, then checked again by the payment gateway before the money moved.']
     : phase === 'cancelled' ? ['idle', 'Cancelled', 'No money moved.']
     : phase === 'frozen' ? ['idle', 'Frozen', 'This draft can never be signed. Nothing moved.']
@@ -453,10 +453,10 @@ function renderConfirm(){
     </div>
     <div class="cfoot">
       <button type="button" class="btn secondary" id="c-cancel">Cancel</button>
-      <button type="button" class="btn primary" id="c-go" ${canGo ? '' : 'disabled'}>${icon('fingerprint')}${state.signMode === 'none' ? "Can't sign in this browser" : state.signMode === 'device' ? 'Confirm on this device' : 'Confirm with fingerprint'}</button>
+      <button type="button" class="btn primary" id="c-go" ${canGo ? '' : 'disabled'}>${icon('fingerprint')}${state.signMode === 'none' ? "Can't sign in this browser" : 'Confirm with fingerprint'}</button>
     </div>
     <div class="signnote">Confirmation code ${esc(c.digest.slice(0, 8))}…${esc(c.digest.slice(-4))} · ${state.signMode === 'none' ? esc(NO_SIGNER) : state.signMode === 'device'
-      ? "this browser signs exactly this card with a key that never leaves it. (This device has no fingerprint or face sensor available here, so no biometric check.)"
+      ? "demo: the fingerprint sensor is simulated. Your tap unlocks this browser's private key, which signs exactly this card; the bank and its payment gateway each verify that signature."
       : "your device checks your fingerprint or face, then signs exactly this card. The bank and its payment gateway each verify the signature."}</div>`;
   $('#confirm').querySelectorAll('.yesno button').forEach(b => b.onclick = () => {
     state.verify = b.dataset.v === 'yes';
@@ -484,9 +484,10 @@ async function cancelCard(){
 }
 async function confirmCard(){
   const c = state.card; const btn = $('#c-go');
-  btn.disabled = true; btn.textContent = state.signMode === 'device' ? 'Signing on this device…' : 'Touch the sensor…';
+  btn.disabled = true; btn.textContent = 'Touch the sensor…';
   const verify_answer = c.verify_question ? state.verify : null;
   try{
+    if(state.signMode === 'device' && !state.data?.passkey?.enrolled) await mockFingerprint(c);
     await ensureSigner();
     const ch = await api('/api/challenge', {session_id: state.sid, draft_id: c.draft_id, digest: c.digest, verify_answer});
     const assertion = await signPayload(ch.payload, ch.passkey);
@@ -519,19 +520,54 @@ const UV_HELP = "Your device signed without checking your fingerprint, face or P
 const b64u = buf => b64(buf).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), ch => ch.charCodeAt(0));
 const IP_HOST = /^(\d{1,3}(\.\d{1,3}){3}|\[.*\])$/;
-// 'passkey'     this device's own fingerprint / face / PIN (Touch ID, Face ID, Windows Hello, Android)
-// 'passkey-any' no built-in sensor: the browser offers a phone (scan a QR code) or a security key instead
-// 'device'      a plain browser key, no biometric: local development only (the server refuses it online)
-// 'none'        this browser can't sign payments (e.g. an in-app browser): open the page in Safari / Chrome
+// 'device'      DEFAULT for the demo: a simulated fingerprint screen, then this browser's non-extractable key signs
+//               the exact card (the DBS brief allows mock biometrics; signatures and gateway checks are real)
+// 'passkey'     opt-in (Settings): this device's real Touch ID / Face ID / Windows Hello
+// 'passkey-any' opt-in on a device without a sensor: the browser offers a phone (QR code) or a security key
+// 'none'        this browser can't sign at all
 const browserKeyAllowed = () => state.health.browser_key !== false;
 const passkeyMode = () => state.signMode === 'passkey' || state.signMode === 'passkey-any';
+const realBioOn = () => !!store.get('realBio', false);
+const canDeviceSign = () => !!(window.crypto?.subtle && window.indexedDB);
+async function passkeyCapability(){
+  if(IP_HOST.test(location.hostname) || !window.PublicKeyCredential || !window.isSecureContext) return null;
+  try{ return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable() ? 'passkey' : 'passkey-any'; }catch{ return null; }
+}
 async function detectSignMode(){
-  if(IP_HOST.test(location.hostname)) return browserKeyAllowed() ? 'device' : 'none';   // passkeys need a domain name
-  try{
-    if(window.PublicKeyCredential && window.isSecureContext)
-      return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable() ? 'passkey' : 'passkey-any';
-  }catch{}
-  return browserKeyAllowed() ? 'device' : 'none';
+  const real = await passkeyCapability();
+  if(real && (realBioOn() || state.data?.passkey?.enrolled || !browserKeyAllowed())) return real;
+  return browserKeyAllowed() && canDeviceSign() ? 'device' : (real || 'none');
+}
+
+// The demo's fingerprint sensor: a clearly labelled simulation. Tapping it is the user's explicit approval; what
+// follows is real cryptography (the browser key signs the exact card, the bank and the gateway verify it).
+function mockFingerprint(c){
+  return new Promise((resolve, reject) => {
+    const host = $('#confirm'); if(!host){ reject(new Error('No card')); return; }
+    host.querySelector('.mockfp')?.remove();
+    const el = document.createElement('div');
+    el.className = 'mockfp'; el.setAttribute('role', 'group'); el.setAttribute('aria-label', 'Simulated fingerprint sensor');
+    el.innerHTML = `<div class="mf-badge">Demo · simulated fingerprint sensor</div>
+      <button type="button" class="mf-pad" aria-label="Touch to confirm">${icon('fingerprint')}</button>
+      <b class="mf-title">Touch the sensor to confirm</b>
+      <div class="mf-what">${esc(c.amount)} ${c.kind === 'investment' ? 'in' : 'to'} ${esc(c.payee_name)}</div>
+      <small>In the real DBS app this is Face ID or Touch ID. Here, your tap unlocks this browser's private key,
+        which signs exactly this card. The bank and its payment gateway each check that signature.</small>
+      <button type="button" class="btn secondary mf-cancel">Cancel</button>`;
+    host.appendChild(el);
+    const pad = el.querySelector('.mf-pad'); pad.focus();
+    let done = false;
+    pad.onclick = () => {
+      if(done) return; done = true;
+      el.classList.add('scanning'); el.querySelector('.mf-title').textContent = 'Reading fingerprint…';
+      setTimeout(() => {
+        el.classList.remove('scanning'); el.classList.add('matched');
+        el.querySelector('.mf-title').textContent = 'Fingerprint matched (simulated)';
+        setTimeout(() => { el.remove(); resolve(); }, 450);
+      }, 900);
+    };
+    el.querySelector('.mf-cancel').onclick = () => { el.remove(); const e = new Error('Cancelled'); e.name = 'NotAllowedError'; reject(e); };
+  });
 }
 async function ensureSigner(){
   if(state.signMode === 'none') throw new Error(NO_SIGNER);
@@ -559,9 +595,9 @@ async function enrolPasskey(){
   await refresh(); return r;
 }
 async function signPayload(payload, passkey){
-  if(passkey?.enrolled && !passkeyMode())
-    throw new Error('Your account signs payments with the fingerprint or face check on the device where you set it up. ' +
-      'Please use that device (or remove the passkey in Settings for this demo).');
+  if(passkey?.enrolled && !await passkeyCapability())
+    throw new Error('Your account signs payments with the real fingerprint or face check on the device where you set it up. ' +
+      'Please use that device, or turn off "Real Face ID / fingerprint" in Settings for this demo.');
   if(passkey?.enrolled){
     const challenge = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload));
     const a = await navigator.credentials.get({publicKey: {challenge, rpId: location.hostname, userVerification: 'required', timeout: 60000,
@@ -572,7 +608,7 @@ async function signPayload(payload, passkey){
   }
   const keyId = await ensureDeviceKey();
   const signature = await deviceSign(payload);
-  addTrace([{kind:'sign', label:`Browser key ${keyId} signed the exact card (ECDSA P-256, no biometric on this device)`, detail: JSON.parse(payload)}]);
+  addTrace([{kind:'sign', label:`Simulated fingerprint approved; browser key ${keyId} signed the exact card (ECDSA P-256)`, detail: JSON.parse(payload)}]);
   return {payload, signature};
 }
 
@@ -621,7 +657,7 @@ function activity(m){
     <section class="card"><div class="table-scroll"><table class="table"><thead><tr><th>Date</th><th>Description</th><th class="num">Amount</th></tr></thead>
       <tbody>${(d?.transactions || []).map(t => `<tr><td>${esc(t.date)}</td><td>${esc(t.desc)}</td><td class="num ${t.amount_cents > 0 ? 'in' : ''}">${esc(t.amount)}</td></tr>`).join('')}</tbody></table></div></section>
     <section class="card panel page-gap"><h2>Signed receipts</h2>
-      ${(d?.receipts || []).length ? `<table class="table"><tbody>${d.receipts.map((r, i) => `<tr><td>${esc(r.txn_id)}</td><td>${esc(r.card.payee_name)}<small class="method">${r.authorization?.method === 'passkey' ? 'Fingerprint / face (passkey)' : 'Browser key'}</small></td>
+      ${(d?.receipts || []).length ? `<table class="table"><tbody>${d.receipts.map((r, i) => `<tr><td>${esc(r.txn_id)}</td><td>${esc(r.card.payee_name)}<small class="method">${r.authorization?.method === 'passkey' ? 'Fingerprint / face (passkey)' : 'Simulated fingerprint + device key'}</small></td>
         <td class="num">S$${(r.card.amount_cents / 100).toFixed(2)}</td><td class="num"><button class="btn secondary dl" data-i="${i}">${icon('download')}Download</button></td></tr>`).join('')}</tbody></table>
         <p class="footnote">Anyone can check a receipt offline: <code class="k">python scripts/verify_receipt.py receipt.json</code></p>`
       : '<p class="footnote">No payments in this session yet.</p>'}</section>`;
@@ -689,12 +725,10 @@ function settingsPage(m){
       <p class="footnote">Always on for everyone: Star only drafts, every draft is checked against your words by two separate engines, your device signs every payment, and the payment gateway refuses anything unsigned.</p>
     </section>
     <section class="card settings page-gap">
-      <div class="setting"><div>Fingerprint / face signing (passkey)<small>${passkeyMode()
-        ? (pk.enrolled ? `Set up for this site. Key ${esc((pk.key_ids || [])[0] || '')}. Your device's own fingerprint or face check signs every payment.` : 'Available on this device. Set it up now, or the first time you confirm a payment.')
-        : state.signMode === 'none' ? esc(NO_SIGNER)
-        : "This browser can't use a fingerprint or face sensor here. Payments are signed with a browser key instead (no biometric check; local development only)."}</small></div>
-        ${passkeyMode() && !pk.enrolled ? `<button class="btn primary" id="pk-setup">${icon('fingerprint')}Set up</button>` : ''}
-        ${pk.enrolled ? `<button class="btn secondary" id="pk-remove">Remove (demo)</button>` : ''}</div>
+      ${sw('s-realbio', passkeyMode(), 'Real Face ID / fingerprint (optional)', passkeyMode()
+        ? (pk.enrolled ? `On. Passkey ${esc((pk.key_ids || [])[0] || '')} on this device signs every payment after its own fingerprint, face or PIN check.`
+                       : 'On. The first payment asks this device to save a passkey (Touch ID, Face ID, Windows Hello).')
+        : "Off: the demo shows a simulated fingerprint sensor. Turn on to use this device's real Touch ID, Face ID or Windows Hello instead.")}
     </section>
     <section class="card settings page-gap">
       ${sw('s-senior', state.senior, 'Senior mode', 'Bigger text, one thing at a time, big voice button, answers read aloud.')}
@@ -712,6 +746,18 @@ function settingsPage(m){
   $('#s-reset').onclick = resetDemo;
   m.querySelectorAll('.level').forEach(b => b.onclick = () => setProtection(b.dataset.to));
   $('#p-cancel') && ($('#p-cancel').onclick = () => setProtection('enhanced'));
+  $('#s-realbio') && ($('#s-realbio').onclick = async () => {
+    const on = !passkeyMode();
+    if(on){
+      if(!await passkeyCapability()){ toast("This browser can't use a real fingerprint or face here. The simulated sensor stays on."); return; }
+      store.set('realBio', true);
+    }else{
+      store.set('realBio', false);
+      if(pk.enrolled){ await api('/api/passkey/remove', {session_id: state.sid}); await refresh(); }
+    }
+    state.signMode = await detectSignMode(); renderPage();
+    toast(on ? 'Real fingerprint / face is on.' : 'Back to the simulated fingerprint sensor.');
+  });
   $('#pk-setup') && ($('#pk-setup').onclick = async () => { try{ await enrolPasskey(); toast('Fingerprint signing is set up.'); renderPage(); }catch(e){ toast(e.name === 'NotAllowedError' ? 'Set-up cancelled.' : e.message); } });
   $('#pk-remove') && ($('#pk-remove').onclick = async () => { await api('/api/passkey/remove', {session_id: state.sid}); await refresh(); toast('Passkey removed from this demo. (A real bank would verify your identity first.)'); });
 }
@@ -882,8 +928,8 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape' && $('#trace')
   if(visitorMode() && !String(state.sid || '').startsWith(VISITOR + '.')){
     try{ const r = await api('/api/reset', {visitor: VISITOR}); state.sid = r.session_id; store.set('sid', r.session_id); }catch{}
   }
-  state.signMode = await detectSignMode();
   await refresh();
+  state.signMode = await detectSignMode();      // after refresh: an enrolled passkey keeps being used
   render();
   restorePending();
 })();

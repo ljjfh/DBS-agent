@@ -88,7 +88,7 @@ def check_signature(registry, *, user_id: str, session_id: str, payload: str, as
         raise SignatureError("This device has no registered signing key yet.", "NO_KEY")
     if not verify_device_signature(jwk, payload, assertion.get("signature") or ""):
         raise SignatureError("A valid signature from your device is required.", "INVALID_SIGNATURE")
-    return {"method": "device_key", "alg": "ECDSA P-256 / SHA-256 (browser key, no biometric)", "payload": payload,
+    return {"method": "device_key", "alg": "ECDSA P-256 / SHA-256 (browser key, unlocked by the demo's simulated fingerprint)", "payload": payload,
             "signature": assertion["signature"], "public_key": jwk, "key_id": p256.key_fingerprint(jwk)}
 
 

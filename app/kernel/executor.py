@@ -234,7 +234,7 @@ class Kernel:
             raise KernelError("A valid signature from your device is required.", "AUTH_FAILED")
         token = self.tokens.issue(draft_id, shown_digest)
         label = {"passkey": "Server verified the passkey: the device checked your fingerprint / face and signed the exact card",
-                 "device_key": "Server verified the browser-key signature over the exact card"}.get(
+                 "device_key": "Server verified the browser-key signature over the exact card (fingerprint simulated for the demo)"}.get(
             method, "User confirmed (demo authenticator)")
         s.add_trace("sign", label, {"digest": shown_digest[:16] + "…", "method": method})
         self.audit.append("auth.granted", s.session_id, {"draft_id": draft_id, "digest": shown_digest,
