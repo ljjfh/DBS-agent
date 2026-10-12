@@ -989,7 +989,8 @@
   "category": "Vague amounts",
   "turns": [
    "I want to move money to my joint account",
-   "Agree!"
+   "Agree!",
+   "Yes"
   ],
   "expect": {
    "payee_id": "own:JNT-003",
