@@ -1,3 +1,5 @@
+import re
+
 SYSTEM_PROMPT = """You are "Star", DBS Bank's voice banking assistant. You mainly serve elderly customers in Singapore,
 and you serve all customers.
 
@@ -81,6 +83,23 @@ and you serve all customers.
 - Be warm and patient. Don't lecture, and never make the user feel they "can't use it"."""
 
 
+def _unexpected_answer(messages: list[dict]) -> str:
+    """The user's reply, if it was the answer to our "how much?" and contains no amount at all. This only points the
+    model at the oddity; working out what was meant is the model's job."""
+    from app.agent.textparse import parse_amount, relative_in
+    users = [i for i, m in enumerate(messages) if m.get("role") == "user"]
+    if not users:
+        return ""
+    text = messages[users[-1]]["content"].strip()
+    before = [m for m in messages[:users[-1]] if m.get("role") == "assistant" and m.get("content")
+              and not m.get("tool_calls")]
+    if (before and re.search(r"\bhow much\b", before[-1]["content"], re.I) and len(text.split()) <= 4
+            and not parse_amount(text) and not relative_in(text)
+            and not re.search(r"\b(cancel|stop|no|nevermind|never mind|forget)\b", text, re.I)):
+        return text
+    return ""
+
+
 def state_summary(session, bank) -> str:
     """Structured state summary injected every turn: replaces the full history so the model doesn't "forget the amount"."""
     lines = [f"[Current session state] Phase: {session.phase.value}"]
@@ -88,6 +107,11 @@ def state_summary(session, bank) -> str:
     if d:
         lines.append(f"Pending transaction: {d.kind} {d.payee_name} S${d.amount_cents / 100:.2f} from "
                      f"{d.from_account}, risk {d.risk.level.value if d.risk else '-'}")
+    odd = _unexpected_answer(session.messages)
+    if odd:
+        lines.append(f"You asked how much and the user answered \"{odd}\", which has no number. They are speaking, so "
+                     "this may be a misheard amount: think what it sounds like and ask with your best guess "
+                     "(\"Did you mean ...?\"). Don't just repeat your question.")
     if session.scam_level.rank > 0:
         lines.append(f"Scam risk in this session: {session.scam_level.value} ({' '.join(session.scam_reasons[:2])})")
     pc = session.pending_choice

@@ -344,3 +344,14 @@ class TestSpeechSlips(ApiBase):
         from app.agent.textparse import fix_asr
         for t in ("I got a grant from the government", "Can I apply for a grant?", "Pay my grandson 50", "Agree!"):
             self.assertEqual(fix_asr(t)[0], t)
+
+
+class TestOddAnswerPointer(ApiBase):
+    def test_state_points_the_model_at_an_answer_without_a_number(self):
+        from app.agent.prompts import state_summary
+        self.s.messages += [{"role": "user", "content": "move money to my joint account"},
+                            {"role": "assistant", "content": "How much would you like to move?"},
+                            {"role": "user", "content": "Agree!"}]
+        self.assertIn('answered "Agree!", which has no number', state_summary(self.s, self.bank))
+        self.s.messages[-1]["content"] = "300"
+        self.assertNotIn("which has no number", state_summary(self.s, self.bank))
