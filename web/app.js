@@ -1026,15 +1026,233 @@ function b64(buf){ let s = ''; const b = new Uint8Array(buf); for(let i = 0; i <
 
 // ---------------------------------------------------------------- Start
 document.addEventListener('keydown', e => { if(e.key === 'Escape' && $('#trace').classList.contains('open') && !$('#confirm').open) toggleTrace(false); });
-(async function init(){
+async function init(){
   try{ state.health = await api('/api/health'); }catch{}
   if(visitorMode() && !state.sid){
     try{ const r = await api('/api/reset', {visitor: VISITOR}); state.sid = r.session_id; store.set('sid', r.session_id); }catch{}
   }
   await refresh();
+  if(!state.data) throw new Error('The demo service is not ready. Please try again in a moment.');
   state.signMode = await detectSignMode();      // after refresh: an enrolled passkey keeps being used
   render();
   const pending = store.get('pendingPayment', null);
   if(pending && pending.sid === state.sid){ state.card = pending.card; renderConfirm(); await recoverPayment(pending.card); }
   else restorePending();
-})();
+}
+
+// Launch screen is local-only: no bank API, microphone or biometric request before entry.
+const welcome = $('#welcome'), enter = $('#welcome-enter');
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+let motionPaused = reducedMotion.matches, animationId = 0, fieldTime = 0, lastFrame = 0;
+const canvas = $('#welcome-canvas'), ctx = canvas.getContext('2d');
+const pointer = {x:0, y:0, active:false}, glow = {x:0, y:0, strength:0};
+let fieldWidth = 1, fieldHeight = 1, particles = [], ripples = [], cursorTrail = [];
+function resizeField(){
+  if(welcome.hidden || welcome.classList.contains('leaving')) return;
+  const rect = welcome.getBoundingClientRect();
+  fieldWidth = rect.width; fieldHeight = rect.height;
+  const scale = Math.min(devicePixelRatio || 1, 2);
+  canvas.width = Math.round(fieldWidth * scale); canvas.height = Math.round(fieldHeight * scale);
+  ctx?.setTransform(scale,0,0,scale,0,0);
+  // Even coverage at every viewport size, with bounded work on large monitors.
+  const count = Math.min(1600, Math.max(260, Math.round(fieldWidth * fieldHeight / 1500)));
+  particles = Array.from({length:count}, (_, i)=>({
+    u:(i*.61803398875)%1, v:(i*.75487766625)%1,
+    phase:i*2.39996, size:.65+(i%7)*.16, dx:0, dy:0, lane:i%5, index:i
+  }));
+  if(motionPaused) paintField();
+}
+function paintField(timestamp = 0){
+  animationId = 0;
+  if(welcome.hidden || welcome.classList.contains('leaving')) return;
+  const dt = lastFrame ? Math.min(timestamp-lastFrame,40) : 16;
+  lastFrame = timestamp;
+  if(!motionPaused) fieldTime += dt*.00015;
+  if(ctx){
+    ctx.clearRect(0,0,fieldWidth,fieldHeight);
+    glow.strength += ((pointer.active && !motionPaused ? 1 : 0)-glow.strength)*.1;
+    glow.x += (pointer.x-glow.x)*.18; glow.y += (pointer.y-glow.y)*.18;
+    const reach = Math.min(210, Math.max(130,fieldWidth*.15));
+    if(glow.strength>.01){
+      const halo = ctx.createRadialGradient(glow.x,glow.y,0,glow.x,glow.y,reach);
+      halo.addColorStop(0,`rgba(229,0,25,${.24*glow.strength})`);
+      halo.addColorStop(.5,`rgba(244,93,120,${.1*glow.strength})`);
+      halo.addColorStop(1,'rgba(229,0,25,0)');
+      ctx.fillStyle=halo;ctx.fillRect(0,0,fieldWidth,fieldHeight);
+    }
+    const step=motionPaused ? 0 : dt/16.667;
+    // Flowing silk-like ribbons cross a quieter, full-page star field.
+    const cells=new Map(), cellSize=76;
+    const rendered=[];
+    for(let lane=0;lane<5;lane++)for(let strand=0;strand<9;strand++){
+      ctx.beginPath();
+      for(let n=0;n<=64;n++){
+        const u=n/64, x=u*fieldWidth;
+        const y=fieldHeight*(.17+lane*.165)+Math.sin(u*7+fieldTime+lane*.8)*fieldHeight*.11+(strand-4)*12*Math.sin(u*3+fieldTime*.4+lane);
+        if(n===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      }
+      ctx.strokeStyle=`rgba(211,13,52,${strand===4?.19:.055})`;
+      ctx.lineWidth=strand===4?1.2:.75;ctx.stroke();
+    }
+    for(const p of particles){
+      const ribbon=p.index%3!==0;
+      const depth=.4+(p.index%11)/10;
+      const travel=(p.u+fieldTime*.018*depth)%1;
+      const parallax=pointer.active ? (glow.x-fieldWidth/2)*.012*depth : 0;
+      const x=travel*fieldWidth+Math.sin(fieldTime*.6+p.phase)*18+parallax;
+      const ribbonY=fieldHeight*(.17+p.lane*.165)+Math.sin(travel*7+fieldTime+p.lane*.8)*fieldHeight*.11;
+      const y=ribbon ? ribbonY+(p.v-.5)*85 : p.v*fieldHeight+Math.cos(fieldTime*.7+p.phase)*16;
+      const vx=x-pointer.x, vy=y-pointer.y, distance=Math.hypot(vx,vy);
+      const influence=pointer.active&&!motionPaused ? Math.max(0,1-distance/reach) : 0;
+      const force=influence*influence*105, d=Math.max(distance,1);
+      let tx=(vx/d-vy/d*1.5)*force, ty=(vy/d+vx/d*1.5)*force, pulse=0;
+      for(const ring of ripples){
+        const rx=x-ring.x, ry=y-ring.y, rd=Math.hypot(rx,ry);
+        const hit=Math.max(0,1-Math.abs(rd-ring.radius)/65)*(1-ring.age/1800);
+        tx+=rx/Math.max(rd,1)*hit*42;ty+=ry/Math.max(rd,1)*hit*42;pulse=Math.max(pulse,hit);
+      }
+      const ease=motionPaused?1:1-Math.pow(.9,step);
+      p.dx+=(tx-p.dx)*ease;p.dy+=(ty-p.dy)*ease;
+      const px=x+p.dx, py=y+p.dy;
+      const wave=.5+.5*Math.sin(p.u*8+p.v*5+fieldTime*1.8);
+      // Keep the headline region quiet without breaking the full-screen field.
+      const center=Math.max(0,1-Math.abs(px-fieldWidth/2)/(fieldWidth*.3))*Math.max(0,1-Math.abs(py-fieldHeight*.5)/(fieldHeight*.28));
+      const alpha=(.23+wave*.36+influence*.42+pulse*.35)*(1-center*.55);
+      const point={x:px,y:py,alpha,energy:influence+pulse};rendered.push(point);
+      const key=`${Math.floor(px/cellSize)},${Math.floor(py/cellSize)}`;
+      if(!cells.has(key))cells.set(key,[]);cells.get(key).push(point);
+      ctx.beginPath();ctx.arc(px,py,p.size*depth+influence*2+pulse*2,0,Math.PI*2);
+      ctx.fillStyle=`rgba(211,13,52,${Math.min(.95,alpha)})`;ctx.fill();
+      if(p.index%37===0 || influence>.65){
+        const length=3+wave*3+influence*5;
+        ctx.beginPath();ctx.moveTo(px-length,py);ctx.lineTo(px+length,py);
+        ctx.moveTo(px,py-length);ctx.lineTo(px,py+length);
+        ctx.strokeStyle=`rgba(229,0,36,${alpha*.65})`;ctx.lineWidth=.7;ctx.stroke();
+      }
+    }
+    // Spatial buckets bound the cost of constellation connections.
+    let links=0;
+    for(let i=0;i<rendered.length && links<1900;i+=2){
+      const p=rendered[i], cx=Math.floor(p.x/cellSize), cy=Math.floor(p.y/cellSize);
+      let neighbors=0;
+      for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){
+        for(const q of cells.get(`${cx+dx},${cy+dy}`)||[]){
+          if(q===p || neighbors>=3 || links>=1900)continue;
+          const dist=Math.hypot(p.x-q.x,p.y-q.y);
+          if(dist>70 || dist<8)continue;
+          ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);
+          ctx.strokeStyle=`rgba(208,15,55,${(1-dist/70)*(.2+Math.min(1,p.energy+q.energy)*.4)*Math.min(p.alpha,q.alpha)*2})`;
+          ctx.lineWidth=.65;ctx.stroke();neighbors++;links++;
+        }
+      }
+    }
+    // Staggered shooting stars: translucent tails with a sharp red-white core.
+    if(!motionPaused)for(let i=0;i<5;i++){
+      const progress=(fieldTime*.22+i*.213)%1;
+      if(progress>.72)continue;
+      const t=progress/.72, x=t*(fieldWidth+320)-160;
+      const y=fieldHeight*(.1+i*.19)+Math.sin(t*3+i)*90;
+      const tail=100+(i%3)*45, opacity=Math.sin(t*Math.PI)*.7;
+      const beam=ctx.createLinearGradient(x-tail,y-35,x,y);
+      beam.addColorStop(0,'rgba(229,0,35,0)');beam.addColorStop(.8,`rgba(229,0,35,${opacity*.3})`);
+      beam.addColorStop(1,`rgba(229,0,35,${opacity})`);
+      ctx.beginPath();ctx.moveTo(x-tail,y-35);ctx.lineTo(x,y);ctx.strokeStyle=beam;ctx.lineWidth=1.8;ctx.stroke();
+      ctx.beginPath();ctx.arc(x,y,2.2,0,Math.PI*2);ctx.fillStyle=`rgba(229,0,35,${opacity})`;ctx.fill();
+    }
+    if(pointer.active && !motionPaused){
+      cursorTrail.push({x:glow.x,y:glow.y,age:0});
+      if(cursorTrail.length>40)cursorTrail.shift();
+    }
+    cursorTrail=cursorTrail.filter(p=>(p.age+=motionPaused?0:dt)<650);
+    for(let i=1;i<cursorTrail.length;i++){
+      const p=cursorTrail[i], prev=cursorTrail[i-1];
+      ctx.beginPath();ctx.moveTo(prev.x,prev.y);ctx.lineTo(p.x,p.y);
+      const fade=Math.max(0,1-p.age/650);
+      ctx.strokeStyle=`rgba(229,0,35,${fade*.16})`;ctx.lineWidth=9*fade;ctx.stroke();
+      ctx.strokeStyle=`rgba(229,0,35,${fade*.65})`;ctx.lineWidth=1.6;ctx.stroke();
+    }
+    ripples=ripples.filter(r=>r.age<1800);
+    for(const ring of ripples){
+      ring.age+=motionPaused?0:dt;ring.radius+=step*7;
+      const alpha=Math.max(0,1-ring.age/1800);
+      for(let spark=0;spark<32;spark++){
+        const angle=spark*Math.PI/16+ring.age*.0004;
+        const radius=ring.radius*(.82+(spark%3)*.09);
+        const x=ring.x+Math.cos(angle)*radius,y=ring.y+Math.sin(angle)*radius;
+        ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-Math.cos(angle)*18*alpha,y-Math.sin(angle)*18*alpha);
+        ctx.strokeStyle=`rgba(223,9,38,${alpha*.65})`;ctx.lineWidth=1.3;ctx.stroke();
+      }
+      for(let layer=0;layer<2;layer++){
+        ctx.beginPath();ctx.arc(ring.x,ring.y,Math.max(0,ring.radius-layer*14),0,Math.PI*2);
+        ctx.strokeStyle=`rgba(225,15,53,${alpha*(layer?.12:.4)})`;ctx.lineWidth=layer?4:1;ctx.stroke();
+      }
+    }
+  }
+  if(!motionPaused && !document.hidden) animationId=requestAnimationFrame(paintField);
+}
+function syncMotion(){
+  cancelAnimationFrame(animationId);lastFrame=0;
+  welcome.classList.toggle('motion-paused', motionPaused);
+  if(motionPaused){ripples=[];cursorTrail=[];}
+  paintField();
+}
+reducedMotion.addEventListener('change', e=>{motionPaused=e.matches;syncMotion();});
+function trackPointer(e){
+  const rect=welcome.getBoundingClientRect();
+  if(!pointer.active){glow.x=e.clientX-rect.left;glow.y=e.clientY-rect.top;}
+  pointer.x=e.clientX-rect.left;pointer.y=e.clientY-rect.top;pointer.active=true;
+}
+welcome.addEventListener('pointermove',trackPointer,{passive:true});
+welcome.addEventListener('pointerdown',e=>{
+  trackPointer(e);
+  if(!motionPaused){ripples.push({x:pointer.x,y:pointer.y,radius:0,age:0});if(ripples.length>5)ripples.shift();}
+},{passive:true});
+welcome.addEventListener('pointerleave',()=>{pointer.active=false;});
+welcome.addEventListener('pointercancel',()=>{pointer.active=false;});
+welcome.addEventListener('pointerup',e=>{if(e.pointerType!=='mouse')pointer.active=false;});
+document.addEventListener('visibilitychange',()=>{cancelAnimationFrame(animationId);lastFrame=0;if(!document.hidden&&!welcome.hidden)paintField();});
+const fieldObserver = new ResizeObserver(resizeField);fieldObserver.observe(welcome);
+resizeField();syncMotion();
+enter.addEventListener('click', async()=>{
+  if(enter.disabled)return;
+  enter.disabled=true; enter.setAttribute('aria-busy','true');
+  $('#welcome-status').textContent='Opening your workspace…';
+  try{
+    await init();
+    $('#app').hidden=false;
+    document.body.classList.remove('welcome-active');
+    welcome.classList.add('leaving');welcome.inert=true;fieldObserver.disconnect();
+    cancelAnimationFrame(animationId);
+    const skip=$('.skip-link');skip.href='#main';skip.textContent='Skip to main content';
+    const main=$('#main');if(main){main.setAttribute('tabindex','-1');main.focus({preventScroll:true});}
+    setTimeout(()=>{welcome.hidden=true;},reducedMotion.matches||motionPaused?0:450);
+  }catch(e){
+    $('#welcome-status').textContent='Unable to connect to the demo. Please try again in a moment.';
+    enter.disabled=false;enter.removeAttribute('aria-busy');
+  }
+});
+
+// Decorative click acknowledgement only. Never dispatches an action or changes
+// disabled, busy, payment, microphone, or confirmation state. Capture runs before
+// existing handlers so controls that re-render still receive the same one click.
+const tapTimers = new WeakMap();
+document.addEventListener('click', e=>{
+  const button=e.target instanceof Element ? e.target.closest('button') : null;
+  if(!button || button.disabled || button.getAttribute('aria-disabled')==='true')return;
+  if(!button.closest('#app, #confirm, #trace, #welcome'))return;
+  const rect=button.getBoundingClientRect();
+  const x=e.detail===0 ? rect.width/2 : e.clientX-rect.left;
+  const y=e.detail===0 ? rect.height/2 : e.clientY-rect.top;
+  button.style.setProperty('--tap-x',`${Math.max(0,Math.min(rect.width,x))}px`);
+  button.style.setProperty('--tap-y',`${Math.max(0,Math.min(rect.height,y))}px`);
+  clearTimeout(tapTimers.get(button));
+  button.classList.remove('tap-feedback');
+  // Restart the local pseudo-element ripple for successive, legitimate clicks.
+  void button.offsetWidth;
+  button.classList.add('tap-feedback');
+  tapTimers.set(button,setTimeout(()=>{
+    button.classList.remove('tap-feedback');
+    button.style.removeProperty('--tap-x');button.style.removeProperty('--tap-y');
+    tapTimers.delete(button);
+  },600));
+},true);

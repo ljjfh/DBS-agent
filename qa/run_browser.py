@@ -38,7 +38,7 @@ def main():
                 page.on("pageerror",lambda e:errors.append(str(e)))
                 page.on("request",lambda r:chats.append(r.post_data_json.get("text")) if r.url.endswith("/api/chat") else None)
                 try:
-                    page.goto(base);page.wait_for_selector("#text")
+                    page.goto(base);page.locator("#welcome-enter").click();page.wait_for_selector("#text");page.locator("#welcome").wait_for(state="hidden")
                     result,obs=fn(page,chats)
                     obs={"details":obs,"page_errors":errors,"chat_requests":chats}
                     if not result or errors:
@@ -64,9 +64,9 @@ def main():
         run("B01","首页账户/账单/持仓加载","三账户、七外部收款方（含信用卡账单）和三个自有账户目标；无JS异常",home)
         for route,title in [("activity","Transactions"),("contacts","Payees"),("audit","Audit trail"),("lab","Security lab"),("settings","Settings")]:
             def nav(p,c,route=route,title=title):
-                p.locator(f'[data-page="{route}"]').click();expect(p.locator("h1")).to_have_text(title)
+                p.locator(f'[data-page="{route}"]').click();expect(p.locator("#app h1")).to_have_text(title)
                 if route=="audit":expect(p.locator("#integrity")).to_contain_text("Chain intact")
-                return True,{"heading":p.locator("h1").inner_text()}
+                return True,{"heading":p.locator("#app h1").inner_text()}
             run("B_nav_"+route,"导航 "+title,"页面成功展示",nav)
         def pay(p,c):
             say(p,"Send 50 to my daughter");before=balance(p)
@@ -84,7 +84,7 @@ def main():
             return balance(p)==325000 and p.locator("#c-go").is_enabled(),{"balance":balance(p)}
         run("B_sensor_cancel","取消模拟指纹","未扣款，可重新确认",sensor_cancel,"P1")
         def refresh(p,c):
-            say(p,"Send 50 to my daughter");p.reload();expect(p.locator("#confirm")).to_be_visible()
+            say(p,"Send 50 to my daughter");p.reload();p.locator("#welcome-enter").click();p.wait_for_selector("#text");p.locator("#welcome").wait_for(state="hidden");expect(p.locator("#confirm")).to_be_visible()
             return "S$50.00" in p.locator("#confirm").inner_text(),{"card":p.locator("#confirm .amt").inner_text()}
         run("B_restore","刷新恢复待确认卡","相同金额草稿恢复",refresh,"P1")
         def doubleclick(p,c):
@@ -116,7 +116,7 @@ def main():
             return "cancelled" not in body.lower() and p.locator("#confirm").is_visible(),{"server_phase":d["phase"],"screen":body[-2000:]}
         run("B_cancel_network","取消请求网络失败","保留待办并提示取消未完成",cancel_failure,"P1")
         def settings(p,c):
-            before=state(p)["protection"];p.locator("#senior-toggle").click();p.reload();expect(p.locator("body")).to_have_class(re.compile("senior"))
+            before=state(p)["protection"];p.locator("#senior-toggle").click();p.reload();p.locator("#welcome-enter").click();p.wait_for_selector("#text");p.locator("#welcome").wait_for(state="hidden");expect(p.locator("body")).to_have_class(re.compile("senior"))
             return state(p)["protection"]==before,{"body_class":p.locator("body").get_attribute("class"),"protection":before}
         run("B_senior","适老模式持久化","刷新保留适老模式且风控等级不变",settings)
         def layout(p,c):
@@ -196,7 +196,7 @@ def main():
         run('B_audit_export','审计导出','可下载且完整性通过',audit_export)
         def preferences(p,c):
             p.locator('[data-page="settings"]').click();p.locator('#s-large').click();p.locator('#s-read').click()
-            p.reload();p.locator('[data-page="settings"]').click()
+            p.reload();p.locator("#welcome-enter").click();p.wait_for_selector("#text");p.locator("#welcome").wait_for(state="hidden");p.locator('[data-page="settings"]').click()
             return 'large' in p.locator('body').get_attribute('class') and p.locator('#s-read').get_attribute('aria-checked')=='true',{'large':p.locator('body').get_attribute('class'),'read':p.locator('#s-read').get_attribute('aria-checked')}
         run('B_preferences','大字和朗读设置','用户设置刷新后保留',preferences)
         def reset(p,c):

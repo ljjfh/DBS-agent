@@ -22,7 +22,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 602
+      "ms": 1969
     },
     {
       "id": "B_nav_activity",
@@ -38,7 +38,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 440
+      "ms": 1477
     },
     {
       "id": "B_nav_contacts",
@@ -54,7 +54,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 411
+      "ms": 1619
     },
     {
       "id": "B_nav_audit",
@@ -70,7 +70,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 402
+      "ms": 1541
     },
     {
       "id": "B_nav_lab",
@@ -86,7 +86,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 417
+      "ms": 2060
     },
     {
       "id": "B_nav_settings",
@@ -102,7 +102,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 401
+      "ms": 1534
     },
     {
       "id": "B_pay",
@@ -122,7 +122,7 @@
           "Send 50 to my daughter"
         ]
       },
-      "ms": 2132
+      "ms": 3524
     },
     {
       "id": "B_cancel",
@@ -138,7 +138,7 @@
           "Send 50 to my daughter"
         ]
       },
-      "ms": 682
+      "ms": 1817
     },
     {
       "id": "B_sensor_cancel",
@@ -156,7 +156,7 @@
           "Send 50 to my daughter"
         ]
       },
-      "ms": 700
+      "ms": 1854
     },
     {
       "id": "B_restore",
@@ -174,7 +174,7 @@
           "Send 50 to my daughter"
         ]
       },
-      "ms": 662
+      "ms": 2628
     },
     {
       "id": "B_doubleclick",
@@ -193,7 +193,7 @@
           "Send 50 to my daughter"
         ]
       },
-      "ms": 2567
+      "ms": 3654
     },
     {
       "id": "B_download",
@@ -221,7 +221,7 @@
             true
           ],
           [
-            "Key id 7de3c6261fb29011 matches",
+            "Key id 19817b981a30c75d matches",
             true
           ]
         ],
@@ -230,7 +230,7 @@
           "Send 50 to my daughter"
         ]
       },
-      "ms": 2461
+      "ms": 4070
     },
     {
       "id": "B_lost_response",
@@ -251,7 +251,7 @@
           "Send 50 to my daughter"
         ]
       },
-      "ms": 3207
+      "ms": 4960
     },
     {
       "id": "B_cancel_network",
@@ -263,14 +263,14 @@
       "observed": {
         "details": {
           "server_phase": "AWAITING_AUTH",
-          "screen": "DBS DIGIBANK · STAR ASSISTANT\nGood morning, Mdm Chen.\n\nYour accounts at a glance. Your next payment, in your own words.\n\nTuesday, 13 October 2026\nTotal available balance\nS$5,570.00\nAcross 3 accounts · updated just now\n•• 001\nS$3,250.00\nSavings Account\n•• 002\nS$820.00\nCurrent Account\n•• 003\nS$1,500.00\nJoint Account\nStar · your banking assistant\nOFFLINE RULES\nSend 50 to my daughter\nSTAR\nPlease check the card: S$50.00 to Chen Mei Ling. If it's right, confirm with your fingerprint.🔊\nSTAR\nCancellation could not be confirmed. The payment is still waiting. Please try again.🔊\nSpeak\nType your request\nStar prepares · you check · your phone signs. No money moves without you.\nBehind your request\nS$50.00 to Chen Mei Ling\n✓\nRequest understood\nConfirm transfer: S$50.00 to Chen Mei Ling\n✓\nMatches what you said\n“Send 50 to my daughter”\n✓\nIndependent check matched\nA separate reader heard the same type, who, amount.\n✓\nBank safety rules passed\nKnown payee, usual amount, within limits.\n…\nWaiting for you\nNothing moves until you check the card and sign.\nOpen the full agent trace ›\nUpcoming bills\n3 due\nOctober utilities bill\nDue 2026-10-20\nS$86.40 Pay\nOctober town council charges (S&CC)\nDue 2026-10-31\nS$42.00 Pay\nDBS Live Fresh Card statement\nDue 2026-10-25\nS$1,240.50 Pay\nRegular payments\nDaily limit S$3,000.00\nS$200.00 to Chen Mei Ling\nEvery month on the 28th · next 2026-10-28\nStarHub Mobile\nGIRO · up to S$80.00\nActiveSG Gym\nGIRO · up to S$30.00\nIncome Insurance\nGIRO · up to S$150.00\n\nAsk Star to set up, stop or change these, or your daily limit.\n\nInvestments\nConservative profile\nSingapore Savings Bonds\nGovernment bond · 5000 units\nS$5,000.00\n+S$0.00\nDBS Group Holdings shares\nShares (SGX) · 50 units\nS$1,925.00\n+S$325.00\n\nDemo prices. Ask \"How are my investments doing?\"\n\nCards\nDBS Visa Debit Card\n•••• 7781\nLock\nDBS Live Fresh Card\n•••• 3304\nLock\n\nLocking is instant. Unlock in the DBS app or call 1800 111 1111."
+          "screen": "DBS DIGIBANK · STAR ASSISTANT\nGood afternoon, Mdm Chen.\n\nYour accounts at a glance. Your next payment, in your own words.\n\nTuesday, 13 October 2026\nTotal available balance\nS$5,570.00\nAcross 3 accounts · updated just now\n•• 001\nS$3,250.00\nSavings Account\n•• 002\nS$820.00\nCurrent Account\n•• 003\nS$1,500.00\nJoint Account\nStar · your banking assistant\nOFFLINE RULES\nSend 50 to my daughter\nSTAR\nPlease check the card: S$50.00 to Chen Mei Ling. If it's right, confirm with your fingerprint.🔊\nSTAR\nCancellation could not be confirmed. The payment is still waiting. Please try again.🔊\nSpeak\nType your request\nStar prepares · you check · your phone signs. No money moves without you.\nBehind your request\nS$50.00 to Chen Mei Ling\n✓\nRequest understood\nConfirm transfer: S$50.00 to Chen Mei Ling\n✓\nMatches what you said\n“Send 50 to my daughter”\n✓\nIndependent check matched\nA separate reader heard the same type, who, amount.\n✓\nBank safety rules passed\nKnown payee, usual amount, within limits.\n…\nWaiting for you\nNothing moves until you check the card and sign.\nOpen the full agent trace ›\nUpcoming bills\n3 due\nOctober utilities bill\nDue 2026-10-20\nS$86.40 Pay\nOctober town council charges (S&CC)\nDue 2026-10-31\nS$42.00 Pay\nDBS Live Fresh Card statement\nDue 2026-10-25\nS$1,240.50 Pay\nRegular payments\nDaily limit S$3,000.00\nS$200.00 to Chen Mei Ling\nEvery month on the 28th · next 2026-10-28\nStarHub Mobile\nGIRO · up to S$80.00\nActiveSG Gym\nGIRO · up to S$30.00\nIncome Insurance\nGIRO · up to S$150.00\n\nAsk Star to set up, stop or change these, or your daily limit.\n\nInvestments\nConservative profile\nSingapore Savings Bonds\nGovernment bond · 5000 units\nS$5,000.00\n+S$0.00\nDBS Group Holdings shares\nShares (SGX) · 50 units\nS$1,925.00\n+S$325.00\n\nDemo prices. Ask \"How are my investments doing?\"\n\nCards\nDBS Visa Debit Card\n•••• 7781\nLock\nDBS Live Fresh Card\n•••• 3304\nLock\n\nLocking is instant. Unlock in the DBS app or call 1800 111 1111."
         },
         "page_errors": [],
         "chat_requests": [
           "Send 50 to my daughter"
         ]
       },
-      "ms": 890
+      "ms": 2169
     },
     {
       "id": "B_senior",
@@ -292,7 +292,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 413
+      "ms": 2753
     },
     {
       "id": "B_mobile",
@@ -309,7 +309,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 424
+      "ms": 1687
     },
     {
       "id": "B_mobile_senior",
@@ -326,7 +326,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 369
+      "ms": 1460
     },
     {
       "id": "B_xss",
@@ -344,7 +344,7 @@
           "<img src=x onerror=\"window.__xss=1\"> What is my balance?"
         ]
       },
-      "ms": 577
+      "ms": 1614
     },
     {
       "id": "B_voice_normal",
@@ -365,7 +365,7 @@
           "Send fifty to my daughter"
         ]
       },
-      "ms": 1253
+      "ms": 2279
     },
     {
       "id": "B_voice_restart",
@@ -386,7 +386,7 @@
           "Send fifty to my daughter"
         ]
       },
-      "ms": 1256
+      "ms": 2260
     },
     {
       "id": "B_voice_network",
@@ -403,7 +403,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 1165
+      "ms": 2218
     },
     {
       "id": "B_voice_pause",
@@ -424,7 +424,7 @@
           "Send fifty to my daughter"
         ]
       },
-      "ms": 3971
+      "ms": 4949
     },
     {
       "id": "B_voice_missing",
@@ -440,7 +440,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 428
+      "ms": 1339
     },
     {
       "id": "B_frozen",
@@ -456,7 +456,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 917
+      "ms": 1884
     },
     {
       "id": "B_lab",
@@ -472,7 +472,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 1234
+      "ms": 2219
     },
     {
       "id": "B_bill",
@@ -499,7 +499,7 @@
           "Pay the October utilities bill"
         ]
       },
-      "ms": 1950
+      "ms": 2980
     },
     {
       "id": "B_investment",
@@ -543,7 +543,7 @@
           "Invest 200 in income fund"
         ]
       },
-      "ms": 2118
+      "ms": 3153
     },
     {
       "id": "B_multi",
@@ -564,7 +564,7 @@
           "send 50 to my daughter"
         ]
       },
-      "ms": 3963
+      "ms": 5438
     },
     {
       "id": "B_audit_export",
@@ -578,7 +578,7 @@
           "integrity": {
             "ok": true,
             "records": 130,
-            "head": "45e200fed0b139623cd5827c54b4ba0c2a6248a847c527ffcb9753e5df105cd9"
+            "head": "486291f0d3f5da1e717dbe87b7e92378d4bed95c800b50ae325a97ee3bef6937"
           },
           "entries": 3
         },
@@ -587,7 +587,7 @@
           "What is my balance?"
         ]
       },
-      "ms": 959
+      "ms": 1932
     },
     {
       "id": "B_preferences",
@@ -604,7 +604,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 575
+      "ms": 2499
     },
     {
       "id": "B_reset",
@@ -623,7 +623,7 @@
           "Send 50 to my daughter"
         ]
       },
-      "ms": 2204
+      "ms": 3237
     },
     {
       "id": "B_voice_permission",
@@ -639,7 +639,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 378
+      "ms": 1352
     },
     {
       "id": "B_trace",
@@ -657,7 +657,7 @@
           "What is my balance?"
         ]
       },
-      "ms": 842
+      "ms": 1858
     }
   ]
 }

@@ -10,9 +10,29 @@
   <link rel="stylesheet" href="/styles.css">
   <script type="module" src="/app.js"></script>
 </head>
-<body>
-  <a class="skip-link" href="#main">Skip to main content</a>
-  <div id="app"></div>
+<body class="welcome-active">
+  <a class="skip-link" href="#welcome-enter">Skip to start</a>
+  <section class="launch-screen" id="welcome" aria-labelledby="welcome-title">
+    <canvas id="welcome-canvas" aria-hidden="true"></canvas>
+    <header class="welcome-header">
+      <div class="welcome-brand"><img src="/dbs-logo.svg" alt="DBS"><span class="welcome-brand-divider"></span><span>Star<span class="welcome-brand-star">✦</span></span></div>
+      <span class="welcome-edition">A new way to bank</span>
+    </header>
+    <main class="welcome-main">
+      <p class="welcome-eyebrow"><span></span> LESS TAPPING. MORE LIVING.</p>
+      <h1 id="welcome-title">Banking, simply<br><span>by speaking.</span></h1>
+      <p class="welcome-description">Meet Star, your conversational banking assistant.<br>Just say what's on your mind. We'll take it one step at a time.</p>
+      <button class="welcome-enter" id="welcome-enter" type="button"><span>Meet Star <span class="welcome-button-divider">/</span> Get started</span><span class="welcome-arrow" aria-hidden="true">↗</span></button>
+      <p class="welcome-caption">Your voice. Your pace. Always your decision.</p>
+      <p class="welcome-status" id="welcome-status" role="status" aria-live="polite"></p>
+      <noscript><p>Please enable JavaScript and refresh this page to enter the demo.</p></noscript>
+    </main>
+    <footer class="welcome-footer">
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6zM8 12l3 3 5-6"/></svg>Every transaction, confirmed by you.</span>
+      <span>Prototype · Not an official DBS product · Synthetic funds</span>
+    </footer>
+  </section>
+  <div id="app" hidden></div>
   <aside class="trace" id="trace" aria-label="Agent trace" aria-hidden="true">
     <header><h3>Agent trace</h3><button type="button" id="trace-close">Close</button></header>
     <div class="sub">Thought → Action → Observation · evidence · rules · signature · execution. Every step is also written to a hash-chained audit log.</div>

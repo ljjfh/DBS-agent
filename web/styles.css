@@ -28,6 +28,43 @@ h1,h2,h3,p{margin:0}
 .skip-link{position:fixed;top:-60px;left:12px;background:#fff;padding:10px 14px;z-index:100;border-radius:8px}
 .skip-link:focus{top:10px}
 
+/* ---------------- Welcome / launch experience ---------------- */
+[hidden]{display:none!important}
+body.welcome-active{background:#fffaf8}
+.launch-screen{--welcome-red:#df0926;position:relative;isolation:isolate;display:flex;flex-direction:column;min-height:100svh;color:#282225;background:#fffaf8;overflow:hidden;transition:opacity .45s ease,transform .45s ease}
+.launch-screen::before,.launch-screen::after{content:"";pointer-events:none;position:absolute;z-index:-1;border-radius:50%;filter:blur(65px)}
+.launch-screen::before{width:65vw;height:65vw;top:-44vw;left:15%;background:#f9bec7;opacity:.5}
+.launch-screen::after{width:50vw;height:50vw;bottom:-38vw;right:-8vw;background:#f48b9f;opacity:.3}
+.welcome-header{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:32px 5.2vw;position:relative;z-index:2}
+.welcome-brand{display:flex;align-items:center;gap:20px;font-size:28px;font-weight:600;letter-spacing:-1px}
+.welcome-brand img{width:88px;height:auto}.welcome-brand-divider{height:25px;width:1px;background:#d9cdd0}
+.welcome-brand-star{font-size:17px;color:var(--welcome-red);margin-left:5px;vertical-align:top}
+.welcome-edition{position:absolute;left:50%;transform:translateX(-50%);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#72656b}
+.welcome-main{display:flex;flex:1;flex-direction:column;align-items:center;text-align:center;justify-content:center;padding:72px 24px 90px;position:relative}
+#welcome-canvas{display:block;position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.welcome-main,.welcome-footer{position:relative;z-index:1}
+.welcome-main{pointer-events:none}.welcome-main button{pointer-events:auto}
+.launch-screen h1,.welcome-description{text-shadow:0 2px 18px #fffaf8,0 0 6px #fffaf8}
+.welcome-eyebrow{display:flex;align-items:center;gap:9px;font-size:10px;font-weight:700;letter-spacing:2.8px;color:#9c4053;margin-bottom:18px}
+.welcome-eyebrow span{width:6px;height:6px;background:#df0926;border-radius:50%;box-shadow:0 0 0 4px #fce3e8}
+.launch-screen h1{font-size:clamp(46px,5.4vw,78px);font-weight:500;letter-spacing:-4px;line-height:1.06;max-width:850px}
+.launch-screen h1>span{color:var(--welcome-red)}
+.welcome-description{color:#78656d;line-height:1.8;font-size:15px;margin-top:24px;max-width:580px}
+.welcome-enter{margin-top:30px;display:flex;align-items:center;justify-content:space-between;gap:38px;background:var(--welcome-red);color:#fff;border-radius:100px;min-height:60px;padding:8px 10px 8px 28px;font-size:15px;font-weight:600;box-shadow:0 10px 26px #cf123b24;transition:transform .2s,box-shadow .2s,background .2s}
+.welcome-enter:hover{transform:translateY(-3px);box-shadow:0 14px 34px #cf123b38;background:#c40020}
+.welcome-enter:active{transform:translateY(0)}.welcome-enter:disabled{opacity:.75;transform:none}
+.welcome-button-divider{margin:0 10px;opacity:.5;font-weight:400}
+.welcome-arrow{display:grid;place-items:center;background:#ffffff24;border:1px solid #ffffff30;width:42px;height:42px;border-radius:50%;font-size:22px;font-weight:400}
+.welcome-caption{margin-top:17px;font-size:11px;letter-spacing:.25px;color:#84747a}
+.welcome-status{min-height:22px;font-size:13px;color:#ad1431;margin-top:8px;max-width:430px}
+.welcome-footer{display:flex;justify-content:space-between;gap:20px;align-items:center;padding:22px 5.2vw 26px;border-top:1px solid #eadfe2;font-size:10px;color:#827179;letter-spacing:.15px}
+.welcome-footer>span:first-child{display:flex;align-items:center;gap:9px;color:#69545d}.welcome-footer svg{width:17px;height:17px;color:#b93550}
+.launch-screen.leaving{position:fixed;inset:0;z-index:90;opacity:0;transform:scale(1.025);pointer-events:none}
+.launch-screen.motion-paused *{animation:none!important;transition:none!important}
+@media(min-height:950px) and (min-width:700px){.welcome-main{justify-content:center;padding-bottom:50px}}
+@media(max-width:650px){.welcome-header{padding:22px 22px 10px}.welcome-brand{font-size:24px;gap:13px}.welcome-brand img{width:72px}.welcome-edition{display:none}.welcome-main{padding:12px 20px 24px;justify-content:center}.launch-screen h1{font-size:clamp(42px,10vw,60px);letter-spacing:-2px}.welcome-description{font-size:13px;margin-top:20px;max-width:330px}.welcome-enter{margin-top:26px;min-height:58px;font-size:14px;gap:25px}.welcome-eyebrow{font-size:8px;letter-spacing:2px}.welcome-footer{padding:18px 20px;flex-direction:column;gap:10px;text-align:center;font-size:9px}.launch-screen::before{width:120vw;height:120vw;top:-90vw;left:-10vw}}
+@media(prefers-reduced-motion:reduce){.launch-screen,.launch-screen *{animation:none!important;transition:none!important}.welcome-enter:hover{transform:none}}
+
 /* ---------------- Layout ---------------- */
 .layout{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh}
 .sidebar{background:var(--side);color:var(--side-ink);padding:26px 16px 20px;display:flex;flex-direction:column;
@@ -455,3 +492,158 @@ body.senior .mockfp .mf-pad{width:160px;height:160px}
 body.senior .mockfp .mf-title{font-size:24px}
 body.senior .mockfp .mf-what{font-size:20px}
 @media (prefers-reduced-motion:reduce){.mockfp.scanning .mf-pad{animation:none}}
+
+/* Presentation layer only: existing controls, content and states are preserved. */
+#app{--radius:22px;--line:#e9e3e5;--surface:#fff;--ink:#29242b;--muted:#69616b;
+  background:radial-gradient(ellipse at 85% 0,#fbe1e6 0,transparent 42%),linear-gradient(135deg,#faf7f8,#f5f5f9)}
+#app .sidebar{background:radial-gradient(ellipse at 0 0,#602334,transparent 55%),linear-gradient(170deg,#29232c,#171820);border-right:1px solid #ffffff14;padding:28px 18px}
+#app .brand{padding:14px;border-radius:14px;box-shadow:0 8px 25px #0002}
+#app .nav{gap:7px}
+#app .nav-btn{border-radius:12px;transition:background .2s,color .2s;min-height:46px}
+#app .nav-btn.active{background:linear-gradient(100deg,#b81836,#86283e);border-left-color:#ff8b9e;box-shadow:0 6px 18px #0002;color:#fff}
+#app .nav-btn.active svg{color:#fff}
+#app .trust-mini{background:#ffffff0a;border:1px solid #ffffff14;border-radius:16px}
+#app .avatar{background:linear-gradient(135deg,#bc354f,#632b46);box-shadow:0 4px 12px #a02c3b15}
+#app .topbar{background:#ffffffec;backdrop-filter:blur(18px);border-top:0;border-bottom:1px solid #e8dfe4;height:80px}
+#app .pill,#app .icon-btn{border-radius:999px;padding:8px 11px;background:#fff}
+#app .senior-toggle{box-shadow:0 3px 12px #d0001810;min-height:42px}
+#app #main{padding-top:30px}
+#app .hero{min-height:175px;border-radius:24px;padding:30px 34px;background:radial-gradient(ellipse at 80% 0,#ff7181 0,transparent 50%),linear-gradient(112deg,#8e0826,#df092b 65%,#eb324a);box-shadow:0 16px 36px #b8163020}
+#app .hero:before{content:"";position:absolute;inset:-100% -20%;z-index:-1;pointer-events:none;background:repeating-radial-gradient(ellipse at 80% 65%,transparent 0 34px,#ffffff15 35px 36px,transparent 37px 58px);transform:rotate(-14deg)}
+#app .hero:after{width:430px;height:430px;right:-80px;top:-190px;border-color:#ffffff0a}
+#app .hero h1{font-size:clamp(28px,2.5vw,38px);font-weight:600;letter-spacing:-1.2px}
+#app .hero .eyebrow{letter-spacing:2px;font-size:11px}
+#app .hero .date{padding:8px 12px;border:1px solid #ffffff35;border-radius:999px;background:#ffffff0b}
+#app .accounts{gap:16px;margin-bottom:26px}
+#app .card{box-shadow:0 8px 28px #30243e06;border-color:#e8e1e6}
+#app .balance{border-radius:22px;background:radial-gradient(ellipse at 100% 0,#753149,transparent 65%),linear-gradient(120deg,#272332,#393040);padding:24px;box-shadow:0 10px 26px #2e243417;min-height:176px}
+#app .balance:after{border-color:#ffffff23;box-shadow:0 0 0 24px #ffffff06,0 0 0 48px #ffffff04}
+#app .balance .value{font-size:32px;font-variant-numeric:tabular-nums}
+#app .acct{position:relative;min-height:176px;padding:24px;background:linear-gradient(140deg,#fff,#fffafb);transition:border-color .2s,box-shadow .2s}
+#app .acct:hover{border-color:#e6a4b3;box-shadow:0 12px 28px #92233a10}
+#app .acct .ico{width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,#ffe0e7,#fff1f4)}
+#app .acct .value{font-size:28px;font-weight:600;font-variant-numeric:tabular-nums}
+#app .main-grid{gap:24px}
+#app .assistant{border:1px solid #e6cfd8;box-shadow:0 12px 45px #8422400b;background:linear-gradient(160deg,#fff 40%,#fff9fb);overflow:hidden}
+#app .section-top{padding:20px 24px;background:linear-gradient(110deg,#fff3f6,#fff);border-bottom:1px solid #f0e0e6}
+#app .section-top h2{font-size:16px}
+#app .tiny-badge{border-radius:999px;padding:5px 9px}
+#app .stage{padding:26px;scrollbar-width:thin;scrollbar-color:#e3c0ca transparent}
+#app .spark{width:48px;height:48px;border-radius:16px;color:#fff;background:radial-gradient(circle at 25% 15%,#ff7a91,#df1236 60%,#a61637);box-shadow:0 5px 18px #df12362b,inset 0 1px 0 #fff8;transform:rotate(-5deg)}
+#app .spark svg{transform:rotate(5deg);width:24px;height:24px}
+#app .welcome h3{font-size:25px;letter-spacing:-.7px}
+#app .suggestion{border-radius:14px;background:#ffffffc9;border-color:#e7e1e7;padding:14px;min-height:58px;transition:border-color .2s,background .2s,box-shadow .2s}
+#app .suggestion:hover{background:#fff1f5;border-color:#e394a8;box-shadow:0 4px 14px #be24450c}
+#app .suggestion svg{flex-shrink:0}
+#app .msg.user{background:linear-gradient(120deg,#a81132,#cd173a);color:#fff;border-radius:18px 18px 5px 18px;box-shadow:0 5px 16px #be173518}
+#app .msg.bot{border-color:#e6dce3;border-radius:18px 18px 18px 5px;box-shadow:0 4px 15px #31233905}
+#app .msg.bot.ok{background:var(--ok-bg);border-color:var(--ok-line)}
+#app .composer-wrap{padding:0 22px 20px}
+#app .composer{background:#fff;border:1px solid #dacbd5;border-radius:18px;padding:12px;box-shadow:0 5px 22px #59203608}
+#app .composer:focus-within{border-color:#cd3555;box-shadow:0 0 0 3px #e5001909}
+#app .send{border-radius:13px;background:linear-gradient(135deg,#ed2348,#c4072c);box-shadow:0 4px 12px #d91b3920}
+#app .mic:not(.rec){color:#a41b3b;background:#fff0f4;border:1px solid #f5dae3;border-radius:12px}
+#app .safety{border-top:0;background:linear-gradient(140deg,#fff,#fff8fa);position:relative}
+#app .shield{border-radius:15px;background:linear-gradient(135deg,#fff0f4,#ffe0e9);border-color:#f5cfdb}
+#app .checks{gap:16px}
+#app .check .s{width:20px;height:20px;display:grid;place-items:center;border-radius:50%;background:#f7f3f5}
+#app .bills{padding:22px}
+#app .bills h3{margin-bottom:12px;gap:8px;flex-wrap:wrap}
+#app .bill{padding:15px 0}
+#app .bill .ico{border-radius:12px;background:#f8eef3;color:#9e3854}
+#app .bill .pay{border-radius:9px;min-height:34px}
+#app .table th{background:#fcf6f9;color:#655665}
+#app .table tbody tr:hover{background:#fff9fb}
+#app .contact{border-radius:18px}
+#app .btn{border-radius:11px}
+#app .setting{padding-top:21px;padding-bottom:21px}
+
+/* Senior view: expressive surfaces, calm content, generous touch targets. */
+body.senior #app{background:radial-gradient(ellipse at 12% 5%,#fbd9e3,transparent 43%),radial-gradient(ellipse at 90% 45%,#eee7f9,transparent 45%),#fcf8fa}
+body.senior #app #main{max-width:980px;padding:30px 24px 44px}
+body.senior #app .topbar{height:82px;padding:0 28px}
+body.senior #app .senior-hello{position:relative;isolation:isolate;overflow:hidden;background:linear-gradient(115deg,#94102e,#d51a41 75%,#ed4867);color:#fff;padding:30px 32px;border-radius:26px;box-shadow:0 12px 32px #a8123020;margin-bottom:24px;align-items:center;min-height:150px}
+body.senior #app .senior-hello:after{content:"";position:absolute;inset:-90% -10%;pointer-events:none;z-index:-1;background:repeating-radial-gradient(ellipse at 80% 40%,transparent 0 34px,#ffffff15 35px 36px,transparent 37px 57px);transform:rotate(-14deg)}
+body.senior #app .senior-hello h1{font-size:36px;font-weight:600;letter-spacing:-1px}
+body.senior #app .senior-hello .bal{color:#fff;font-size:20px;padding:12px 18px;border:1px solid #ffffff55;border-radius:16px;background:#710a222e}
+body.senior #app .senior-hello .bal b{display:block;color:#fff;font-size:30px;font-variant-numeric:tabular-nums}
+body.senior #app .assistant{border-radius:28px;background:#ffffffed;border-color:#e6ced8;box-shadow:0 14px 44px #7824420b}
+body.senior #app .stage{padding:30px;gap:22px}
+body.senior #app .spark{width:62px;height:62px;border-radius:20px}
+body.senior #app .spark svg{width:32px;height:32px}
+body.senior #app .welcome h3{font-size:30px;line-height:1.25}
+body.senior #app .welcome p{font-size:20px;color:#514a56;line-height:1.65}
+body.senior #app .suggestion{min-height:88px;border:2px solid #e9d7e0;border-radius:18px;padding:20px;font-size:20px;line-height:1.45;color:#372b36;background:linear-gradient(140deg,#fff,#fff5f8)}
+body.senior #app .suggestion:hover{border-color:#c52b50;background:#ffedf2}
+body.senior #app .suggestion svg{color:#bd1640;width:30px;height:30px}
+body.senior #app .msg{font-size:22px;line-height:1.6;padding:18px 22px}
+body.senior #app .composer-wrap{padding:8px 28px 26px}
+body.senior #app .composer{padding:26px 20px 18px;border-radius:24px;background:linear-gradient(180deg,#fff7fa,#fff 75%);border:2px solid #e8d3dd;gap:18px}
+body.senior #app .mic:not(.rec){width:140px;height:140px;border-radius:50%;color:#fff;border:1px solid #fff8;background:radial-gradient(circle at 32% 20%,#ff6984,#db123e 55%,#ac0b31);box-shadow:0 0 0 8px #fbe2ea,0 0 0 16px #fff4f8,0 12px 30px #b6173530;font-size:17px}
+body.senior #app .mic.rec{border-radius:50%}
+body.senior #app .composer textarea{font-size:21px;border-color:#e6d5de;min-height:60px;margin-top:6px}
+body.senior #app .send{min-height:56px;border-radius:14px;padding:0 28px;font-size:20px}
+body.senior #app .composer-foot{font-size:16px;color:#605564;line-height:1.5}
+body.senior #app .hint{font-size:18px;color:#574754}
+
+@media(min-width:821px) and (max-width:1100px){#app .topbar{padding:0 20px}#app .top-actions{gap:6px}#app .top-actions>.pill:not(.prot){padding:6px;font-size:10px}#app .breadcrumb .crumbs{font-size:11px}}
+@media(max-width:820px){
+  #app .sidebar{padding:7px 8px;background:#fffffff5;backdrop-filter:blur(18px);border-top:1px solid #e5d5df;box-shadow:0 -5px 20px #58243a08}
+  #app .nav{gap:2px}#app .nav-btn{min-height:48px;border-radius:10px}#app .nav-btn.active{background:#ffecf2;color:#b10e35;box-shadow:none}#app .nav-btn.active svg{color:#b10e35}
+  #app .topbar{height:68px;padding:0 14px}#app .icon-btn{padding:8px}#app .top-actions{gap:7px}
+  #app #main{padding:20px 14px 32px}#app .hero{padding:26px 22px;border-radius:20px;gap:18px}#app .hero h1{font-size:28px}
+  #app .accounts{gap:12px}#app .acct,#app .balance{min-height:150px;padding:22px;border-radius:20px}
+  #app .stage{padding:20px}#app .welcome h3{font-size:23px}#app .composer-wrap{padding:0 14px 18px}#app .composer{gap:7px;padding:9px}#app .composer textarea{min-width:0}#app .mic{padding:9px 7px}
+  body.senior #app #main{padding:20px 12px 32px}body.senior #app .topbar{padding:0 14px;height:74px}
+  body.senior #app .senior-hello{padding:24px;gap:18px;border-radius:22px}body.senior #app .senior-hello h1{font-size:30px}
+  body.senior #app .senior-hello .bal{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px}
+  body.senior #app .senior-hello .bal b{font-size:27px}body.senior #app .stage{padding:22px 18px}
+  body.senior #app .spark{width:48px;height:48px;border-radius:16px}body.senior #app .welcome{gap:12px}body.senior #app .welcome h3{font-size:26px}
+  body.senior #app .welcome p{font-size:19px}body.senior #app .suggestion{padding:18px;font-size:20px;min-height:82px}
+  body.senior #app .composer-wrap{padding:8px 12px 22px}body.senior #app .composer{padding:26px 14px 16px}body.senior #app .msg{padding:16px;font-size:21px}
+}
+@media(prefers-reduced-motion:reduce){#app *,#app *:before,#app *:after{transition:none!important;animation:none!important}}
+
+/* Fine surface detailing and tactile controls. No layout or workflow changes. */
+#app{background:radial-gradient(ellipse at 80% 0,#f5dce3,transparent 42%),radial-gradient(ellipse at 5% 75%,#eeeaf4,transparent 50%),#f8f7fa}
+#app .hero{border:1px solid #ffffff52;box-shadow:inset 0 1px 0 #ffffff50,0 14px 38px #b816301c}
+#app .hero:before{background:repeating-radial-gradient(ellipse at 80% 65%,transparent 0 34px,#ffffff18 35px 36px,transparent 37px 58px)}
+#app .card{border-color:#e9e2e8;box-shadow:0 1px 2px #31223504,0 12px 32px #31223506,inset 0 1px 0 #fff}
+#app .balance{background:radial-gradient(ellipse at 100% 0,#8e3f60,transparent 65%),linear-gradient(120deg,#211f2b,#393040);border:1px solid #ffffff32;box-shadow:inset 0 1px 0 #ffffff26,0 12px 30px #2e243418}
+#app .balance .value,#app .acct .value{letter-spacing:-1.1px}
+#app .acct{background:radial-gradient(ellipse at 100% 0,#fff0f4,transparent 60%),#fff}
+#app .assistant{box-shadow:0 1px 0 #fff,0 14px 48px #8422400c}
+#app .section-top{background:linear-gradient(115deg,#fff0f5,#fff 80%)}
+#app .suggestion{box-shadow:0 2px 3px #4c233504,inset 0 1px 0 #fff}
+#app .suggestion svg{transition:transform .2s ease}
+#app .sidebar .brand{border:1px solid #fff;box-shadow:0 8px 26px #0002,inset 0 1px 0 #fff}
+#app .nav-btn.active{background:linear-gradient(105deg,#bd1d40,#792a42);box-shadow:inset 0 1px 0 #ffffff29,0 7px 20px #08070b26}
+#app .bills h3,#app .safety h3{letter-spacing:-.25px}
+#app .composer{box-shadow:0 8px 25px #59203609,inset 0 1px 0 #fff}
+#app button,#confirm button,#trace button,.welcome-enter{position:relative;isolation:isolate;-webkit-tap-highlight-color:transparent;touch-action:manipulation;
+  transition:transform .16s ease,box-shadow .2s ease,background .2s ease,border-color .2s ease,filter .2s ease}
+@media(hover:hover) and (pointer:fine){
+  #app .suggestion:hover,#app .choice:hover,#app .btn:hover,#app .bill .pay:hover{transform:translateY(-2px);box-shadow:0 7px 18px #8b254017}
+  #app .suggestion:hover svg{transform:translateX(2px) rotate(-7deg)}
+  #app .send:hover,#app .senior-toggle:hover,#confirm .btn.primary:hover,.welcome-enter:hover{filter:brightness(1.06);box-shadow:0 7px 22px #bb12302b}
+  #app .nav-btn:hover{transform:translateX(2px)}
+  body.senior #app .mic:not(.rec):hover{transform:scale(1.025);box-shadow:0 0 0 9px #fbdce7,0 0 0 18px #fff0f5,0 14px 35px #b6173540}
+}
+#app button:not(:disabled):active,#confirm button:not(:disabled):active,#trace button:not(:disabled):active,.welcome-enter:not(:disabled):active{transform:translateY(1px) scale(.975);filter:brightness(.94)}
+#app button:focus-visible,#confirm button:focus-visible,#trace button:focus-visible,.welcome-enter:focus-visible{outline:3px solid #b81540;outline-offset:4px}
+#app button:disabled,#confirm button:disabled,.welcome-enter:disabled{transform:none;filter:none;cursor:not-allowed}
+button.tap-feedback:not(.switch)::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:2;
+  background:radial-gradient(circle at var(--tap-x,50%) var(--tap-y,50%),#f7739566 0,transparent 65%);box-shadow:inset 0 0 0 2px #d929552b;animation:control-tap .55s ease-out both}
+button.send.tap-feedback::after,button.primary.tap-feedback::after,button.mic.tap-feedback::after,button.welcome-enter.tap-feedback::after{background:radial-gradient(circle at var(--tap-x,50%) var(--tap-y,50%),#ffffff85 0,transparent 65%)}
+@keyframes control-tap{0%{opacity:.9;clip-path:circle(0% at var(--tap-x,50%) var(--tap-y,50%))}55%{opacity:.7}100%{opacity:0;clip-path:circle(145% at var(--tap-x,50%) var(--tap-y,50%))}}
+body.senior #app .senior-hello{border:1px solid #ffffff60;box-shadow:inset 0 1px 0 #ffffff60,0 14px 38px #a8123020}
+body.senior #app .senior-hello .bal{background:linear-gradient(135deg,#ffffff17,#74001e25);box-shadow:inset 0 1px 0 #ffffff30}
+body.senior #app .suggestion{background:linear-gradient(130deg,#fff,#fff5f8);box-shadow:0 4px 12px #82304a06,inset 0 1px 0 #fff}
+body.senior #app .assistant{box-shadow:0 18px 55px #7824420d;border-color:#e2c9d5}
+body.senior #app .mic:not(.rec){box-shadow:inset 0 2px 3px #ffffff80,inset 0 -5px 12px #7d00212b,0 0 0 8px #fbe2ea,0 0 0 16px #fff4f8,0 12px 30px #b6173530}
+body.senior #app button:not(:disabled):active{transform:scale(.985);filter:brightness(.93)}
+@media(prefers-reduced-motion:reduce){
+  #app button,#confirm button,#trace button,.welcome-enter{transition:none!important}
+  #app button:hover,#app button:active,#confirm button:active,#trace button:active,.welcome-enter:active{transform:none!important}
+  button.tap-feedback:not(.switch)::after{animation:none;background:#d92b5014;box-shadow:inset 0 0 0 2px #b8154060}
+}
