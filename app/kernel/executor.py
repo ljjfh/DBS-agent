@@ -176,6 +176,19 @@ class Kernel:
             g.amount_source = "derived"
             g.derived = f"Half of the signed transaction {parent_id}"
             g.quote = latest_user.get("raw_content", g.quote)[:160]
+        # A model-planner step whose amount the code worked out ("half of it", "whatever is left"): the draft must use
+        # exactly that number, and take the money from the account the plan resolved
+        resolved = latest_user.get("resolved") or {}
+        if resolved.get("from_account") and from_account != resolved["from_account"]:
+            raise KernelError(f"This step's money comes from the {resolved['from_account']} account; draft it with "
+                              f"from_account={resolved['from_account']}.", "WRONG_SOURCE")
+        if resolved.get("amount_cents") is not None:
+            if amount_cents == resolved["amount_cents"]:
+                g.amount, g.amount_source, g.derived = True, "derived", resolved["why"]
+            else:
+                g.amount, g.amount_source = False, "derived mismatch"
+                g.derived = f"{resolved['why']}, which is {fmt_money(resolved['amount_cents'])}"
+            g.quote = latest_user.get("raw_content", g.quote)[:160]
         draft.grounding, draft.you_said = g.as_dict(), g.quote
         draft.digest = compute_digest(draft)
         level = prot.effective(self.bank, s.user_id, now)

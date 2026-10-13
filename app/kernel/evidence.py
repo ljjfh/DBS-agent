@@ -91,7 +91,8 @@ def confirmed_proposal(messages: list[dict]) -> str:
 
 
 def user_utterances(messages: list[dict], window: int = WINDOW) -> list[str]:
-    return [m["content"] for m in messages if m.get("role") == "user"][-window:]
+    # A planner step is a rewritten instruction; ground it in what the user actually said (ground_text)
+    return [m.get("ground_text") or m["content"] for m in messages if m.get("role") == "user"][-window:]
 
 
 def ground(utterances: list[str], payee: dict | None, amount_cents: int, kind: str,

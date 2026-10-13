@@ -46,6 +46,10 @@ class Session:
     scam_reasons: list[str] = field(default_factory=list)
     plan: list[str] = field(default_factory=list)           # follow-up tasks split out of a compound request
     plan_references: dict[str, str] = field(default_factory=dict)  # raw child request -> parent draft id
+    plan_specs: dict[str, dict] = field(default_factory=dict)      # queued step words -> the model planner's step
+    plan_drafts: dict[int, str] = field(default_factory=dict)      # planner step number -> its draft id
+    plan_raw: str = ""                                             # the user's original words for the current plan
+    plan_pos: int | None = None                                    # planner step being drafted in this turn
     trace: list[dict] = field(default_factory=list)
     public_key: dict | None = None                          # the user's device signing key (JWK, public half only)
     challenges: dict[str, str] = field(default_factory=dict) # draft_id -> exact payload bytes the device must sign

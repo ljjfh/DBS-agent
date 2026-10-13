@@ -18,7 +18,7 @@ import re
 import time
 from dataclasses import dataclass, field
 
-from app.agent import fraud, presenter, request_guard
+from app.agent import fraud, planner, presenter, request_guard
 from app.agent.llm import LLMError, OfflineLLM, detect_intent
 from app.agent.prompts import SYSTEM_PROMPT, _unexpected_answer, state_summary
 from app.agent.textparse import money_mentions, parse_amount, relative_in
@@ -170,7 +170,15 @@ class Agent:
 
         raw_text = text
         reference_parent_id = None
-        if _RELATIVE.search(text) and len(split_plan(text)) == 1:
+        s.plan_pos = None
+        step_meta = None              # this turn drafts one step of a model-planned request
+        spec = s.plan_specs.pop(text, None)
+        if spec:
+            done = self._planned_step(s, start, spec, s.plan_raw or raw_text)
+            if isinstance(done, TurnResult):
+                return done
+            text, step_meta = done
+        elif _RELATIVE.search(text) and len(split_plan(text)) == 1:
             parent_id = s.plan_references.pop(text, None)
             if parent_id is None and s.receipts:
                 # A separate follow-up may explicitly identify the account just credited.
@@ -202,6 +210,7 @@ class Agent:
                 s.settle()
             s.plan.clear()
             s.plan_references.clear()
+            s.plan_specs.clear()
             reply = "OK, no payment will be sent from that request."
             s.messages.extend([{"role": "user", "content": text}, {"role": "assistant", "content": reply}])
             s.task_start = len(s.messages)
@@ -230,6 +239,9 @@ class Agent:
                 for task, parent in list(s.plan_references.items()):
                     if parent == pending_edit.draft_id:
                         s.plan_references[task] = d.draft_id
+                for pos, parent in list(s.plan_drafts.items()):
+                    if parent == pending_edit.draft_id:
+                        s.plan_drafts[pos] = d.draft_id
                 reply = "The old confirmation is cancelled. Please review the corrected payment."
                 s.messages.append({"role": "assistant", "content": reply})
                 card = presenter.build_card(d, self.bank, s.phase)
@@ -244,18 +256,8 @@ class Agent:
             s.task_start = len(s.messages)
             return TurnResult(error, {"type": "text"}, error, s.trace[start:], "request guard")
 
-        # 0. Plan
-        plan_before = list(s.plan)
-        parts = split_plan(text)
-        if len(parts) > 1:
-            s.plan_references.clear()
-            s.plan[:] = parts[1:]          # a restated compound request replaces what was queued before
-            s.add_trace("plan", "Compound request split into ordered tasks", parts)
-            text_now = parts[0]
-        else:
-            text_now = text
-
-        # 1. pre-hook: deterministic scam scan (standard protection turns HIGH into a warning; BLOCK stops everyone)
+        # 0. pre-hook, before any model sees the words (the planner included): deterministic scam scan
+        #    (standard protection turns HIGH into a warning; BLOCK stops everyone)
         level_p = prot.effective(self.bank, s.user_id)
         raw_level, reasons, cats = fraud.scan(text)
         level = prot.cap_scam(raw_level, level_p)
@@ -269,6 +271,31 @@ class Agent:
         if level.rank >= RiskLevel.HIGH.rank and fraud.wants_money_move(text):
             return self._intercept(s, start, text)
 
+        # 0. Plan
+        plan_before = list(s.plan)
+        parts = [text] if step_meta else split_plan(text)
+        busy = s.scam_level.rank >= RiskLevel.HIGH.rank or s.phase in (Phase.AWAITING_AUTH, Phase.COOLING)
+        steps = None if (step_meta or busy) else self._model_plan(s, text, parts)
+        if steps:
+            # The model's plan replaces whatever was queued; each step is still drafted, checked and signed on its own
+            parts = [st["said"] for st in steps]
+            s.plan_references.clear()
+            s.plan_specs = {st["said"]: st for st in steps[1:]}
+            s.plan[:] = parts[1:]
+            s.plan_drafts, s.plan_raw = {}, raw_text
+            done = self._planned_step(s, start, steps[0], raw_text)
+            if isinstance(done, TurnResult):
+                return done
+            text_now, step_meta = done
+        elif len(parts) > 1:
+            s.plan_references.clear()
+            s.plan_specs.clear()
+            s.plan[:] = parts[1:]          # a restated compound request replaces what was queued before
+            s.add_trace("plan", "Compound request split into ordered tasks", parts)
+            text_now = parts[0]
+        else:
+            text_now = text
+
         # 1a. Scam signs earlier in this conversation removed the draft tools. Say so plainly (deterministic) instead of
         #     letting the model improvise, and drop the remaining steps of any plan.
         if s.scam_level.rank >= RiskLevel.HIGH.rank and detect_intent(text_now) in _MONEY_INTENTS:
@@ -281,8 +308,12 @@ class Agent:
             return self._still_pending(s, start, text_now, pending)
 
         # 2. Constrained ReAct
-        s.messages.append({"role": "user", "content": text_now, "raw_content": raw_text,
-                           "reference_parent_id": reference_parent_id})
+        msg = {"role": "user", "content": text_now, "raw_content": raw_text, "reference_parent_id": reference_parent_id}
+        if step_meta:
+            s.plan_pos = step_meta["pos"]
+            msg.update(raw_content=step_meta["raw"], ground_text=step_meta["raw"], plan_pos=step_meta["pos"],
+                       plan_total=step_meta["total"], resolved=step_meta["resolved"])
+        s.messages.append(msg)
         verifier = self.gateway.verifier
         if verifier and s.phase == Phase.IDLE and self._money_related(s, text_now) and \
                 any(t.tier == "draft" for t in self.gateway.available(s)):
@@ -321,7 +352,9 @@ class Agent:
 
         # 3. Output validation
         new_draft = s.current_draft if s.current_draft_id and s.current_draft_id != draft_before else None
-        if new_draft and s.plan and _RELATIVE.search(s.plan[0]):
+        if new_draft and s.plan_pos:
+            s.plan_drafts[s.plan_pos] = new_draft.draft_id
+        elif new_draft and s.plan and _RELATIVE.search(s.plan[0]):
             s.plan_references[s.plan[0]] = new_draft.draft_id
         new_change = s.pending_change if (s.pending_change or {}).get("change_id") not in (None, change_before) else None
         reply = self._validate_reply(s, reply, new_draft, text_now, changed=bool(new_change))
@@ -372,6 +405,63 @@ class Agent:
             ui["plan"] = [text_now, *s.plan]    # the model queued follow-up steps (queue_follow_up)
         self.audit.append("agent.reply", s.session_id, {"reply": reply, "ui": ui["type"], "llm": llm_name})
         return TurnResult(reply=reply, ui=ui, speak=speak, trace=s.trace[start:], llm=llm_name)
+
+    # ------------------------------------------------------------------ Model planner
+    def _model_plan(self, s: Session, text: str, rule_parts: list[str]) -> list[dict] | None:
+        """Ask the model for a structured plan when a money request may hold several steps or a relative amount.
+        None = use the rule-based splitter (offline, PLANNER=rules, planner error, or a plain one-step request)."""
+        if settings.planner != "model" or str(getattr(self.llm, "name", "")).startswith("offline") or \
+                not planner.worth_planning(text):
+            return None
+        from app.agent.verifier import catalog
+        t0 = time.time()
+        steps, err = planner.plan(self.llm, text, catalog(self.bank, s.user_id))
+        took = time.time() - t0
+        if not steps:
+            s.add_trace("plan", f"Model planner unavailable ({err}); rule-based splitter used", rule_parts)
+            return None
+        if len(steps) == 1 and not planner.needs_resolving(steps[0]):
+            return None                                     # a plain one-step request: nothing to plan
+        for st in steps:
+            st["total"] = len(steps)
+        seen: set[str] = set()
+        for st in steps:                                    # queued steps are looked up by their words
+            if st["said"] in seen:
+                st["said"] = f"{st['said']} (step {st['pos']})"
+            seen.add(st["said"])
+        if len(rule_parts) > 1 and len(rule_parts) != len(steps):
+            s.add_trace("guard", f"The model planned {len(steps)} steps but the rule splitter found {len(rule_parts)}; "
+                                 "going with the model, and the independent verifier checks each step against your words",
+                        {"rules": rule_parts})
+        s.add_trace("plan", f"Model planned {len(steps)} step{'s' if len(steps) > 1 else ''} ({took:.1f}s): "
+                            + " → ".join(st["said"] for st in steps),
+                    [{k: st[k] for k in ("pos", "request", "action", "amount", "from")} for st in steps])
+        self.audit.append("plan.model", s.session_id, {"request": text, "steps": steps})
+        return steps
+
+    def _planned_step(self, s: Session, start: int, spec: dict, raw: str):
+        """Work out a planned step's referenced amount / account in code (from signed, executed earlier steps and real
+        balances). Returns (instruction, step_meta), or a TurnResult asking the user when it can't be worked out."""
+        try:
+            text, resolved = planner.resolve(spec, self.bank, s.user_id, s.receipts, s.plan_drafts)
+        except planner.Unresolved as e:
+            reply = (f"I can't work out the amount for “{spec['said']}” yet: {e}. "
+                     "Which exact amount in SGD should I use?")
+            s.plan.clear()
+            s.plan_specs.clear()
+            s.messages.extend([{"role": "user", "content": spec["said"], "raw_content": raw},
+                               {"role": "assistant", "content": reply}])
+            return TurnResult(reply, {"type": "text"}, reply, s.trace[start:], "plan guard")
+        if resolved:
+            s.add_trace("reference", f"Step {spec['pos']}: worked out by the bank — "
+                                     + (f"{resolved['why']} = {fmt_money(resolved['amount_cents'])}"
+                                        if resolved.get("amount_cents") is not None else "")
+                                     + (f"{'; ' if resolved.get('amount_cents') is not None else ''}from "
+                                        f"{resolved['from_account']}" if resolved.get("from_account") else ""),
+                        {"step": spec["said"], "instruction": text})
+            self.audit.append("plan.reference_resolved", s.session_id, {"step": spec, "instruction": text,
+                                                                         "resolved": resolved})
+        return text, {"pos": spec["pos"], "total": spec.get("total", 1), "raw": raw, "resolved": resolved}
 
     def _react(self, s: Session, llm, history: list[dict], draft_before, intent: str = "unknown") -> tuple[str, str, bool]:
         """Constrained ReAct: Thought -> Action (tool gateway) -> Observation, capped at settings.max_steps.

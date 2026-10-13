@@ -38,6 +38,7 @@ class Settings:
     # model for the independent verifier (second engine); empty = the judge model, else the main model.
     # Using a DIFFERENT model here makes the two engines more independent.
     llm_verifier_model = _f("LLM_VERIFIER_MODEL", "")
+    planner = _f("PLANNER", "model").lower()            # model: the model writes the plan, code checks it; rules: regex splitter
     llm_timeout = float(_f("LLM_TIMEOUT", "30"))
     llm_max_tokens = int(_f("LLM_MAX_TOKENS", "600"))      # cap per call: a runaway generation can't stall a turn
     # A forced tool call (tool_choice=required) slower than this switches forced calls off for this model server;

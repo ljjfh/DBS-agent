@@ -60,6 +60,16 @@ trace as "DBS <API> · <method> <path> (mock)".
 Small models pick tools better from short lists, so the limits, GIRO / standing-order and add-payee tools are only
 offered when the conversation is about them.
 
+**Multi-step requests: the model plans, the code computes.** "Move a grand to my joint account and then buy DBS
+shares with half of it", "put 1000 into the joint account, then use half that money for DBS stock", "send 500 to my
+daughter and invest whatever is left in Apple": no list of phrases covers these, so the model translates the request
+into a small closed plan (`app/agent/planner.py`): steps, and amounts as *references* ("half of step 1's amount",
+"what is left in savings after step 1", "20% of savings"), never as numbers it calculated. The code then works each
+amount out from **signed, executed** earlier steps and real balances, and the draft must use exactly that number
+(R53) and account. The plan itself executes nothing: every step is still grounded in the user's original words,
+checked by the independent verifier (which reads the original sentence plus the step number, never the plan),
+shown on a card and signed. Offline, on a planner error, or with `PLANNER=rules`, the rule-based splitter is used.
+
 **Vague amounts.** "Buy Apple shares with half of my money", "20% of my savings", "move a grand to my joint account,
 then buy DBS shares with half of it": the bank's code works the amount out from the real balance (or the amount just
 said) and gives it to the model; the card says how it was worked out. If the model uses any other number, rule
@@ -94,7 +104,7 @@ a time with tap-to-answer choices, replies read aloud slowly, and a bigger confi
 words. Settings also has "Larger text", "Read replies aloud" and "Reset demo".
 
 ```bash
-python -m unittest discover tests     # 195 tests (kernel, passkeys, verifier, gateway, protection, Harness, HTTP)
+python -m unittest discover tests     # 220 tests (kernel, passkeys, verifier, gateway, protection, Harness, HTTP)
 python -m app.lab                    # security lab: 22 real attacks on an isolated sandbox
 python eval/run_eval.py               # core + hard suites + attack tests -> eval/report.md / .json / .html
 python eval/run_eval.py --compare --repeat 3   # the headline run: rules-only baseline vs LLM agent, 3x each
