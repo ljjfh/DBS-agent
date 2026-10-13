@@ -1,9 +1,9 @@
 {
   "receipt_version": 2,
-  "txn_id": "TXN-C943DCEFEF",
+  "txn_id": "TXN-6806830E7A",
   "status": "SUCCESS",
-  "executed_at": 1791869356,
-  "session_id": "b9ee2012dc0143e1b12c70d6086fd3ad",
+  "executed_at": 1791872927,
+  "session_id": "b0c7e3b4652a499a8f7bd01d4d3b4605",
   "verification": {
     "status": "match",
     "fields": {
@@ -17,7 +17,7 @@
     "engine": "offline extractor"
   },
   "card": {
-    "draft_id": "d_18d72fe0bd",
+    "draft_id": "d_be7627b3a8",
     "user_id": "u_chen",
     "kind": "transfer",
     "from_account": "SAV-001",
@@ -29,22 +29,22 @@
     "asset_class": "Cash",
     "you_said": "Send 50 to my daughter",
     "schedule": null,
-    "nonce": "ca713f53de81",
-    "expires_at": 1791869954
+    "nonce": "cf5d4e17c69c",
+    "expires_at": 1791873526
   },
-  "digest": "fdbefe31d67e774ef56da3d5ac1e535aae6fa7726a82354b1d0b59282d37195f",
+  "digest": "09219473cd5f059d35a132b49aa776ff9e635b5d5c50fd75d81209420bc7796b",
   "authorization": {
     "method": "device_key",
     "alg": "ECDSA P-256 / SHA-256 (browser key, unlocked by the demo's simulated fingerprint)",
-    "payload": "{\"amount_cents\":5000,\"asset_class\":\"Cash\",\"currency\":\"SGD\",\"digest\":\"fdbefe31d67e774ef56da3d5ac1e535aae6fa7726a82354b1d0b59282d37195f\",\"domain\":\"STAR-DCTA-AUTH-V1\",\"draft_id\":\"d_18d72fe0bd\",\"expires_at\":1791869476,\"from_account\":\"SAV-001\",\"kind\":\"transfer\",\"nonce\":\"4bae063e0d647307aa4928bb\",\"payee\":\"Chen Mei Ling\",\"schedule\":null,\"session_id\":\"b9ee2012dc0143e1b12c70d6086fd3ad\",\"you_said\":\"Send 50 to my daughter\"}",
-    "signature": "b5sMZmpIGdnOW95QMBKYzhfFASCZ2OhoDo92eoYkSfclCcAVNM5cro9di66xdEklPukcMjqaWDnpez6zvcNkeQ==",
+    "payload": "{\"amount_cents\":5000,\"asset_class\":\"Cash\",\"currency\":\"SGD\",\"digest\":\"09219473cd5f059d35a132b49aa776ff9e635b5d5c50fd75d81209420bc7796b\",\"domain\":\"STAR-DCTA-AUTH-V1\",\"draft_id\":\"d_be7627b3a8\",\"expires_at\":1791873047,\"from_account\":\"SAV-001\",\"kind\":\"transfer\",\"nonce\":\"e64147f726bccf5457fbb5c2\",\"payee\":\"Chen Mei Ling\",\"schedule\":null,\"session_id\":\"b0c7e3b4652a499a8f7bd01d4d3b4605\",\"you_said\":\"Send 50 to my daughter\"}",
+    "signature": "+91Ijn1M1klaHWwTqCf0h+ehvaV7rCs0QAultV742cf4L/Q7l3GO5gsCMdyhYGBT/EQH6be5vXzL8RE9SwtgXQ==",
     "public_key": {
       "kty": "EC",
       "crv": "P-256",
-      "x": "JsUZxnuINq5utzEB_9SZ08-Zwycn_nchoNDGaieQxA0",
-      "y": "nYU4FkoMhIvDOcB5VEbKIAXxipwlRL_1WgyD2dx2i7c"
+      "x": "cXTpPom3YM1LTsnQ4lALfXc8c2Xq4L3eiwh1xbYnp0M",
+      "y": "lijn48LxmA6SOe6BgTPM2s8STdq2KJq0Hw9HtRqZ7vM"
     },
-    "key_id": "19817b981a30c75d"
+    "key_id": "1251d2937bff7d0a"
   },
-  "receipt_sha256": "b2a9d5a3f66f8df76c6c2192badb311cc851e28015559d85b579caed7ef6dd3a"
+  "receipt_sha256": "43e8817e50451c679ebf71263140fff40b5da8f081d4f077d44bdc0df1d828ed"
 }

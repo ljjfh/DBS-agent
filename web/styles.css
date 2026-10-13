@@ -147,6 +147,9 @@ main{width:100%;max-width:1480px;margin:0 auto;padding:28px 32px 40px}
 
 .main-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(290px,1fr);gap:22px;align-items:start}
 .side-stack{display:grid;gap:18px}
+.overview-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;margin-top:24px;align-items:stretch}
+@media(min-width:1181px){.main-grid>.safety{position:sticky;top:104px}}
+@media(max-width:820px){.overview-details{grid-template-columns:minmax(0,1fr);gap:18px;margin-top:18px}}
 
 /* ---------------- Assistant ---------------- */
 .assistant{display:flex;flex-direction:column;min-height:560px}

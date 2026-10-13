@@ -22,7 +22,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 1969
+      "ms": 1754
     },
     {
       "id": "B_nav_activity",
@@ -38,7 +38,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 1477
+      "ms": 1334
     },
     {
       "id": "B_nav_contacts",
@@ -54,7 +54,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 1619
+      "ms": 1319
     },
     {
       "id": "B_nav_audit",
@@ -70,7 +70,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 1541
+      "ms": 1362
     },
     {
       "id": "B_nav_lab",
@@ -86,7 +86,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 2060
+      "ms": 1267
     },
     {
       "id": "B_nav_settings",
@@ -102,7 +102,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 1534
+      "ms": 1308
     },
     {
       "id": "B_pay",
@@ -122,7 +122,7 @@
           "Send 50 to my daughter"
         ]
       },
-      "ms": 3524
+      "ms": 3101
     },
     {
       "id": "B_cancel",
@@ -138,7 +138,7 @@
           "Send 50 to my daughter"
         ]
       },
-      "ms": 1817
+      "ms": 1637
     },
     {
       "id": "B_sensor_cancel",
@@ -156,7 +156,7 @@
           "Send 50 to my daughter"
         ]
       },
-      "ms": 1854
+      "ms": 1643
     },
     {
       "id": "B_restore",
@@ -174,7 +174,7 @@
           "Send 50 to my daughter"
         ]
       },
-      "ms": 2628
+      "ms": 2498
     },
     {
       "id": "B_doubleclick",
@@ -193,7 +193,7 @@
           "Send 50 to my daughter"
         ]
       },
-      "ms": 3654
+      "ms": 3478
     },
     {
       "id": "B_download",
@@ -221,7 +221,7 @@
             true
           ],
           [
-            "Key id 19817b981a30c75d matches",
+            "Key id 1251d2937bff7d0a matches",
             true
           ]
         ],
@@ -230,7 +230,7 @@
           "Send 50 to my daughter"
         ]
       },
-      "ms": 4070
+      "ms": 3767
     },
     {
       "id": "B_lost_response",
@@ -251,7 +251,7 @@
           "Send 50 to my daughter"
         ]
       },
-      "ms": 4960
+      "ms": 4398
     },
     {
       "id": "B_cancel_network",
@@ -270,7 +270,7 @@
           "Send 50 to my daughter"
         ]
       },
-      "ms": 2169
+      "ms": 1982
     },
     {
       "id": "B_senior",
@@ -292,7 +292,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 2753
+      "ms": 2714
     },
     {
       "id": "B_mobile",
@@ -309,7 +309,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 1687
+      "ms": 1568
     },
     {
       "id": "B_mobile_senior",
@@ -326,7 +326,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 1460
+      "ms": 1427
     },
     {
       "id": "B_xss",
@@ -344,7 +344,7 @@
           "<img src=x onerror=\"window.__xss=1\"> What is my balance?"
         ]
       },
-      "ms": 1614
+      "ms": 1647
     },
     {
       "id": "B_voice_normal",
@@ -365,7 +365,7 @@
           "Send fifty to my daughter"
         ]
       },
-      "ms": 2279
+      "ms": 2474
     },
     {
       "id": "B_voice_restart",
@@ -386,7 +386,7 @@
           "Send fifty to my daughter"
         ]
       },
-      "ms": 2260
+      "ms": 2317
     },
     {
       "id": "B_voice_network",
@@ -403,7 +403,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 2218
+      "ms": 2190
     },
     {
       "id": "B_voice_pause",
@@ -424,7 +424,7 @@
           "Send fifty to my daughter"
         ]
       },
-      "ms": 4949
+      "ms": 4958
     },
     {
       "id": "B_voice_missing",
@@ -440,7 +440,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 1339
+      "ms": 1347
     },
     {
       "id": "B_frozen",
@@ -456,7 +456,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 1884
+      "ms": 1883
     },
     {
       "id": "B_lab",
@@ -472,7 +472,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 2219
+      "ms": 2190
     },
     {
       "id": "B_bill",
@@ -499,7 +499,7 @@
           "Pay the October utilities bill"
         ]
       },
-      "ms": 2980
+      "ms": 3359
     },
     {
       "id": "B_investment",
@@ -543,7 +543,7 @@
           "Invest 200 in income fund"
         ]
       },
-      "ms": 3153
+      "ms": 3177
     },
     {
       "id": "B_multi",
@@ -564,7 +564,7 @@
           "send 50 to my daughter"
         ]
       },
-      "ms": 5438
+      "ms": 5479
     },
     {
       "id": "B_audit_export",
@@ -578,7 +578,7 @@
           "integrity": {
             "ok": true,
             "records": 130,
-            "head": "486291f0d3f5da1e717dbe87b7e92378d4bed95c800b50ae325a97ee3bef6937"
+            "head": "31f18d57cc457ecdbaf4a4d252edd48a1203443c29d3185196db228291805f9a"
           },
           "entries": 3
         },
@@ -587,7 +587,7 @@
           "What is my balance?"
         ]
       },
-      "ms": 1932
+      "ms": 1977
     },
     {
       "id": "B_preferences",
@@ -604,7 +604,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 2499
+      "ms": 2452
     },
     {
       "id": "B_reset",
@@ -623,7 +623,7 @@
           "Send 50 to my daughter"
         ]
       },
-      "ms": 3237
+      "ms": 3301
     },
     {
       "id": "B_voice_permission",
@@ -639,7 +639,7 @@
         "page_errors": [],
         "chat_requests": []
       },
-      "ms": 1352
+      "ms": 1357
     },
     {
       "id": "B_trace",
@@ -657,7 +657,7 @@
           "What is my balance?"
         ]
       },
-      "ms": 1858
+      "ms": 1877
     }
   ]
 }

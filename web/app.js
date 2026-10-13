@@ -185,9 +185,13 @@ function overview(m){
     <section class="accounts" id="accounts" aria-label="Accounts"></section>
     <div class="main-grid">
       ${assistantHtml()}
-      <div class="side-stack"><section class="card safety" id="safety" aria-live="polite"></section><section class="card bills" id="bills"></section>
-        <section class="card bills" id="regular"></section>
-        <section class="card bills" id="holdings"></section><section class="card bills" id="cards"></section></div>
+      <section class="card safety" id="safety" aria-live="polite"></section>
+    </div>
+    <div class="overview-details">
+      <section class="card bills" id="bills"></section>
+      <section class="card bills" id="regular"></section>
+      <section class="card bills" id="holdings"></section>
+      <section class="card bills" id="cards"></section>
     </div>`;
   bindAssistant(); renderAccounts(); renderSafety(); renderBills(); renderHoldings();
 }
