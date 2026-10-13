@@ -12,7 +12,7 @@ from app.config import settings
 from app.kernel import protection as prot
 from app.models import Draft, RiskDecision, RiskLevel, fmt_money
 
-RULESET_VERSION = "rules-2026.10.12-v4"
+RULESET_VERSION = "rules-2026.10.14-v5"
 
 
 @dataclass
@@ -115,7 +115,7 @@ def evaluate(draft: Draft, bank: MockBank, ctx: RuleContext | None = None) -> Ri
             raise_to(RiskLevel.HIGH, "R72_LARGE_INVESTMENT",
                      f"This is more than {fmt_money(int(threshold * 100))}, so we'll wait a little before confirming.")
 
-    # ---- Time and frequency (MEDIUM) ----
+    # ---- Time warning (MEDIUM) and hard transaction frequency limit (BLOCK) ----
     if ctx.local_hour is not None:
         hour = ctx.local_hour
     elif settings.fixed_hour is not None:
@@ -126,7 +126,7 @@ def evaluate(draft: Draft, bank: MockBank, ctx: RuleContext | None = None) -> Ri
         raise_to(RiskLevel.MEDIUM, "R20_NIGHT", "It's late at night, so let's double-check.")
     recent = bank.recent_exec_count(draft.user_id, settings.velocity_window_min * 60)
     if recent >= settings.velocity_max:
-        raise_to(RiskLevel.MEDIUM, "R21_VELOCITY", "You've made several payments in a short time, so let's double-check.")
+        raise_to(RiskLevel.BLOCK, "R21_VELOCITY", "Too many payments in a short time. Please wait until the transaction window clears, then prepare a new request.")
 
     # ---- Fields from untrusted sources (MEDIUM) ----
     if draft.taint:

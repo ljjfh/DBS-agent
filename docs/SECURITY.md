@@ -1,5 +1,11 @@
 # Security: what is implemented, what is simulated, what remains
 
+The transaction contract update adds server-owned, expiring secondary approvals bound to customer/session/card digest,
+independently checked again at the gateway; hard velocity limits enforced under the ledger write lock; and signed plan
+dependency IDs checked against completed ledger receipts. The reviewer is a simulated bank role authenticated by a
+separate configured secret, not a real out-of-band banking channel or KYC. See [RISK_CONTRACT.md](RISK_CONTRACT.md).
+Decision records are server observations: only the transaction card is covered by the customer's device signature.
+
 Star is a local prototype with synthetic money. It does not claim production bank security, legal
 non-repudiation or resistance to every attack. This table is meant to be read by judges as-is.
 

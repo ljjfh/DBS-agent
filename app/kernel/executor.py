@@ -17,7 +17,7 @@ from app.bank.gateway import ExecutionGateway, GatewayError
 from app.bank.mock_bank import MockBank
 from app.config import settings
 from app.kernel import crosscheck, p256, rules, webauthn
-from app.kernel import changes
+from app.kernel import changes, contract
 from app.kernel import protection as prot
 from app.kernel.audit import AuditLog
 from app.kernel.credentials import CredentialRegistry
@@ -49,6 +49,7 @@ class Kernel:
         self.allow_mock = (settings.auth_mode == "mock") if allow_mock is None else allow_mock
         self.registry = registry or CredentialRegistry()
         self.gateway = gateway or ExecutionGateway(bank, self.registry, audit, allow_unsigned=self.allow_mock)
+        self.reviews = self.gateway.reviews
         # No independent-verifier verdict -> the draft can't be signed (fail closed)
         self.require_verification = require_verification
 
@@ -179,6 +180,7 @@ class Kernel:
         # A model-planner step whose amount the code worked out ("half of it", "whatever is left"): the draft must use
         # exactly that number, and take the money from the account the plan resolved
         resolved = latest_user.get("resolved") or {}
+        draft.dependency_ids = list(dict.fromkeys(([parent_id] if parent_id else []) + resolved.get("dependency_ids", [])))
         if resolved.get("from_account") and from_account != resolved["from_account"]:
             raise KernelError(f"This step's money comes from the {resolved['from_account']} account; draft it with "
                               f"from_account={resolved['from_account']}.", "WRONG_SOURCE")
@@ -236,7 +238,42 @@ class Kernel:
         if frozen:
             self.audit.append("draft.frozen", s.session_id, {"draft_id": draft.draft_id,
                                                              "mismatches": draft.verification["mismatches"]})
+        self.record_decision(s, draft)
         return draft
+
+    def record_decision(self, s, draft, **kwargs):
+        result = contract.decision(draft, s, self.bank, self.reviews, **kwargs)
+        draft.decision = result
+        self.audit.append("contract.decision", s.session_id, result)
+        return result
+
+    def approve_secondary(self, s, draft_id, digest):
+        """Only the authenticated demo-reviewer HTTP endpoint may call this; never an agent tool."""
+        draft = self._get_draft(s, draft_id)
+        if s.phase not in (Phase.COOLING, Phase.AWAITING_AUTH) or draft.expires_at <= time.time():
+            raise KernelError("This draft is no longer awaiting approval.", "REVIEW_NOT_PENDING")
+        if digest != draft.digest or compute_digest(draft) != digest:
+            raise KernelError("Review is for a different card.", "DIGEST_MISMATCH")
+        if draft.verification.get("status") != "match":
+            raise KernelError("The intent check must pass first.", "NOT_VERIFIED")
+        self._recheck_risk(s, draft)
+        if not contract.secondary_required(draft.card_fields(), self.bank):
+            raise KernelError("This payment does not need secondary approval.", "REVIEW_NOT_REQUIRED")
+        rec = self.reviews.approve(s.user_id, s.session_id, draft_id, digest, draft.expires_at)
+        try:
+            self.audit.append("review.approved", s.session_id, rec)
+            self.record_decision(s, draft)
+        except Exception:
+            self.reviews.revoke(s.session_id, draft_id)
+            raise
+        return rec
+
+    def _contract_gate(self, s, draft, *, signature=False, verify_answer=False, stage="before_authorization"):
+        record = self.record_decision(s, draft, signature=signature, verify_answer=verify_answer, stage=stage)
+        if record["checks"]["plan"]["status"] == "fail":
+            raise KernelError("An earlier transaction has not completed. Nothing can move.", "DEPENDENCY_NOT_COMPLETED")
+        if record["checks"]["secondary_approval"]["status"] == "pending":
+            raise KernelError("A separate demo reviewer must approve this exact payment first.", "SECONDARY_APPROVAL_REQUIRED")
 
     # ------------------------------------------------------------------ Challenge
     def issue_challenge(self, s: Session, draft_id: str, shown_digest: str,
@@ -265,6 +302,7 @@ class Kernel:
                               "NOT_VERIFIED")
         if draft.risk and draft.risk.verify_question and verify_answer is not True:
             raise KernelError("Please answer the verification question first.", "VERIFY_REQUIRED")
+        self._contract_gate(s, draft, verify_answer=verify_answer)
 
     # ------------------------------------------------------------------ Authorize
     def authorize(self, s: Session, draft_id: str, shown_digest: str, assertion,
@@ -288,6 +326,7 @@ class Kernel:
         s.add_trace("sign", label, {"digest": shown_digest[:16] + "…", "method": method})
         self.audit.append("auth.granted", s.session_id, {"draft_id": draft_id, "digest": shown_digest,
                                                          "method": method})
+        self.record_decision(s, draft, stage="authorized", signature=isinstance(assertion, dict), verify_answer=True)
         return token
 
     def _verify_payment_signature(self, s: Session, draft: Draft, assertion: dict, site: Site) -> str:
@@ -322,21 +361,27 @@ class Kernel:
         ok, why = self.tokens.verify_and_consume(token, draft_id, recomputed)
         if not ok:
             self.audit.append("commit.rejected", s.session_id, {"draft_id": draft_id, "reason": why})
+            self.record_decision(s, draft, stage="rejected", rejection="TOKEN_INVALID")
             raise KernelError(why, "TOKEN_INVALID")
         # Re-run the rules before executing (the balance may have changed; prevents time-of-check vs time-of-use gaps)
         self._recheck_risk(s, draft)
+        self._contract_gate(s, draft, signature=bool(s.signatures.get(draft_id)), verify_answer=True, stage="pre_execution")
         # The ledger is behind a zero-trust gateway that re-verifies the device signature itself
         try:
             receipt = self.gateway.execute(user_id=s.user_id, session_id=s.session_id, card=draft.card_fields(),
                                            digest=recomputed, auth=s.signatures.get(draft_id),
                                            idempotency_key=draft.draft_id,
-                                           verification={k: draft.verification.get(k) for k in ("status", "fields", "engine")})
+                                           verification={k: draft.verification.get(k) for k in ("status", "fields", "engine")},
+                                           decision=draft.decision)
         except GatewayError as e:
             s.transition(Phase.CANCELLED)
+            self.record_decision(s, draft, stage="rejected", rejection=e.code)
             raise KernelError(str(e), e.code) from e
         receipt = dict(receipt)
         receipt.setdefault("verifiable", self._verifiable_receipt(s, draft, receipt))
         s.transition(Phase.EXECUTED)
+        draft.decision = receipt.get("verifiable", {}).get("decision", draft.decision)
+        self.reviews.revoke(s.session_id, draft_id)
         s.add_trace("gateway", "Execution gateway re-verified the device signature on its own, then " +
                     ("set up the standing instruction (DBS Standing Instructions · POST /standing-instructions)"
                      if draft.schedule else "posted to the ledger"),
@@ -359,6 +404,9 @@ class Kernel:
             s.challenges.pop(draft.draft_id, None)
             s.signatures.pop(draft.draft_id, None)
             s.transition(Phase.CANCELLED)
+            draft.risk = current
+            self.reviews.revoke(s.session_id, draft.draft_id)
+            self.record_decision(s, draft, stage="rejected", rejection="RECHECK_BLOCKED")
             self.audit.append("commit.rejected", s.session_id,
                               {"draft_id": draft.draft_id, "reason": current.rule_hits})
             raise KernelError("The payment conditions changed. Please prepare and review a new payment.", "RECHECK_BLOCKED")
@@ -433,6 +481,8 @@ class Kernel:
         draft = self._get_draft(s, draft_id)
         if s.phase in (Phase.DRAFTED, Phase.COOLING, Phase.AWAITING_AUTH, Phase.FROZEN):
             s.transition(Phase.CANCELLED)
+            self.reviews.revoke(s.session_id, draft_id)
+            self.record_decision(s, draft, stage="cancelled", rejection="Cancelled by user; nothing posted.")
             self.audit.append("draft.cancelled", s.session_id, {"draft_id": draft.draft_id, "reason": reason})
 
     # ------------------------------------------------------------------ Helpers

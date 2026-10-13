@@ -14,7 +14,9 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
-      - run: pip install -r requirements.txt
+      - run: pip install -r tests/requirements.txt
       - run: python -m unittest discover tests -v
       - name: Hard safety checks (no unsigned execution, every attack blocked)
         run: python eval/run_eval.py
+      - name: Transaction contract fault injection
+        run: python eval/run_contract_eval.py

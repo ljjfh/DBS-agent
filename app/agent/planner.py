@@ -171,12 +171,15 @@ def resolve(step: dict, bank, user_id: str, receipts: list[dict], step_drafts: d
     accounts = bank.accounts(user_id)
     text, amount = step["request"], step["amount"]
     cents, why, from_id = None, "", None
+    dependency_ids = []
 
     def parent(n: int) -> dict:
         draft_id = step_drafts.get(n)
         rec = next((r for r in receipts if draft_id and r.get("card", {}).get("draft_id") == draft_id), None)
         if not rec or rec.get("status") != "SUCCESS":
             raise Unresolved(f"step {n} has not been signed and completed yet")
+        if draft_id not in dependency_ids:
+            dependency_ids.append(draft_id)
         return rec["card"]
 
     def account(word: str | None, fallback: str | None) -> dict:
@@ -215,7 +218,8 @@ def resolve(step: dict, bank, user_id: str, receipts: list[dict], step_drafts: d
         text += f" with {cents // 100}.{cents % 100:02d} SGD"
     if from_id and not re.search(r"\bfrom\b", text, re.I):
         text += f" from my {bank.account(user_id, from_id)['name']}"
-    resolved = {"amount_cents": cents, "why": why, "from_account": from_id} if (cents is not None or from_id) else None
+    resolved = {"amount_cents": cents, "why": why, "from_account": from_id,
+                "dependency_ids": dependency_ids} if (cents is not None or from_id) else None
     return text, resolved
 
 

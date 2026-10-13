@@ -34,6 +34,7 @@ API_LIMIT, ASR_LIMIT = 32 * 1024, 3 * 1024 * 1024   # 50 s of 16 kHz WAV is ~2.2
 
 # Online demo only: each device gets a fair share of the model and speech APIs (they cost money and have quotas)
 COSTLY = {"/api/chat": 40, "/api/asr": 20}          # requests per device per 5 minutes
+COSTLY.update({"/api/review/secondary": 20, "/api/lab/contract": 6})
 _WINDOW = 300
 _hits: dict[tuple[str, str], deque] = {}
 _hits_lock = threading.Lock()
@@ -88,7 +89,7 @@ class SecurityMiddleware:
                 length = limit + 1
             if length < 0 or length > limit:
                 return await self._deny(send, 413, "TOO_LARGE", "Request is too large.")
-            if settings.public_demo and path in COSTLY and not _allow(_client(scope, headers), path):
+            if (settings.public_demo or path == "/api/review/secondary") and path in COSTLY and not _allow(_client(scope, headers), path):
                 return await self._deny(send, 429, "RATE_LIMITED",
                                         "Too many requests from this device. Please wait a minute and try again.")
 

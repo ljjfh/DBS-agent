@@ -255,6 +255,72 @@ function renderRegular(){
 }
 
 // "Behind your request": the checks behind the latest request, in plain words
+function decisionPanel(record){
+  const labels = {intent:'Intent', plan:'Plan dependencies', policy:'Transaction policy', secondary_approval:'Separate approval', authorization:'Authorization', execution:'Execution'};
+  const marks = {pass:'PASS', fail:'FAILED', pending:'PENDING', not_applicable:'NOT REQUIRED'};
+  const ex = record.verifier?.extracted || {};
+  const cents = v => Number.isInteger(v) ? `S$${(v/100).toFixed(2)}` : 'Not stated';
+  return `<details class="decision-panel"><summary>Transaction safety evidence · ${esc(record.action.replaceAll('_',' '))}</summary>
+    <p class="footnote">Policy ${esc(record.policy_version)} · ${esc(record.stage)}<br>${esc(record.evidence_scope)}</p>
+    <blockquote>${esc(record.raw_text || 'No transcript recorded')}</blockquote>
+    <div class="evidence-compare"><div><b>AI draft</b><p>${esc(record.draft?.payee)}<br>${esc(cents(record.draft?.amount_cents))}<br>${esc(record.draft?.from_account)}</p></div>
+    <div><b>Validation reading</b><p>${esc(ex.payee || 'Not stated')}<br>${esc(ex.amount == null ? 'Not stated' : 'S$'+ex.amount)}<br>${esc(ex.from_account || 'Not stated')}</p></div></div>
+    <p class="footnote">${esc(record.verifier?.engine)}${record.verifier?.mode === 'offline_shared_parser' ? ' · Shared offline parser; not two independent models.' : ''}</p>
+    <ol class="contract-checks">${Object.entries(record.checks || {}).map(([key,c]) => `<li class="${esc(c.status)}"><b>${esc(labels[key] || key)}</b><span>${esc(marks[c.status] || c.status)}</span><small>${esc(c.detail)}</small></li>`).join('')}</ol>
+    <p><b>Decision:</b> ${esc(record.action.replaceAll('_',' '))}</p>
+    <p class="footnote">Rules: ${esc((record.reason_codes || []).join(', ') || 'No risk flags')}<br>Still needed: ${esc((record.required_evidence || []).join(', ') || 'None')}</p>
+    </details>`;
+}
+
+function bindContractLab(){
+  $('#contract-run').onclick = async () => {
+    const button = $('#contract-run'); button.disabled = true;
+    $('#contract-out').textContent = 'Running isolated fault injection…';
+    try{
+      const data = await api('/api/lab/contract', {});
+      $('#contract-out').innerHTML = `<h3>${data.passed} / ${data.total} scenarios behaved as expected</h3>
+        <details class="decision-panel"><summary>How these results were measured</summary><p class="footnote">${esc(data.methodology)}</p></details>
+        <div class="contract-cases">${data.cases.map(r => `<article class="contract-case"><h3>${esc(r.title)}</h3>
+          <p>${esc(r.principle)} · ${r.fault_injected ? 'Injected fault' : 'Normal control'}</p>
+          <p class="${r.expected_behavior_met ? 'contract-pass' : 'contract-fail'}">${r.expected_behavior_met ? 'Expected behavior observed' : 'Unexpected result'} · ${esc(r.code)}</p>
+          <p>${esc(Object.entries(r.decision.checks).filter(([k,c])=>k !== 'execution' && c.status === 'fail').map(([,c])=>c.detail).join(' ') || (r.id === 'secondary' ? 'Approval from the separate reviewer is missing.' : ''))}</p>
+          <p><b>Ledger debit:</b> S$${(r.ledger_debit_cents/100).toFixed(2)}</p>
+          ${r.external_balance_change ? '<p class="footnote">The fixture changes the balance externally before execution; the attempted transaction must debit zero.</p>' : ''}
+          ${decisionPanel(r.decision)}</article>`).join('')}</div>
+        <h3>Which checks prevent unsafe candidates reaching authorization?</h3>
+        <p class="footnote">Counterfactual gate replay on five fixed candidates, including one normal control. This is not a live-model benchmark.</p>
+        <div class="contract-table"><table class="table"><thead><tr><th>Checks enabled</th><th>Unsafe admitted</th><th>Normal admitted</th></tr></thead><tbody>
+        ${data.comparison.map(r => `<tr><td>${esc(r.label)}</td><td>${r.unsafe_candidates_admitted}/${r.unsafe_candidates}</td><td>${r.normal_candidates_admitted}/${r.normal_candidates}</td></tr>`).join('')}</tbody></table></div>
+        <button class="btn secondary" id="contract-download">Download measured evidence</button>`;
+      $('#contract-download').onclick = () => download('contract-evidence.json', data);
+    }catch(e){$('#contract-out').textContent = e.message;}finally{button.disabled = false;}
+  };
+  $('#review-inspect').onclick = async () => {
+    const out = $('#review-out');
+    try{
+      const file = $('#review-file').files[0]; if(!file) throw new Error('Select a customer review ticket first.');
+      if(file.size > 4096) throw new Error('Review ticket is too large.');
+      const ticket = JSON.parse(await file.text());
+      const key = $('#review-key').value;
+      const request = async operation => {
+        const response = await fetch('/api/review/secondary', {method:'POST', headers:{'Content-Type':'application/json','X-Review-Key':key},
+          body:JSON.stringify({session_id:ticket.session_id, draft_id:ticket.draft_id, digest:ticket.digest, operation})});
+        const data = await response.json(); if(!response.ok) throw new Error(data.error || 'Review failed'); return data;
+      };
+      const {card} = await request('inspect');
+      out.innerHTML = `<h3>Review this exact transaction</h3><p>${esc(card.amount)} to ${esc(card.payee_name)}<br>From ${esc(card.from_account)}</p>
+        <blockquote>${esc(card.you_said)}</blockquote><p class="footnote">Card ${esc(card.digest)}</p>
+        ${decisionPanel(card.decision)}<button class="btn primary" id="review-approve">Approve as simulated bank reviewer</button>`;
+      $('#review-key').value = '';
+      $('#review-approve').onclick = async () => {
+        const b = $('#review-approve'); b.disabled = true;
+        try{await request('approve'); out.textContent = 'Approved for five minutes or until the card expires. The customer must still refresh and sign the exact card.';}
+        catch(e){out.textContent = e.message;}
+      };
+    }catch(e){out.textContent = e.message;}
+  };
+}
+
 function renderSafety(){
   const el = $('#safety'); if(!el) return;
   const c = state.check;
@@ -268,11 +334,19 @@ function renderSafety(){
   ].join('');
   el.innerHTML = `<div class="safety-head"><span class="shield">${icon('shield')}</span><div><h3>Behind your request</h3>
       <div class="sub">${c ? esc(c.title) : 'What happens before any money moves'}</div></div></div>
-    <div class="checks">${rows}</div>
+    <div class="checks">${rows}</div>${c?.decision ? decisionPanel(c.decision) : ''}
     <button class="text-btn" id="open-trace">Open the full agent trace ›</button>`;
   $('#open-trace').onclick = () => toggleTrace(true);
 }
 function checksFromCard(card, phase, method){
+  if(card.decision){
+    const labels = {intent:'Faithful to your words', plan:'Earlier steps completed', policy:'Transaction policy',
+      secondary_approval:'Separate approval', authorization:'Your authorization', execution:'Execution'};
+    const r = card.decision;
+    return {title:`${card.amount} to ${card.payee_name}`, decision:r,
+      rows:Object.entries(r.checks).map(([key, c]) => [c.status === 'not_applicable' ? 'idle' : c.status,
+        labels[key] || key, c.detail])};
+  }
   const v = card.verification || {};
   const FIELD = {payee: 'who', amount: 'amount', from_account: 'account', asset_class: 'asset', type: 'type'};
   const matched = Object.entries(v.fields || {}).filter(([, st]) => st === 'match').map(([k]) => FIELD[k] || k);
@@ -522,7 +596,9 @@ function renderConfirm(){
         ${c.amount_from_user === false ? '<span class="flag">You didn\'t say this amount — please check it</span>' : ''}</div>
       <div class="crow"><span class="k">From</span><span class="v">${esc(c.from_account)}</span></div>
       ${c.schedule ? `<div class="crow"><span class="k">Repeats</span><span class="v">${esc(c.schedule)}<small>Nothing is taken today. You can stop it any time.</small></span></div>` : ''}
-      ${c.verification?.status === 'match' ? `<div class="vcheck">${icon('shield')}<span>A second, independent check re-read your words and found the same ${esc(Object.entries(c.verification.fields).filter(([, v]) => v === 'match').map(([k]) => ({payee:'payee', amount:'amount', from_account:'account', asset_class:'asset', type:'type'}[k] || k)).join(', '))}.</span></div>` : ''}
+      ${c.verification?.status === 'match' ? `<div class="vcheck">${icon('shield')}<span>${/offline/i.test(c.verification.engine) ? 'An offline check (shared parser)' : 'A separate model check'} matched your transaction details.</span></div>` : ''}
+      ${c.secondary_required ? `<div class="secondary-wait"><b>Separate approval needed</b><p>A demo bank reviewer must approve this exact payment. You will still need to sign afterwards.</p><button type="button" class="btn secondary" id="review-ticket">Download review ticket</button><button type="button" class="btn secondary" id="review-refresh">Check approval status</button><small>Simulated review channel; not a real bank callback.</small></div>` : ''}
+      ${c.decision ? decisionPanel(c.decision) : ''}
       ${c.risk_level !== 'LOW' ? `<div class="risk ${esc(c.risk_level)}"><b>${c.risk_level === 'MEDIUM' ? 'Please take a second look' : "For your safety, let's wait a little"}</b><ul>${c.reasons.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
       ${needVerify ? `<div class="verify"><div class="q">${esc(c.verify_question)}</div><div class="yesno">
         <button type="button" data-v="yes" aria-pressed="${state.verify === true}">Yes</button>
@@ -545,6 +621,12 @@ function renderConfirm(){
   });
   $('#c-cancel').onclick = cancelCard;
   $('#c-go').onclick = () => { stopSpeaking(); confirmCard(); };
+  $('#review-ticket') && ($('#review-ticket').onclick = () => download('review-ticket.json', {
+    session_id:state.sid, draft_id:c.draft_id, digest:c.digest}));
+  $('#review-refresh') && ($('#review-refresh').onclick = async () => {
+    try{const r = await api('/api/card/' + state.sid); if(r.card){state.card = r.card; renderConfirm();}}
+    catch(e){toast(e.message);}
+  });
   $('#c-repk') && ($('#c-repk').onclick = async () => {
     try{
       await removePasskey(); await refresh(); await enrolPasskey();
@@ -559,7 +641,7 @@ async function cancelCard(){
   try{
     const r = await api('/api/cancel', {session_id: state.sid, draft_id: c.draft_id}); closeConfirm(); push({role:'bot', text:r.reply}); speak(r.speak);
     if(r.next_task) offerNext(r.next_task);
-    state.check = checksFromCard(c, 'cancelled'); renderSafety();
+    state.check = checksFromCard({...c, decision:r.decision}, 'cancelled'); renderSafety();
   }catch(e){ push({role:'bot', text:'Cancellation could not be confirmed. The payment is still waiting. Please try again.'}); renderConfirm(); }
 }
 async function confirmCard(){
@@ -577,7 +659,7 @@ async function confirmCard(){
     const r = await api('/api/confirm', {session_id: state.sid, draft_id: c.draft_id, digest: c.digest, assertion, verify_answer});
     store.set('pendingPayment', null); closeConfirm(); addTrace(r.trace);
     push({role:'bot', text: r.reply, ok: true, receipt: r.receipt?.verifiable}); speak(r.speak);
-    state.check = checksFromCard(c, 'done', r.receipt?.verifiable?.authorization?.method); renderSafety();
+    state.check = checksFromCard({...c, decision:r.receipt?.verifiable?.decision}, 'done', r.receipt?.verifiable?.authorization?.method); renderSafety();
     if(r.next_task) continueWith(r.next_task);      // multi-step request: go straight on to the next step
     refresh();
   }catch(e){
@@ -587,6 +669,7 @@ async function confirmCard(){
       : e.name === 'SecurityError' ? `Fingerprint signing needs a website name, not an address like ${location.hostname}. Please open http://localhost:${location.port || 80} and try again. Nothing was sent.`
       : e.message;
     addTrace(e.data?.trace);
+    if(e.data?.decision){state.check = checksFromCard({...c, decision:e.data.decision}, 'rejected'); renderSafety();}
     if(e.data?.code === 'UV_REQUIRED'){ state.uvFail = true; push({role:'bot', text:UV_HELP}); speak(UV_HELP); }
     else { push({role:'bot', text:msg}); speak(msg); }
     if(['NOT_AWAITING_AUTH', 'RECHECK_BLOCKED'].includes(e.data?.code) || String(e.data?.code || '').startsWith('GW_')) closeConfirm(); else renderConfirm();
@@ -599,7 +682,7 @@ async function recoverPayment(c){
     if(r.status === 'SUCCESS'){
       store.set('pendingPayment', null); closeConfirm();
       push({role:'bot', text:r.reply, ok:true, receipt:r.receipt?.verifiable});
-      state.check = checksFromCard(c, 'done'); renderSafety(); await refresh(); return;
+      state.check = checksFromCard({...c, decision:r.receipt?.verifiable?.decision}, 'done'); renderSafety(); await refresh(); return;
     }
   }catch{}
   push({role:'bot', text:'Payment status is uncertain. Check its status before making another payment.'});
@@ -801,7 +884,25 @@ function labPage(m){
       <div class="row-actions"><button class="btn primary" id="lab-run">${icon('lab')}Run all attacks</button>
         <button class="btn secondary" id="lab-mistake">${icon('alert')}Simulate a model mistake</button></div>
       <p class="footnote">"Simulate a model mistake" sends “Send 50 to my daughter” to a deliberately faulty model that drafts S$500. The independent verifier, the kernel and the gateway are the real ones.</p>
-      <div id="lab-out"></div></section>`;
+      <div id="lab-out"></div></section>
+    <section class="card panel page-gap contract-showcase">
+      <p class="eyebrow">Intent → Plan → Authorization → Execution</p>
+      <h2>Transaction safety contract</h2>
+      <p>Four enforceable promises: follow your intent, use completed dependencies, execute exactly what you sign, and recheck conditions before posting.</p>
+      <p class="footnote">Fault injection runs against a fresh synthetic ledger. No customer session or real model is used.</p>
+      <button class="btn primary" id="contract-run">Run risk demonstration</button>
+      <div id="contract-out" aria-live="polite"></div>
+    </section>
+    <section class="card panel page-gap">
+      <h2>Simulated bank review desk</h2>
+      <p>A separate demo operator inspects the exact card before approving. This is not a real bank callback or customer identity check.</p>
+      <label for="review-key">Reviewer credential</label>
+      <input type="password" id="review-key" autocomplete="off" placeholder="Configured by the server operator">
+      <label for="review-file">Customer review ticket (.json)</label><input type="file" id="review-file" accept=".json,application/json">
+      <button class="btn secondary" id="review-inspect">Inspect pending transaction</button>
+      <div id="review-out" aria-live="polite"></div>
+    </section>`;
+  bindContractLab();
   $('#lab-mistake').onclick = () => send('Send 50 to my daughter', '/api/demo/model-mistake');
   $('#lab-run').onclick = async () => {
     $('#lab-out').innerHTML = '<p class="footnote">Running…</p>';

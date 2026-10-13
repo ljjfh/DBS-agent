@@ -69,6 +69,8 @@ def build_card(d: Draft, bank: MockBank, phase: Phase) -> dict:
         "from_account_id": d.from_account,
         "verification": {"status": v.get("status", "missing"), "fields": v.get("fields", {}),
                          "mismatches": v.get("mismatches", []), "engine": v.get("engine", "")},
+        "decision": d.decision,
+        "secondary_required": d.decision.get("checks", {}).get("secondary_approval", {}).get("status") == "pending",
         "amount": fmt_money(d.amount_cents),
         "amount_words": words,
         "amount_spoken_digits": amount_digits_spoken(d.amount_cents),
@@ -77,7 +79,10 @@ def build_card(d: Draft, bank: MockBank, phase: Phase) -> dict:
         "reasons": risk.reasons if risk else [],
         "verify_question": risk.verify_question if risk else None,
         "cooldown_left": max(0, int(d.cooling_until - time.time())) if phase == Phase.COOLING else 0,
-        "can_confirm": phase in (Phase.AWAITING_AUTH, Phase.COOLING) and (not risk or risk.level != RiskLevel.BLOCK),
+        "can_confirm": phase in (Phase.AWAITING_AUTH, Phase.COOLING) and (not risk or risk.level != RiskLevel.BLOCK)
+                       and v.get("status") == "match"
+                       and d.decision.get("checks", {}).get("secondary_approval", {}).get("status") != "pending"
+                       and d.decision.get("checks", {}).get("plan", {}).get("status") != "fail",
         "readback": readback,
         "expires_at": int(d.expires_at),
         "you_said": d.you_said,

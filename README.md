@@ -3,6 +3,14 @@
 A conversational transaction agent for everyone, optimized for elderly users. Core principle:
 **the LLM understands, the code decides, and the user authorizes.**
 
+**Transaction safety contract:** intent fidelity, completed plan dependencies, exact authorization and safe execution
+conditions now share an auditable decision record. Open **Security lab → Run risk demonstration** for eight isolated
+fault-injection scenarios and a clearly labelled five-candidate gate comparison. Confirmation cards expose expandable
+**Transaction safety evidence**; committed evidence is retained in signed transaction receipts as server observations.
+Large external transactions additionally need a separate simulated reviewer (`SECONDARY_REVIEW_KEY`); missing reviewer
+configuration fails closed. Transaction frequency is now a hard ledger-level limit. Setup, limitations and a five-minute
+demo script: [docs/RISK_CONTRACT.md](docs/RISK_CONTRACT.md).
+
 Semantic robustness update: colloquial SGD amounts, amount corrections that invalidate the old card,
 and receipt-bound proportional follow-ups are covered in [the semantic regression report](qa/SEMANTIC_REPORT.md).
 Try: "Move a grand to my joint account and then buy DBS shares with half of it".
@@ -104,8 +112,10 @@ a time with tap-to-answer choices, replies read aloud slowly, and a bigger confi
 words. Settings also has "Larger text", "Read replies aloud" and "Reset demo".
 
 ```bash
-python -m unittest discover tests     # 220 tests (kernel, passkeys, verifier, gateway, protection, Harness, HTTP)
+pip install -r tests/requirements.txt # includes the HTTP test client
+python -m unittest discover tests     # kernel, passkeys, verifier, gateway, contract, protection, Harness, HTTP
 python -m app.lab                    # security lab: 22 real attacks on an isolated sandbox
+python eval/run_contract_eval.py      # contract fault injection + measured gate replay -> eval/contract-report.json
 python eval/run_eval.py               # core + hard suites + attack tests -> eval/report.md / .json / .html
 python eval/run_eval.py --compare --repeat 3   # the headline run: rules-only baseline vs LLM agent, 3x each
 python eval/run_eval.py -v --only t1  # full trace for a single case

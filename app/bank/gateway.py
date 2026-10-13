@@ -17,6 +17,7 @@ the customer's device can never execute, however it reaches this point.
 from __future__ import annotations
 
 import base64
+import copy
 import hashlib
 import json
 import threading
@@ -24,6 +25,7 @@ import time
 from urllib.parse import urlparse
 
 from app.config import settings
+from app.kernel.contract import SecondaryReviews, secondary_required
 from app.kernel.signing import CHALLENGE_DOMAIN, SignatureError, Site, canonical, check_signature
 
 GRACE_SECONDS = 60
@@ -39,17 +41,32 @@ class ExecutionGateway:
     def __init__(self, bank, registry, audit=None, allow_unsigned: bool = False):
         self._bank, self.registry, self.audit = bank, registry, audit
         self.allow_unsigned = allow_unsigned          # only for quick scripts in AUTH_MODE=mock; never in the demo
+        self.reviews = SecondaryReviews()
         self._consumed: set[str] = set()
         self._lock = threading.Lock()
 
     def execute(self, *, user_id: str, session_id: str, card: dict, digest: str, auth: dict | None,
-                idempotency_key: str, verification: dict | None = None) -> dict:
+                idempotency_key: str, verification: dict | None = None, decision: dict | None = None) -> dict:
         try:
             method = self._check(user_id, session_id, card, digest, auth)
+            approval = self.reviews.valid(user_id, session_id, card["draft_id"], digest)
+            if secondary_required(card, self._bank) and not approval:
+                raise GatewayError("The independent demo review is missing or expired.", "GW_SECONDARY_APPROVAL_REQUIRED")
+            for ref in card.get("dependency_ids", []):
+                if (self._bank.transaction(user_id, ref) or {}).get("status") != "SUCCESS":
+                    raise GatewayError("A required earlier transaction is not complete.", "GW_DEPENDENCY_NOT_COMPLETED")
         except GatewayError as e:
             self._log("gateway.rejected", session_id, {"draft_id": card.get("draft_id"), "reason": e.code})
             raise
         metadata = {"session_id": session_id, "verification": verification or {}, "card": card, "digest": digest, "authorization": auth or {"method": "demo authenticator (unsigned)"}}
+        if decision:
+            recorded = copy.deepcopy(decision)
+            recorded.update(stage="executed", action="executed", required_evidence=[], recorded_at=time.time())
+            recorded["checks"]["authorization"] = {"status": "pass" if auth else "not_applicable",
+                "detail": "Gateway independently verified the device signature." if auth else "Unsigned test fixture."}
+            recorded["checks"]["execution"] = {"status": "pass", "detail": "Gateway verified; this record is stored atomically with the ledger commit."}
+            recorded["secondary_approval"] = approval
+            metadata["decision"] = recorded
         try:
             if card.get("schedule"):
                 receipt = self._bank.create_standing_instruction(user_id, card["from_account"], card["payee_id"],

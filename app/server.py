@@ -7,6 +7,7 @@ The Agent (model) has no way to call any of these.
 from __future__ import annotations
 
 import base64
+import secrets
 import time
 
 from starlette.applications import Starlette
@@ -20,6 +21,7 @@ from app.agent import presenter
 from app.bank.mock_bank import DEMO_USER
 from app.config import ROOT, settings
 from app.kernel import protection as prot
+from app.kernel import contract
 from app.kernel.executor import KernelError
 from app.kernel.signing import Site
 from app.kernel.state import valid_visitor, UnknownSession
@@ -204,7 +206,10 @@ async def challenge(request: Request):
         payload = runtime.kernel.issue_challenge(s, body["draft_id"], body["digest"],
                                                  verify_answer=body.get("verify_answer"))
     except KernelError as e:
-        return JSONResponse({"error": str(e), "code": e.code}, status_code=400)
+        d = s.drafts.get(body["draft_id"])
+        if d:
+            runtime.kernel.record_decision(s, d, stage="authorization_rejected", rejection=e.code)
+        return JSONResponse({"error": str(e), "code": e.code, "decision": d.decision if d else None}, status_code=400)
     return JSONResponse({"payload": payload, "passkey": runtime.kernel.passkey_status(s.user_id, _site(request))})
 
 
@@ -326,6 +331,34 @@ async def run_security_lab(_: Request):
     return JSONResponse({"results": lab.run_lab()})
 
 
+async def contract_lab(_: Request):
+    from app.contract_lab import run_showcase
+    return JSONResponse(run_showcase())
+
+
+async def review_secondary(request: Request):
+    # A distinct demo operator credential, never a customer session or an LLM tool argument.
+    key = request.headers.get("x-review-key", "")
+    if not settings.secondary_review_key:
+        return _err("The demo reviewer is not configured. Set SECONDARY_REVIEW_KEY on the server.", "REVIEW_DISABLED", 503)
+    if not secrets.compare_digest(key.encode(), settings.secondary_review_key.encode()):
+        return _err("A separate reviewer credential is required.", "REVIEW_UNAUTHORIZED", 403)
+    body = await _json(request, "session_id", "draft_id", "digest")
+    s = runtime.sessions.get(body["session_id"])
+    try:
+        if body.get("operation") == "inspect":
+            d = runtime.kernel._get_draft(s, body["draft_id"])
+            if d.digest != body["digest"]:
+                raise KernelError("The review ticket is for another card.", "DIGEST_MISMATCH")
+            return JSONResponse({"card": presenter.build_card(d, runtime.bank, s.phase)})
+        if body.get("operation") != "approve":
+            raise BadInput("operation must be inspect or approve")
+        approval = runtime.kernel.approve_secondary(s, body["draft_id"], body["digest"])
+        return JSONResponse({"approval": approval, "simulation": True})
+    except KernelError as e:
+        return _err(str(e), e.code)
+
+
 async def confirm(request: Request):
     body = await _json(request, "draft_id", "digest")
     s = runtime.sessions.get(body.get("session_id"))
@@ -335,7 +368,11 @@ async def confirm(request: Request):
                                          verify_answer=body.get("verify_answer"), site=_site(request))
         receipt = runtime.kernel.commit(s, body["draft_id"], token)
     except KernelError as e:
-        return JSONResponse({"error": str(e), "code": e.code, "trace": s.trace[start:]}, status_code=400)
+        d = s.drafts.get(body["draft_id"])
+        if d:
+            runtime.kernel.record_decision(s, d, stage="rejected", rejection=e.code)
+        return JSONResponse({"error": str(e), "code": e.code, "trace": s.trace[start:],
+                             "decision": d.decision if d else None}, status_code=400)
     draft = s.drafts[body["draft_id"]]
     if receipt.get("verifiable") and not any(r["txn_id"] == receipt["txn_id"] for r in s.receipts):
         s.receipts.insert(0, receipt["verifiable"])
@@ -358,7 +395,8 @@ async def cancel(request: Request):
     msg = "OK, it's cancelled. No money was sent."
     _say(s, msg)
     next_task = s.plan.pop(0) if s.plan else None      # offered as a button, never run automatically
-    return JSONResponse({"reply": msg, "speak": msg, "phase": s.phase.value, "next_task": next_task})
+    return JSONResponse({"reply": msg, "speak": msg, "phase": s.phase.value, "next_task": next_task,
+                         "decision": s.drafts[body["draft_id"]].decision})
 
 
 async def current_card(request: Request):
@@ -368,6 +406,8 @@ async def current_card(request: Request):
         return JSONResponse({"card": None, "phase": s.phase.value})
     # once the cooling-off period ends, move to awaiting authorization
     runtime.kernel._refresh_cooling(s, d)  # noqa: SLF001
+    if s.phase.value in ("COOLING", "AWAITING_AUTH"):
+        d.decision = contract.decision(d, s, runtime.bank, runtime.kernel.reviews)
     return JSONResponse({"card": presenter.build_card(d, runtime.bank, s.phase), "phase": s.phase.value})
 
 
@@ -423,6 +463,8 @@ routes = [
     Route("/api/change/cancel", change_cancel, methods=["POST"]),
     Route("/api/protection", protection_change, methods=["POST"]),
     Route("/api/lab", run_security_lab, methods=["POST"]),
+    Route("/api/lab/contract", contract_lab, methods=["POST"]),
+    Route("/api/review/secondary", review_secondary, methods=["POST"]),
     Route("/api/demo/model-mistake", demo_model_mistake, methods=["POST"]),
     Route("/api/cancel", cancel, methods=["POST"]),
     Route("/api/card/{session_id}", current_card),

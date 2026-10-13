@@ -1,0 +1,30 @@
+{
+  "checks": [
+    {
+      "name": "Real WebCrypto payment stores executed contract evidence",
+      "status": "PASS"
+    },
+    {
+      "name": "Customer cannot self-approve a large payment",
+      "status": "PASS"
+    },
+    {
+      "name": "Separate review followed by customer signature completes payment",
+      "status": "PASS"
+    },
+    {
+      "name": "Eight real sandbox outcomes and labelled gate comparison are visible",
+      "status": "PASS"
+    },
+    {
+      "name": "Mobile risk evidence has no horizontal page overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "No browser JavaScript errors",
+      "status": "PASS"
+    }
+  ],
+  "errors": [],
+  "scope": "Offline Edge; real WebCrypto; simulated reviewer; temporary ledger"
+}
