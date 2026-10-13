@@ -650,3 +650,20 @@ body.senior #app button:not(:disabled):active{transform:scale(.985);filter:brigh
   #app button:hover,#app button:active,#confirm button:active,#trace button:active,.welcome-enter:active{transform:none!important}
   button.tap-feedback:not(.switch)::after{animation:none;background:#d92b5014;box-shadow:inset 0 0 0 2px #b8154060}
 }
+
+/* Readability and feedback additions, with the original DBS red/white theme. */
+.simple-eyebrow{color:#ffdae2;font-size:11px;font-weight:600;letter-spacing:1.6px;margin-bottom:10px}
+.simple-intro{color:#ffe5eb;font-size:18px;margin-top:9px;line-height:1.5}
+#app .receipt-heading{display:block;font-size:17px;margin:4px 0 8px;font-weight:600}
+#app .receipt{padding:9px 12px;border-radius:9px;min-height:40px}
+#app .replay{min-width:36px;min-height:36px;border-radius:8px}
+#app .typing{display:flex;align-items:center;gap:10px;font-size:14px;padding:8px 0;color:var(--muted)}
+.thinking-dot{width:7px;height:7px;border-radius:50%;background:#d7193f;box-shadow:0 0 0 5px #f7ecef;flex:none}
+#app .hint:not(:empty){background:#fff3f6;border:1px solid #eed3db;color:#6c3345;padding:12px;border-radius:12px;line-height:1.55;font-size:14px;margin-top:12px}
+.review-intro{color:var(--muted);font-size:15px;line-height:1.65;margin:-2px 0 18px}
+body.senior #app .assistant{min-height:0}
+body.senior #app .msg{font-size:22px;line-height:1.65}
+body.senior #app .receipt-heading{font-size:23px}
+body.senior #app .receipt{min-height:50px;font-size:18px}
+body.senior #app .hint:not(:empty){font-size:19px}
+body.senior .review-intro{font-size:20px}

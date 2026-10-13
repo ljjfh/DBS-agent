@@ -136,14 +136,14 @@ function render(){
       <header class="topbar">
         <div class="breadcrumb">
           <span class="mobile-brand"><img src="/dbs-logo.svg" alt="DBS"><span>digibank</span></span>
-          <span class="crumbs">digibank</span><span class="crumbs" aria-hidden="true">›</span><strong class="crumbs">${state.senior ? 'Senior mode' : current}</strong>
+          <span class="crumbs">digibank</span><span class="crumbs" aria-hidden="true">›</span><strong class="crumbs">${state.senior ? 'Simple view' : current}</strong>
         </div>
         <div class="top-actions">
           <span class="pill ${live() ? 'live' : ''}" title="Language model"><span class="dot"></span>${live() ? 'Live model' : 'Offline rules'}</span>
           <span class="pill" title="Speech recognition"><span class="dot"></span>${state.health.asr === 'tencent' ? 'Tencent ASR' : 'Browser voice'}</span>
           <button class="pill prot ${protLevel()}" id="prot-pill" title="Account protection level (a bank setting, not a screen setting)" aria-label="${protLevel() === 'enhanced' ? 'Enhanced protection' : 'Standard protection'}">${icon('shield')}${protLevel() === 'enhanced' ? 'Enhanced protection' : 'Standard protection'}</button>
           <button class="icon-btn" id="trace-toggle" aria-pressed="${$('#trace').classList.contains('open')}">${icon('trace')}<span class="label">Agent trace</span></button>
-          <button class="senior-toggle" id="senior-toggle" aria-pressed="${state.senior}">${icon('senior')}${state.senior ? 'Standard view' : 'Senior mode'}</button>
+          <button class="senior-toggle" id="senior-toggle" aria-pressed="${state.senior}">${icon('senior')}${state.senior ? 'Standard view' : 'Simple view'}</button>
         </div>
       </header>
       <main id="main" tabindex="-1"></main>
@@ -159,7 +159,7 @@ function go(page){ state.page = page; render(); $('#main')?.focus({preventScroll
 function setSenior(on){
   state.senior = on; store.set('senior', on);
   if(on) state.page = 'overview';
-  render(); toast(on ? 'Senior mode on: bigger text, one thing at a time, read aloud.' : 'Standard view');
+  render(); toast(on ? 'Simple view. More room, larger text. Take your time.' : 'Standard view');
 }
 function toggleTrace(force){
   const t = $('#trace'); const open = force ?? !t.classList.contains('open');
@@ -179,7 +179,7 @@ function overview(m){
   m.innerHTML = `
     <section class="hero">
       <div><div class="eyebrow">DBS digibank · Star assistant</div><h1>${greeting()}, Mdm Chen.</h1>
-        <p>Your accounts at a glance. Your next payment, in your own words.</p></div>
+        <p>A little help with your everyday banking. At your pace.</p></div>
       <div class="date">${today()}</div>
     </section>
     <section class="accounts" id="accounts" aria-label="Accounts"></section>
@@ -198,7 +198,7 @@ function overview(m){
 function seniorHome(m){
   const sav = state.data?.accounts?.[0];
   m.innerHTML = `
-    <div class="senior-hello"><h1>Hello, Mdm Chen</h1>
+    <div class="senior-hello"><div><div class="simple-eyebrow">YOUR EVERYDAY BANKING</div><h1>Hello, Mdm Chen</h1><p class="simple-intro">One thing at a time. You're in control.</p></div>
       <div class="bal">Savings <b>${esc(sav ? sav.balance : '…')}</b></div></div>
     ${assistantHtml()}`;
   bindAssistant();
@@ -311,7 +311,7 @@ function assistantHtml(){
         <textarea id="text" rows="1" placeholder="${state.senior ? 'Or type here' : 'e.g. Send 200 to my daughter'}"></textarea>
         <button class="send" type="submit" aria-label="Send">${icon('send')}<span class="label">Send</span></button>
       </form>
-      <div class="hint" id="hint"></div>
+      <div class="hint" id="hint" role="status" aria-live="polite" aria-atomic="true"></div>
       <div class="composer-foot">${icon('lock')}Star prepares · you check · your phone signs. No money moves without you.</div>
     </div></section>`;
 }
@@ -337,15 +337,15 @@ function renderStage(){
     const list = state.senior ? SUGGEST_SENIOR : SUGGEST;
     st.innerHTML = `<div class="welcome"><span class="spark">${icon('spark')}</span><div>
         <h3>${state.senior ? 'What would you like to do?' : 'What can I help you with today?'}</h3>
-        <p>${state.senior ? 'Tap a button, or tap the red button and just say it.' : 'Say it or type it the way you would tell a person. I will prepare it, and you confirm.'}</p></div></div>
-      <div class="suggest-label">Try</div>
+        <p>${state.senior ? 'Choose below, or tap Speak and tell me in your own words.' : "Tell me in your own words. We'll take it one step at a time."}</p></div></div>
+      <div class="suggest-label">A place to start</div>
       <div class="suggestions">${list.map(([ic, t, cls]) => `<button class="suggestion ${cls || ''}" data-say="${esc(t)}">${icon(ic)}${esc(t)}</button>`).join('')}</div>`;
     st.querySelectorAll('.suggestion').forEach(b => b.onclick = () => send(b.dataset.say));
     return;
   }
   st.innerHTML = state.messages.map((m, i) => {
     if(m.role === 'user') return `<div class="msg user">${esc(m.text)}</div>`;
-    if(m.type === 'typing') return `<div class="typing">Star is preparing…</div>`;
+    if(m.type === 'typing') return `<div class="typing"><span class="thinking-dot" aria-hidden="true"></span>I'm working on your request…</div>`;
     if(m.type === 'choices') return m.done ? '' : `<div class="choices" role="group" aria-label="Choose one">${m.options.map((o, j) =>
       `<button class="choice" data-i="${i}" data-j="${j}"><span>${esc(o.label)}</span><small>${esc(o.detail || '')}</small></button>`).join('')}</div>`;
     if(m.type === 'plan') return `<div class="plan" role="note"><b>I'll do this in ${m.items.length} steps. You check and confirm each one.</b>
@@ -356,7 +356,7 @@ function renderStage(){
     if(m.type === 'blocked') return `<div class="alert-block" role="alert"><b>I've stopped this for you</b>${esc(m.text)}${m.hint ? `<small class="demo-hint">${esc(m.hint)}</small>` : ''}
       <div class="acts"><a href="tel:1799">Call ScamShield 1799</a><button class="notify" type="button">Tell my family</button></div></div>`;
     if(m.type === 'next') return m.done ? '' : `<div class="next-chips"><button class="nx-go" data-i="${i}">Continue: ${esc(m.task)}</button><button class="nx-no" data-i="${i}">Not now</button></div>`;
-    return `<div class="msg bot ${m.ok ? 'ok' : ''}"><span class="who">Star</span>${esc(m.text)}<button class="replay" data-i="${i}" aria-label="Read this aloud">🔊</button>${m.receipt ? `<button class="receipt" data-i="${i}">${icon('download')} Download signed receipt</button>` : ''}</div>`;
+    return `<div class="msg bot ${m.ok ? 'ok' : ''}"><span class="who">Star</span>${m.receipt ? '<strong class="receipt-heading">Transaction completed</strong>' : ''}${esc(m.text)}<button class="replay" data-i="${i}" aria-label="Read this aloud">🔊</button>${m.receipt ? `<button class="receipt" data-i="${i}">${icon('download')} Download signed receipt</button>` : ''}</div>`;
   }).join('');
   st.querySelectorAll('.choice').forEach(b => b.onclick = () => { const m = state.messages[b.dataset.i]; m.done = true; send(m.options[b.dataset.j].send); });
   st.querySelectorAll('.replay').forEach(b => b.onclick = () => speak(state.messages[b.dataset.i].text, true));
@@ -452,6 +452,7 @@ function renderChange(){
   $('#confirm').innerHTML = `
     <div class="cbody">
       <h2 id="c-title">${esc(c.title)}</h2>
+      <p class="review-intro">Take a moment to check the details. Nothing changes until you confirm. You can cancel below.</p>
       ${c.you_said ? `<div class="said"><span class="k">Based on what you said</span><q>${esc(c.you_said)}</q></div>` : ''}
       ${c.rows.map(([k, v]) => `<div class="crow"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join('')}
       <div class="risk MEDIUM"><b>Before you confirm</b><ul><li>${esc(c.note)}</li></ul></div>
@@ -511,6 +512,7 @@ function renderConfirm(){
   $('#confirm').innerHTML = `
     <div class="cbody">
       <h2 id="c-title">${esc(c.title)}</h2>
+      <p class="review-intro">Check the recipient, amount and account. Nothing is sent until you confirm. You can cancel below.</p>
       ${c.you_said ? `<div class="said"><span class="k">Based on what you said</span><q>${esc(c.you_said)}</q></div>` : ''}
       <div class="crow ${c.payee_from_user === false ? 'unsaid' : ''}"><span class="k">${c.kind === 'investment' ? 'Invest in' : 'To'}</span><span class="v">${esc(c.payee_name)}${rel}<small>${esc(c.payee_account)}</small>
         ${c.payee_from_user === false ? `<span class="flag">You didn't mention this ${c.kind === 'investment' ? 'product' : 'person'}</span>` : ''}</span></div>
@@ -836,7 +838,7 @@ function settingsPage(m){
         : "Off: the demo shows a simulated fingerprint sensor. Turn on to use this device's real Touch ID, Face ID or Windows Hello instead.")}
     </section>
     <section class="card settings page-gap">
-      ${sw('s-senior', state.senior, 'Senior mode', 'Bigger text, one thing at a time, big voice button, answers read aloud.')}
+      ${sw('s-senior', state.senior, 'Simple view', 'Larger text, fewer choices and an easy-to-find voice button. You can choose whether replies are read aloud in Settings.')}
       ${sw('s-large', state.large, 'Larger text in standard view', 'Makes the normal dashboard easier to read.')}
       ${sw('s-read', readAloudOn(), 'Read every answer aloud', 'Answers to questions you speak are always read aloud. Tap the microphone to stop one.')}
       <div class="setting"><div>Language model<small>${esc(state.health.model || '')}</small></div><code class="k">${live() ? 'live' : 'offline rules'}</code></div>
@@ -926,7 +928,7 @@ function startBrowserSR(SR){
     const ta = $('#text'); if(ta) ta.value = (rec.final + rec.interim).trim();   // show what has been heard so far
   };
   sr.onerror = e => {
-    if(e.error === 'not-allowed' || e.error === 'service-not-allowed'){ rec.stopping = true; rec.err = 'No microphone permission. You can type instead.'; }
+    if(e.error === 'not-allowed' || e.error === 'service-not-allowed'){ rec.stopping = true; rec.err = 'Microphone permission is off. You can type your request, or allow access in your browser and try again.'; }
     else if(e.error === 'network' || e.error === 'audio-capture'){ rec.stopping = true; rec.err = "Voice input isn't working right now. Please type instead."; }
   };
   sr.onend = () => {
@@ -943,7 +945,7 @@ function finishBrowserSR(){
   const text = (rec.final + ' ' + rec.interim).replace(/\s+/g, ' ').trim();
   rec.sr = null; rec.base = ''; setRec(false);
   if(rec.err){ const err = rec.err; rec.err = ''; if($('#text')) $('#text').value = text; hint(err + ' Your words were not sent. Check the text before sending.'); return; }
-  if(!text){ hint(rec.err || "Didn't catch that, please tap the mic and try again"); rec.err = ''; return; }
+  if(!text){ hint(rec.err || "I didn't catch that. Tap Speak to try again, or type your request."); rec.err = ''; return; }
   rec.err = '';
   addTrace([{kind:'asr', label:'Browser speech recognition: ' + text}]);
   send(text, undefined, true);
@@ -952,11 +954,11 @@ function listeningHint(now){
   if(now - rec.shown < 500) return; rec.shown = now;
   const left = MAX_SEC - Math.floor((now - rec.t0) / 1000);
   hint(left <= 10 ? `Recording stops in ${left} s. Tap the mic when you're done.`
-                  : "I'm listening. Take your time, I'll wait until you finish. Tap the mic when you're done.");
+                  : "I'm listening. Tap when you're finished, or pause to send.");
 }
 async function startWavRec(){
   try{ rec.stream = await navigator.mediaDevices.getUserMedia({audio:{channelCount:1, echoCancellation:true, noiseSuppression:true}}); }
-  catch{ push({role:'bot', text:'No microphone permission. You can type instead.'}); return; }
+  catch{ push({role:'bot', text:'Microphone permission is off. You can type your request, or allow access in your browser and try again.'}); return; }
   rec.ctx = new (window.AudioContext || window.webkitAudioContext)(); rec.rate = rec.ctx.sampleRate; rec.chunks = [];
   Object.assign(rec, {t0:Date.now(), heard:0, lastVoice:0, noise:null, stopping:false});
   const src = rec.ctx.createMediaStreamSource(rec.stream);
@@ -995,20 +997,20 @@ async function stopRec(){
   rec.node = rec.stream = rec.ctx = null;
   const wav = encodeWav(downsample(flatten(rec.chunks), rec.rate, 16000), 16000);
   rec.chunks = [];
-  if(wav.byteLength < 16000){ hint('Too short, please speak a little longer'); return; }
+  if(wav.byteLength < 16000){ hint('I need a little more to go on. Please try again or type your request.'); return; }
   hint('Recognizing…');
   try{
     const r = await api('/api/asr', {session_id: state.sid, audio_b64: b64(wav)});
     hint(''); addTrace([{kind:'asr', label:`Tencent Cloud ASR (${r.engine}, ${r.latency_ms}ms): ${r.text}`}]);
-    if(r.text) send(r.text, undefined, true); else hint("Didn't catch that, please say it again");
-  }catch(e){ hint('Recognition failed: ' + e.message); }
+    if(r.text) send(r.text, undefined, true); else hint("I didn't catch that. You can try again or type your request.");
+  }catch(e){ hint('Voice input is unavailable right now. Please try again or type your request.'); }
 }
 function setRec(on){
   rec.on = on; const mic = $('#mic');
   if(mic){ mic.classList.toggle('rec', on); if(!on){ mic.classList.remove('live'); mic.style.removeProperty('--lvl'); } }
   const label = $('#mic span'); if(label) label.textContent = on ? (state.senior ? 'Tap when done' : 'Listening… tap to stop') : (state.senior ? 'Tap to speak' : 'Speak');
   rec.shown = 0;
-  hint(on ? "I'm listening. Take your time, I'll wait until you finish. Tap the mic when you're done." : '');
+  hint(on ? "I'm listening. Tap when you're finished, or pause to send." : '');
 }
 function flatten(chunks){ const n = chunks.reduce((a, c) => a + c.length, 0), out = new Float32Array(n); let o = 0; chunks.forEach(c => { out.set(c, o); o += c.length; }); return out; }
 function downsample(buf, from, to){
