@@ -1056,13 +1056,13 @@ function customerChoices(){
 function bindCustomerChoices(root){
   root.querySelectorAll('.customer-choice').forEach(b => b.onclick = () => switchCustomer(b.dataset.customer));
 }
-async function switchCustomer(id){
+async function switchCustomer(id, quiet = false){
   if(state.data?.customer === id){ $('#customer-menu') && ($('#customer-menu').hidden = true); return; }
   const r = await api('/api/reset', {session_id: state.sid, persona: id, world: true, ...(visitorMode() ? {visitor: VISITOR} : {})});
   state.sid = r.session_id; store.set('sid', r.session_id);
   state.messages = []; state.check = null; $('#tlist').innerHTML = ''; closeConfirm();
   if(id === 'alex'){ state.senior = false; store.set('senior', false); }
-  await refresh(); go('overview'); toast(`Now banking as ${CUSTOMERS[id].name} (${CUSTOMERS[id].tag})`);
+  await refresh(); go('overview'); if(!quiet) toast(`Now banking as ${CUSTOMERS[id].name} (${CUSTOMERS[id].tag})`);
 }
 async function resetDemo(){
   const r = await api('/api/reset', {session_id: state.sid, world: true, ...(visitorMode() ? {visitor: VISITOR} : {})});
@@ -1398,12 +1398,15 @@ welcome.addEventListener('pointerup',e=>{if(e.pointerType!=='mouse')pointer.acti
 document.addEventListener('visibilitychange',()=>{cancelAnimationFrame(animationId);lastFrame=0;if(!document.hidden&&!welcome.hidden)paintField();});
 const fieldObserver = new ResizeObserver(resizeField);fieldObserver.observe(welcome);
 resizeField();syncMotion();
-enter.addEventListener('click', async()=>{
-  if(enter.disabled)return;
-  enter.disabled=true; enter.setAttribute('aria-busy','true');
-  $('#welcome-status').textContent='Opening your workspace…';
+// The launch screen picks the demo customer: Mdm Chen (senior care, the main demo) or Alex Tan (everyday)
+const enterAlt = $('#welcome-alt');
+async function enterAs(customerId, btn){
+  if(enter.disabled || enterAlt.disabled)return;
+  enter.disabled=true; enterAlt.disabled=true; btn.setAttribute('aria-busy','true');
+  $('#welcome-status').textContent=`Opening ${customerId === 'alex' ? "Alex Tan's" : "Mdm Chen's"} account…`;
   try{
     await init();
+    if(state.data?.customer !== customerId) await switchCustomer(customerId, true);
     $('#app').hidden=false;
     document.body.classList.remove('welcome-active');
     welcome.classList.add('leaving');welcome.inert=true;fieldObserver.disconnect();
@@ -1413,9 +1416,11 @@ enter.addEventListener('click', async()=>{
     setTimeout(()=>{welcome.hidden=true;},reducedMotion.matches||motionPaused?0:450);
   }catch(e){
     $('#welcome-status').textContent='Unable to connect to the demo. Please try again in a moment.';
-    enter.disabled=false;enter.removeAttribute('aria-busy');
+    enter.disabled=false;enterAlt.disabled=false;btn.removeAttribute('aria-busy');
   }
-});
+}
+enter.addEventListener('click', () => enterAs('chen', enter));
+enterAlt.addEventListener('click', () => enterAs('alex', enterAlt));
 
 // Decorative click acknowledgement only. Never dispatches an action or changes
 // disabled, busy, payment, microphone, or confirmation state. Capture runs before
