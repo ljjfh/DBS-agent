@@ -64,6 +64,7 @@ class Settings:
     secondary_review_key = _f("SECONDARY_REVIEW_KEY", "")
     review_invest_threshold = int(_f("REVIEW_INVEST_THRESHOLD", "3000"))  # investments above this need the reviewer  # independent demo operator; never returned to browsers
     night_start, night_end = 23, 6
+    bank_timezone = _f("BANK_TIMEZONE", "Asia/Singapore")   # "late at night" is the customer's night
     # pin the "current hour" during evaluation so running it late at night doesn't change risk levels
     fixed_hour = int(os.environ["RULE_FIXED_HOUR"]) if os.getenv("RULE_FIXED_HOUR") else None
 

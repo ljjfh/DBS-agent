@@ -5,6 +5,8 @@ Every rule has a code (for the audit log) and a plain-language reason (for the e
 from __future__ import annotations
 
 import time
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from dataclasses import dataclass, field
 
 from app.bank.mock_bank import MockBank
@@ -121,7 +123,11 @@ def evaluate(draft: Draft, bank: MockBank, ctx: RuleContext | None = None) -> Ri
     elif settings.fixed_hour is not None:
         hour = settings.fixed_hour
     else:
-        hour = time.localtime(ctx.now).tm_hour
+        # the customer's local time (Singapore), not the server's clock (Render runs in UTC)
+        try:
+            hour = datetime.fromtimestamp(ctx.now, ZoneInfo(settings.bank_timezone)).hour
+        except Exception:  # noqa: BLE001 - no time zone data on the server: Singapore is UTC+8 all year
+            hour = time.gmtime(ctx.now + 8 * 3600).tm_hour
     if enhanced and (hour >= settings.night_start or hour < settings.night_end):
         raise_to(RiskLevel.MEDIUM, "R20_NIGHT", "It's late at night, so let's double-check.")
     recent = bank.recent_exec_count(draft.user_id, settings.velocity_window_min * 60)
