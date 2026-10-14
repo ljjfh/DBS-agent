@@ -922,7 +922,7 @@ function labPage(m){
       <p class="footnote">The model lives left of the red boxes. It has no tool that can sign, authorize or pay, and the ledger only accepts instructions carrying your device's signature.</p>
       <div class="row-actions"><button class="btn primary" id="lab-run">${icon('lab')}Run all attacks</button>
         <button class="btn secondary" id="lab-mistake">${icon('alert')}Simulate a model mistake</button></div>
-      <p class="footnote">"Simulate a model mistake" sends “Send 50 to my daughter” to a deliberately faulty model that drafts S$500. The independent verifier, the kernel and the gateway are the real ones.</p>
+      <p class="footnote">"Simulate a model mistake" is the same check, live in your chat: “Send 50 to my daughter” goes to a deliberately faulty model that drafts S$500, and you watch the real verifier, kernel and gateway stop it. The risk demonstration below runs every case at once in a sandbox.</p>
       <div id="lab-out"></div></section>
     <section class="card panel page-gap contract-showcase">
       <p class="eyebrow">Intent → Plan → Authorization → Execution</p>
