@@ -45,7 +45,8 @@ the eval as a model mistake caught.
 **Protection levels are an account setting, not a screen setting.** Senior mode only changes the look. How careful
 the bank is (cooling-off threshold, scam phrases stopped vs warned, late-night checks, risky investments) is
 *Enhanced* or *Standard* protection. Raising it is instant. Lowering it must be signed with the fingerprint and only
-takes effect after 24 h, so a scammer on the phone can't say "tap Standard view" and remove the protection. The hard
+takes effect after a wait (24 h at a real bank; 2 minutes in this demo, `PROTECTION_LOWER_DELAY`, with a countdown
+and a "Keep Enhanced" button), so a scammer on the phone can't say "tap Standard view" and remove the protection. The hard
 safety boundary (draft only, two-engine check, device signature, gateway) is the same for everyone.
 
 ## Mock DBS APIs the agent calls

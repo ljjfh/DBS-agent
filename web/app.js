@@ -25,6 +25,7 @@ const state = {
 
 // ---------------------------------------------------------------- Icons (generic, project-native)
 const P = {
+  clock:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18m0-14v5l3 2',
   home:'M3 10 12 3l9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z',
   transfer:'M4 7h15m-4-4 4 4-4 4M20 17H5m4-4-4 4 4 4',
   users:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-3.87M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8m8-7.87a4 4 0 0 1 0 7.75',
@@ -78,14 +79,18 @@ const greeting = () => { const h = new Date().getHours(); return h < 12 ? 'Good 
 const readAloudOn = () => state.readAloud === null ? state.senior : state.readAloud;
 const live = () => state.health.llm && !String(state.health.llm).startsWith('offline');
 const protLevel = () => state.data?.protection?.level || 'enhanced';
+const protPending = () => protLevel() === 'enhanced' && !!state.data?.protection?.pending;
+const protLabel = () => protLevel() === 'enhanced'
+  ? (protPending() ? '<span>Enhanced · Standard in <span class="prot-count"></span></span>' : 'Enhanced protection') : 'Standard protection';
 
 async function refresh(){
   try{
     const d = await api('/api/state' + (state.sid ? `?session_id=${encodeURIComponent(state.sid)}` : ''));
     state.data = d; state.sid = d.session_id; store.set('sid', d.session_id);
     renderAccounts(); renderBills(); renderHoldings();
-    const pill = $('#prot-pill'); if(pill){ pill.className = `pill prot ${protLevel()}`; pill.lastChild.textContent = protLevel() === 'enhanced' ? 'Enhanced protection' : 'Standard protection'; }
+    const pill = $('#prot-pill'); if(pill){ pill.className = `pill prot ${protLevel()}${protPending() ? ' queued' : ''}`; pill.innerHTML = icon('shield') + protLabel(); }
     if(['activity', 'contacts', 'settings'].includes(state.page)) renderPage();
+    protCountdown();
   }catch(e){
     if(e.data?.code === 'SESSION_NOT_FOUND'){ state.sid = null; store.set('sid', null); return refresh(); }
     console.error(e);
@@ -141,7 +146,7 @@ function render(){
         <div class="top-actions">
           <span class="pill ${live() ? 'live' : ''}" title="Language model"><span class="dot"></span>${live() ? 'Live model' : 'Offline rules'}</span>
           <span class="pill" title="Speech recognition"><span class="dot"></span>${state.health.asr === 'tencent' ? 'Tencent ASR' : 'Browser voice'}</span>
-          <button class="pill prot ${protLevel()}" id="prot-pill" title="Account protection level (a bank setting, not a screen setting)" aria-label="${protLevel() === 'enhanced' ? 'Enhanced protection' : 'Standard protection'}">${icon('shield')}${protLevel() === 'enhanced' ? 'Enhanced protection' : 'Standard protection'}</button>
+          <button class="pill prot ${protLevel()}${protPending() ? ' queued' : ''}" id="prot-pill" title="Account protection level (a bank setting, not a screen setting)" aria-label="Account protection: ${protLevel()}">${icon('shield')}${protLabel()}</button>
           <button class="icon-btn" id="trace-toggle" aria-pressed="${$('#trace').classList.contains('open')}">${icon('trace')}<span class="label">Agent trace</span></button>
           <button class="senior-toggle" id="senior-toggle" aria-pressed="${state.senior}">${icon('senior')}${state.senior ? 'Standard view' : 'Simple view'}</button>
         </div>
@@ -153,12 +158,13 @@ function render(){
   $('#senior-toggle').onclick = () => setSenior(!state.senior);
   $('#trace-toggle').onclick = () => toggleTrace();
   $('#prot-pill').onclick = () => go('settings');
-  renderPage();
+  renderPage(); protCountdown();
 }
 function go(page){ state.page = page; render(); $('#main')?.focus({preventScroll:true}); window.scrollTo(0, 0); }
 function setSenior(on, quiet = false){
   state.senior = on; store.set('senior', on);
   if(on) state.page = 'overview';
+  state.messages.forEach(m => { if(m.type === 'choices' && m.care) m.done = true; });   // the switch answers the offer
   if(state.sid) api('/api/care', {session_id: state.sid, on}).catch(() => {});   // Star talks to match the screen
   render(); if(!quiet) toast(on ? 'Simple view. More room, larger text. Take your time.' : 'Standard view');
 }
@@ -167,7 +173,7 @@ async function offerCare(){
   if(state.senior || state.messages.length) return;
   try{
     const r = await api('/api/care/offer', {session_id: state.sid});
-    if(r.offer){ push({role:'bot', text: r.offer}); push({type:'choices', options: r.options}); }
+    if(r.offer){ push({role:'bot', text: r.offer}); push({type:'choices', options: r.options, care: true}); }
   }catch{}
 }
 function toggleTrace(force){
@@ -970,16 +976,18 @@ function settingsPage(m){
   const sw = (id, on, title, sub) => `<div class="setting"><div>${title}<small>${sub}</small></div><button class="switch" role="switch" id="${id}" aria-checked="${on}" aria-label="${esc(title)}"></button></div>`;
   const pr = state.data?.protection || {level: 'enhanced'}, pk = state.data?.passkey || {};
   const when = t => new Date(t * 1000).toLocaleString('en-SG', {weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
-  const delay = Math.round((pr.delay_seconds || 86400) / 3600);
+  const wait = pr.delay_words || '2 minutes';
+  const pend = pr.pending && pr.level === 'enhanced';
   m.innerHTML = head('Your workspace', 'Settings') + `
     <section class="card settings protection">
-      <div class="setting"><div>Account protection<small>This is a bank setting, not a screen setting: switching to Standard view doesn't change it.
-        Raising it is instant. Lowering it needs your fingerprint and only starts ${delay >= 1 ? `${delay} hours` : `${pr.delay_seconds} seconds`} later, so nobody can rush you into it on the phone.</small></div></div>
+      <div class="setting"><div>Account protection<small>This is a bank setting, not a screen setting: switching to Simple view doesn't change it.
+        Raising it is instant. Lowering it needs your fingerprint and only starts ${esc(wait)} later, so nobody can rush you into it on the phone.
+        (A real bank would wait 24 hours. This demo waits ${esc(wait)} so you can watch it happen.)</small></div></div>
       <div class="levels" role="radiogroup" aria-label="Protection level">
-        <button role="radio" class="level ${pr.level === 'enhanced' ? 'on' : ''}" data-to="enhanced" aria-checked="${pr.level === 'enhanced'}"><b>Enhanced</b><small>Recommended for seniors. Waits before payments over S$1,000, stops scam-like requests, double-checks late at night and for risky investments.</small></button>
-        <button role="radio" class="level ${pr.level === 'standard' ? 'on' : ''}" data-to="standard" aria-checked="${pr.level === 'standard'}"><b>Standard</b><small>Fewer interruptions: waits only over S$3,000, scam-like requests get a warning instead of a stop. "Safe account" requests are always stopped.</small></button>
+        <button role="radio" class="level ${pr.level === 'enhanced' ? 'on' : ''}" data-to="enhanced" aria-checked="${pr.level === 'enhanced'}"><b>Enhanced${pr.level === 'enhanced' ? ' <em class="lvl-tag">On now</em>' : ''}</b><small>Recommended for seniors. Waits before payments over S$1,000, stops scam-like requests, double-checks late at night and for risky investments.</small></button>
+        <button role="radio" class="level ${pr.level === 'standard' ? 'on' : ''} ${pend ? 'queued' : ''}" data-to="standard" aria-checked="${pr.level === 'standard'}"><b>Standard${pr.level === 'standard' ? ' <em class="lvl-tag">On now</em>' : pend ? ' <em class="lvl-tag wait">Starts in <span class="prot-count"></span></em>' : ''}</b><small>Fewer interruptions: waits only over S$3,000, scam-like requests get a warning instead of a stop. "Safe account" requests are always stopped.</small></button>
       </div>
-      ${pr.pending ? `<div class="pending">Standard protection starts ${esc(when(pr.pending.effective_at))}. <button class="btn secondary" id="p-cancel">Keep Enhanced</button></div>` : ''}
+      ${pend ? `<div class="pending" role="status"><span class="pend-txt">${icon('clock')}<span>Switching to Standard in <b class="prot-count"></b> (at ${esc(when(pr.pending.effective_at))}). Until then Enhanced stays on.</span></span> <button class="btn secondary" id="p-cancel">Keep Enhanced</button></div>` : ''}
       <p class="footnote">Always on for everyone: Star only drafts, every draft is checked against your words by two separate engines, your device signs every payment, and the payment gateway refuses anything unsigned.</p>
     </section>
     <section class="card settings page-gap">
@@ -1004,6 +1012,7 @@ function settingsPage(m){
   $('#s-reset').onclick = resetDemo;
   m.querySelectorAll('.level').forEach(b => b.onclick = () => setProtection(b.dataset.to));
   $('#p-cancel') && ($('#p-cancel').onclick = () => setProtection('enhanced'));
+  protCountdown();
   $('#s-realbio') && ($('#s-realbio').onclick = async () => {
     const on = !passkeyMode();
     if(on){
@@ -1020,18 +1029,36 @@ function settingsPage(m){
   $('#pk-setup') && ($('#pk-setup').onclick = async () => { try{ await enrolPasskey(); toast('Fingerprint signing is set up.'); renderPage(); }catch(e){ toast(e.name === 'NotAllowedError' ? 'Set-up cancelled.' : e.message); } });
   $('#pk-remove') && ($('#pk-remove').onclick = async () => { await removePasskey(); await refresh(); toast('Identity verified. Passkey removed from this demo.'); });
 }
+// A scheduled lowering counts down on screen (Settings and the top pill) and the page updates when it starts
+let protTimer = null;
+function protCountdown(){
+  clearInterval(protTimer);
+  const pend = state.data?.protection?.pending;
+  if(!pend || protLevel() !== 'enhanced') return;
+  const tick = async () => {
+    const left = Math.max(0, Math.round(pend.effective_at - Date.now() / 1000));
+    const txt = left >= 3600 ? `${Math.floor(left / 3600)} h ${Math.round(left % 3600 / 60)} min` : `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+    document.querySelectorAll('.prot-count').forEach(e => e.textContent = txt);
+    const pill = $('#prot-pill'); if(pill) pill.title = `Standard protection starts in ${txt}`;
+    if(left <= 0){
+      clearInterval(protTimer); await refresh();
+      if(protLevel() === 'standard') toast('Standard protection is now on. You can switch back to Enhanced at any time, instantly.');
+    }
+  };
+  tick(); protTimer = setInterval(tick, 1000);
+}
 async function setProtection(to){
   const cur = state.data?.protection;
   if(to === cur?.level && !cur?.pending) return;
   try{
     if(to === 'enhanced'){
-      await api('/api/protection', {session_id: state.sid, to}); toast('Enhanced protection is on.');
+      await api('/api/protection', {session_id: state.sid, to}); toast(cur?.pending ? 'Cancelled. Enhanced protection stays on.' : 'Enhanced protection is on.');
     }else{
       await ensureSigner();
       const ch = await api('/api/protection/challenge', {session_id: state.sid, to});
       const assertion = await signPayload(ch.payload, ch.passkey);
       const st = await api('/api/protection', {session_id: state.sid, to, assertion});
-      toast(`Standard protection will start ${new Date(st.pending.effective_at * 1000).toLocaleString('en-SG')}. You can cancel before then.`);
+      toast(`Signed. Standard protection starts in ${st.delay_words || 'a while'}. You can keep Enhanced until then.`);
     }
   }catch(e){ toast(e.name === 'NotAllowedError' ? 'Cancelled. Nothing changed.' : e.message); }
   await refresh();

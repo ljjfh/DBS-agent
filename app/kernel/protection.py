@@ -5,7 +5,8 @@ on the phone can easily say "tap Standard view" - but cannot make the account le
 
   * raising protection (standard -> enhanced) takes effect immediately
   * lowering it (enhanced -> standard) must be signed on the customer's device AND only takes effect after a delay
-    (PROTECTION_LOWER_DELAY, 24 h by default). It can be cancelled at any time before then.
+    (PROTECTION_LOWER_DELAY). It can be cancelled at any time before then. A real bank would wait 24 hours; the
+    demo default is 2 minutes so a judge can watch the switch happen.
 
 What the level changes is only the SOFT friction. The hard safety boundary is the same for everyone:
 the agent can only draft, drafts must match what the user said, the independent verifier can freeze a draft,
@@ -41,7 +42,20 @@ def status(bank, user_id: str) -> dict:
     level = effective(bank, user_id)
     pend = bank.protection(user_id).get("pending")
     return {"level": level, "pending": dict(pend) if pend else None, "delay_seconds": settings.protection_delay,
+            "delay_words": delay_words(),
             "high_threshold": high_threshold(level)}
+
+
+def delay_words(seconds: int | None = None) -> str:
+    """'2 minutes', '24 hours': how long a lowering (or a higher limit) waits before it starts."""
+    sec = settings.protection_delay if seconds is None else seconds
+    if sec >= 3600 and sec % 3600 == 0:
+        h = sec // 3600
+        return f"{h} hour{'s' if h != 1 else ''}"
+    if sec >= 60:
+        m = round(sec / 60)
+        return f"{m} minute{'s' if m != 1 else ''}"
+    return f"{sec} seconds"
 
 
 def high_threshold(level: str) -> float:

@@ -756,6 +756,15 @@ class TestProtection(Base):
         self.assertEqual(st["pending"]["to"], "standard")
         self.assertEqual(protection.effective(self.bank, "u_chen", now=st["pending"]["effective_at"] + 1), "standard")
 
+    def test_lowering_still_enhanced_until_the_wait_is_over(self):
+        st = self.lower()
+        self.assertEqual(protection.effective(self.bank, "u_chen", now=st["pending"]["effective_at"] - 1), "enhanced")
+        self.assertTrue(st["delay_words"])
+
+    def test_delay_words(self):
+        self.assertEqual([protection.delay_words(x) for x in (120, 86400, 3600, 45)],
+                         ["2 minutes", "24 hours", "1 hour", "45 seconds"])
+
     def test_lowering_without_signature_refused(self):
         with self.assertRaises(KernelError):
             self.kernel.change_protection(self.s, "standard", None)

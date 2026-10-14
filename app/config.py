@@ -57,7 +57,7 @@ class Settings:
     user_high_threshold = float(_f("RULE_HIGH_THRESHOLD", "1000")) # above this: cooling-off period (enhanced protection)
     user_high_threshold_standard = float(_f("RULE_HIGH_THRESHOLD_STANDARD", "3000"))  # same, standard protection
     # Lowering protection (enhanced -> standard) is signed on the device and only takes effect after this delay
-    protection_delay = int(_f("PROTECTION_LOWER_DELAY", "86400"))
+    protection_delay = int(_f("PROTECTION_LOWER_DELAY", "120"))   # demo: 2 min; a real bank: 86400 (24 h)
     cooldown_seconds = int(_f("RULE_COOLDOWN_SECONDS", "20"))      # 20 s for the demo, e.g. 600 in production
     velocity_window_min = int(_f("RULE_VELOCITY_WINDOW_MIN", "10"))
     velocity_max = int(_f("RULE_VELOCITY_MAX", "3"))

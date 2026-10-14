@@ -100,11 +100,12 @@ def request(kernel, s, kind: str, data: dict, evidence: str = "") -> dict:
         if not _amount_said(said, to_cents):
             raise ChangeError("The new limit must be the amount you said. Please tell me the amount.", "NOT_SAID")
         data = {"from_cents": lim["daily_transfer_cents"], "to_cents": to_cents}
-        hours = max(1, round(settings.protection_delay / 3600))
+        from app.kernel.protection import delay_words
+        wait = delay_words()
         title = "Raise your daily transfer limit"
         rows = [["Daily limit now", fmt_money(data["from_cents"])], ["New daily limit", fmt_money(to_cents)],
-                ["Takes effect", f"in {hours} hours"]]
-        note = (f"For your safety a higher limit only starts after {hours} hours. You can keep the old limit at any "
+                ["Takes effect", f"in {wait}"]]
+        note = (f"For your safety a higher limit only starts after {wait}. You can keep the old limit at any "
                 "time before then. Lowering it again is instant.")
     else:  # giro_setup
         biller = bank.payee(s.user_id, data.get("biller_payee_id", ""))
@@ -164,8 +165,9 @@ def apply(kernel, s, change_id: str, assertion: dict, site) -> dict:
     elif pc["kind"] == "raise_limit":
         eff = time.time() + settings.protection_delay
         bank.set_daily_limit(uid, d["to_cents"], effective_at=eff)
-        reply = (f"Done. Your daily transfer limit goes up to {fmt_money(d['to_cents'])} on "
-                 f"{time.strftime('%d %b, %H:%M', time.localtime(eff))}. Until then it stays "
+        from app.kernel.protection import delay_words
+        reply = (f"Done. Your daily transfer limit goes up to {fmt_money(d['to_cents'])} in "
+                 f"{delay_words()}. Until then it stays "
                  f"{fmt_money(d['from_cents'])}.")
     else:
         g = bank.add_giro(uid, d["biller"], d["aliases"], d["limit_cents"], d["from_account"])
