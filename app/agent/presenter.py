@@ -46,6 +46,10 @@ def build_card(d: Draft, bank: MockBank, phase: Phase) -> dict:
         when = f" {sched['label'][0].lower()}{sched['label'][1:]}" if sched else ""
         readback = (f"You want to {verb} {words} ({fmt_money(d.amount_cents)}) to {who}{when}, "
                     f"from your {acct.get('name', 'account')}. Is that right?")
+    if bank.user(d.user_id).get("persona") == "everyday":      # same card, shorter read-back
+        when = f", {sched['label'][0].lower()}{sched['label'][1:]}" if sched else ""
+        readback = (f"{fmt_money(d.amount_cents)} {'in' if invest else 'to'} {d.payee_name}{when}, "
+                    f"from {acct.get('name', 'your account')}.")
     risk = d.risk
     v = d.verification or {}
     return {

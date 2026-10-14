@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 
 from app.agent import fraud, planner, presenter, request_guard
 from app.agent.llm import LLMError, OfflineLLM, detect_intent
-from app.agent.prompts import SYSTEM_PROMPT, _unexpected_answer, state_summary
+from app.agent.prompts import _unexpected_answer, state_summary, system_prompt
 from app.agent.textparse import money_mentions, parse_amount, relative_in
 from app.kernel.evidence import derived_amounts, user_utterances
 from app.agent.tools import ToolGateway
@@ -481,7 +481,8 @@ class Agent:
         for step in range(settings.max_steps):
             # Fixed prefix (system prompt) first, dynamic state after: works with APIs that accept only one system
             # message, and helps prompt caching
-            msgs = [{"role": "system", "content": SYSTEM_PROMPT + "\n\n" + state_summary(s, self.bank)},
+            msgs = [{"role": "system", "content": system_prompt(self.bank.user(s.user_id).get("persona", "senior")) +
+                     "\n\n" + state_summary(s, self.bank)},
                     *history, *working]
             forced = money and step == 0 and getattr(llm, "supports_tool_choice", False)
             kw = {"tool_choice": "required"} if forced else {}
@@ -641,7 +642,9 @@ class Agent:
         reply = _NOTE.sub("", reply or "").strip() or None
         if draft:
             prep = "in" if draft.kind == "investment" else "to"
-            template = f"Please check the card: {fmt_money(draft.amount_cents)} {prep} {draft.payee_name}."
+            template = (f"{fmt_money(draft.amount_cents)} {prep} {draft.payee_name}, ready to confirm."
+                        if self.bank.user(s.user_id).get("persona") == "everyday" else
+                        f"Please check the card: {fmt_money(draft.amount_cents)} {prep} {draft.payee_name}.")
             if draft.risk and draft.risk.level == RiskLevel.BLOCK:
                 template = "I can't process this: " + " ".join(draft.risk.reasons[:2])
             elif draft.verification.get("status") == "mismatch":

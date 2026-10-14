@@ -129,7 +129,9 @@ function render(){
       <div class="nav">${navHtml}</div>
       <div class="side-bottom">
         <div class="trust-mini">${icon('shield')}<div><b>Your money. Your decision.</b><p>Star can only prepare payments. Your phone signs every one.</p></div></div>
-        <div class="profile"><span class="avatar">MC</span><div>Mdm Chen<small>Personal · demo account</small></div></div>
+        <button class="profile" id="switch-customer" aria-haspopup="true" aria-expanded="false" title="Switch demo customer">
+          <span class="avatar">${customer().initials}</span><div>${esc(customer().name)}<small>${customer().tag} · switch customer</small></div></button>
+        <div class="customer-menu" id="customer-menu" hidden>${customerChoices()}</div>
       </div>
     </nav>
     <div class="workspace">
@@ -150,6 +152,9 @@ function render(){
     </div>
   </div>`;
   $('#app').querySelectorAll('.nav-btn').forEach(b => b.onclick = () => go(b.dataset.page));
+  $('#switch-customer').onclick = () => { const menu = $('#customer-menu'); menu.hidden = !menu.hidden;
+    $('#switch-customer').setAttribute('aria-expanded', String(!menu.hidden)); };
+  bindCustomerChoices($('#app'));
   $('#senior-toggle').onclick = () => setSenior(!state.senior);
   $('#trace-toggle').onclick = () => toggleTrace();
   $('#prot-pill').onclick = () => go('settings');
@@ -178,8 +183,8 @@ function renderPage(){
 function overview(m){
   m.innerHTML = `
     <section class="hero">
-      <div><div class="eyebrow">DBS digibank · Star assistant</div><h1>${greeting()}, Mdm Chen.</h1>
-        <p>A little help with your everyday banking. At your pace.</p></div>
+      <div><div class="eyebrow">DBS digibank · Star assistant</div><h1>${greeting()}, ${esc(everyday() ? customer().name.split(' ')[0] : customer().name)}.</h1>
+        <p>${everyday() ? 'Pay, transfer and invest by just saying it. You sign every payment.' : 'A little help with your everyday banking. At your pace.'}</p></div>
       <div class="date">${today()}</div>
     </section>
     <section class="accounts" id="accounts" aria-label="Accounts"></section>
@@ -198,7 +203,7 @@ function overview(m){
 function seniorHome(m){
   const sav = state.data?.accounts?.[0];
   m.innerHTML = `
-    <div class="senior-hello"><div><div class="simple-eyebrow">YOUR EVERYDAY BANKING</div><h1>Hello, Mdm Chen</h1><p class="simple-intro">One thing at a time. You're in control.</p></div>
+    <div class="senior-hello"><div><div class="simple-eyebrow">YOUR EVERYDAY BANKING</div><h1>Hello, ${esc(customer().name)}</h1><p class="simple-intro">One thing at a time. You're in control.</p></div>
       <div class="bal">Savings <b>${esc(sav ? sav.balance : '…')}</b></div></div>
     ${assistantHtml()}`;
   bindAssistant();
@@ -404,14 +409,27 @@ const SUGGEST = [
   ['chart', 'Buy 300 dollars of Apple shares'], ['transfer', 'Send 350 to my son and invest 1000 in a fixed deposit'],
   ['alert', 'The police say I must move my savings to a safe account', 'danger'],
 ];
+// Alex (everyday customer): same bank, same safety, quicker conversations
+const SUGGEST_EVERYDAY = [
+  ['family', 'Send mum 500'], ['bolt', 'Pay my credit card bill in full'], ['users', 'Transfer 45 to Ryan'],
+  ['refresh', 'What did I spend this month?'], ['chart', 'Buy 2000 of the STI ETF'],
+  ['transfer', 'Move 3000 to my current account, then put half of it in the income fund'],
+  ['alert', 'A bank officer called and asked for my OTP to unlock my account', 'danger'],
+];
+const CUSTOMERS = {
+  chen: {name: 'Mdm Chen', initials: 'MC', tag: 'Senior care', about: 'Plain words, amounts read in words, gentle reminders. Enhanced protection.'},
+  alex: {name: 'Alex Tan', initials: 'AT', tag: 'Everyday', about: 'Short, direct answers. Same safety checks. Standard protection.'},
+};
+const customer = () => CUSTOMERS[state.data?.customer] || CUSTOMERS.chen;
+const everyday = () => state.data?.persona === 'everyday';
 const SUGGEST_SENIOR = [['coin', 'Has my pension come in?'], ['bolt', 'Pay my bills'], ['family', 'Send money to my family'], ['phone', 'Talk to a real person']];
 function renderStage(){
   const st = $('#stage'); if(!st) return;
   if(!state.messages.length){
-    const list = state.senior ? SUGGEST_SENIOR : SUGGEST;
+    const list = state.senior ? SUGGEST_SENIOR : everyday() ? SUGGEST_EVERYDAY : SUGGEST;
     st.innerHTML = `<div class="welcome"><span class="spark">${icon('spark')}</span><div>
-        <h3>${state.senior ? 'What would you like to do?' : 'What can I help you with today?'}</h3>
-        <p>${state.senior ? 'Choose below, or tap Speak and tell me in your own words.' : "Tell me in your own words. We'll take it one step at a time."}</p></div></div>
+        <h3>${state.senior ? 'What would you like to do?' : everyday() ? `Hi ${esc(customer().name.split(' ')[0])}, what do you need?` : 'What can I help you with today?'}</h3>
+        <p>${state.senior ? 'Choose below, or tap Speak and tell me in your own words.' : everyday() ? 'Type or speak. Every payment still needs your fingerprint.' : "Tell me in your own words. We'll take it one step at a time."}</p></div></div>
       <div class="suggest-label">A place to start</div>
       <div class="suggestions">${list.map(([ic, t, cls]) => `<button class="suggestion ${cls || ''}" data-say="${esc(t)}">${icon(ic)}${esc(t)}</button>`).join('')}</div>`;
     st.querySelectorAll('.suggestion').forEach(b => b.onclick = () => send(b.dataset.say));
@@ -978,6 +996,10 @@ function settingsPage(m){
         : "Off: the demo shows a simulated fingerprint sensor. Turn on to use this device's real Touch ID, Face ID or Windows Hello instead.")}
     </section>
     <section class="card settings page-gap">
+      <div class="setting"><div>Demo customer<small>Same bank and the same safety checks; Star talks to each customer differently.</small></div></div>
+      <div class="customer-list">${customerChoices()}</div>
+    </section>
+    <section class="card settings page-gap">
       ${sw('s-senior', state.senior, 'Simple view', 'Larger text, fewer choices and an easy-to-find voice button. You can choose whether replies are read aloud in Settings.')}
       ${sw('s-large', state.large, 'Larger text in standard view', 'Makes the normal dashboard easier to read.')}
       ${sw('s-read', readAloudOn(), 'Read every answer aloud', 'Answers to questions you speak are always read aloud. Tap the microphone to stop one.')}
@@ -988,6 +1010,7 @@ function settingsPage(m){
       <div class="setting"><div>Reset demo<small>New session, balances and bills restored. Old audit records are kept.</small></div><button class="btn secondary" id="s-reset">${icon('refresh')}Reset</button></div>
     </section>`;
   $('#s-senior').onclick = () => setSenior(!state.senior);
+  bindCustomerChoices(m);
   $('#s-large').onclick = () => { state.large = !state.large; store.set('large', state.large); render(); };
   $('#s-read').onclick = () => { state.readAloud = !readAloudOn(); store.set('readAloud', state.readAloud); if(!state.readAloud) speechSynthesis?.cancel(); renderPage(); };
   $('#s-reset').onclick = resetDemo;
@@ -1024,6 +1047,22 @@ async function setProtection(to){
     }
   }catch(e){ toast(e.name === 'NotAllowedError' ? 'Cancelled. Nothing changed.' : e.message); }
   await refresh();
+}
+// ---------------------------------------------------------------- Demo customers (same risk engine, different conversation)
+function customerChoices(){
+  return Object.entries(CUSTOMERS).map(([id, c]) => `<button class="customer-choice ${state.data?.customer === id ? 'on' : ''}" data-customer="${id}"
+    aria-pressed="${state.data?.customer === id}"><span class="avatar">${c.initials}</span><span><b>${esc(c.name)} · ${c.tag}</b><small>${esc(c.about)}</small></span></button>`).join('');
+}
+function bindCustomerChoices(root){
+  root.querySelectorAll('.customer-choice').forEach(b => b.onclick = () => switchCustomer(b.dataset.customer));
+}
+async function switchCustomer(id){
+  if(state.data?.customer === id){ $('#customer-menu') && ($('#customer-menu').hidden = true); return; }
+  const r = await api('/api/reset', {session_id: state.sid, persona: id, world: true, ...(visitorMode() ? {visitor: VISITOR} : {})});
+  state.sid = r.session_id; store.set('sid', r.session_id);
+  state.messages = []; state.check = null; $('#tlist').innerHTML = ''; closeConfirm();
+  if(id === 'alex'){ state.senior = false; store.set('senior', false); }
+  await refresh(); go('overview'); toast(`Now banking as ${CUSTOMERS[id].name} (${CUSTOMERS[id].tag})`);
 }
 async function resetDemo(){
   const r = await api('/api/reset', {session_id: state.sid, world: true, ...(visitorMode() ? {visitor: VISITOR} : {})});

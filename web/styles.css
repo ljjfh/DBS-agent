@@ -736,3 +736,23 @@ body.senior .cg strong{font-size:28px}
 #review-out{overflow-wrap:anywhere;margin-top:16px}
 .eyebrow{font-size:13px;font-weight:700;letter-spacing:.04em;color:#a31319}
 @media(max-width:700px){.contract-cases,.evidence-compare{grid-template-columns:1fr}.contract-checks li{grid-template-columns:1fr}.contract-checks small{grid-column:auto}}
+
+/* ---------- Demo customer switcher (Mdm Chen · Senior care / Alex Tan · Everyday) ---------- */
+button.profile{width:100%;background:none;border:0;border-top:1px solid #40434a;text-align:left;cursor:pointer;font:inherit;border-radius:0}
+button.profile:hover small,button.profile:focus-visible small{color:#fff}
+button.profile:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.side-bottom{position:relative}
+.customer-menu{position:absolute;left:0;right:0;bottom:calc(100% + 8px);z-index:20;display:flex;flex-direction:column;gap:6px;
+  background:#1f2126;border:1px solid #40434a;border-radius:12px;padding:8px;box-shadow:0 12px 30px rgba(0,0,0,.35)}
+.customer-menu[hidden]{display:none}
+.customer-choice{display:flex;align-items:flex-start;gap:10px;width:100%;text-align:left;cursor:pointer;font:inherit;
+  border-radius:10px;padding:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.customer-choice b{display:block;font-size:13px}
+.customer-choice small{display:block;color:var(--muted);font-size:12px;line-height:1.4;margin-top:2px}
+.customer-choice.on{border-color:var(--brand);box-shadow:inset 0 0 0 1px var(--brand)}
+.customer-choice .avatar{flex:none}
+.customer-menu .customer-choice{background:#2b2e34;border-color:#40434a;color:#fff}
+.customer-menu .customer-choice small{color:#a9afb9}
+.customer-menu .customer-choice.on{border-color:#fff;box-shadow:none}
+.customer-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:0 0 4px}
+@media (max-width:640px){.customer-list{grid-template-columns:1fr}}

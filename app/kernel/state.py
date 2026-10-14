@@ -172,10 +172,15 @@ class SessionStore:
         with self._lock:
             return self._create(uuid.uuid4().hex, old.user_id)
 
-    def new_for_visitor(self, visitor: str) -> Session:
+    def new_for_visitor(self, visitor: str, base: str = "u_chen") -> Session:
         # A client-chosen visitor label is not an identity or a credential.
         with self._lock:
-            return self._create(uuid.uuid4().hex, "u_chen~" + uuid.uuid4().hex)
+            return self._create(uuid.uuid4().hex, f"{base}~" + uuid.uuid4().hex)
+
+    def new_for_user(self, user_id: str) -> Session:
+        """Local demo: a fresh session for one of the seeded customers (customer switcher)."""
+        with self._lock:
+            return self._create(uuid.uuid4().hex, user_id)
 
 
 sessions = SessionStore()

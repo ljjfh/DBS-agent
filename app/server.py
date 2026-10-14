@@ -18,7 +18,7 @@ from starlette.routing import Route
 
 from app import lab, runtime
 from app.agent import presenter
-from app.bank.mock_bank import DEMO_USER
+from app.bank.mock_bank import DEMO_USER, PERSONAS, base_user
 from app.config import ROOT, settings
 from app.kernel import protection as prot
 from app.kernel import contract
@@ -106,6 +106,7 @@ async def state(request: Request):
     user = bank.user(uid)
     return JSONResponse({
         "session_id": s.session_id, "phase": s.phase.value, "user": user["name"],
+        "persona": user.get("persona", "senior"), "customer": base_user(uid).removeprefix("u_"),
         "accounts": [{**a, "balance": fmt_money(a["balance_cents"])} for a in bank.accounts(uid)],
         "total_balance": fmt_money(sum(a["balance_cents"] for a in bank.accounts(uid))),
         "payees": [{k: p[k] for k in ("payee_id", "name", "relation", "type", "masked_account")}
@@ -429,7 +430,14 @@ async def reset(request: Request):
     body = await _json(request)
     sid = body.get("session_id")
     visitor = valid_visitor(body.get("visitor"))
-    if visitor:
+    base = PERSONAS.get(str(body.get("persona") or "").lower())        # customer switcher: "chen" / "alex"
+    current = runtime.sessions.get(sid).user_id if (sid and base) else None
+    if base and (not sid or base_user(current) != base):
+        # Switch customer: a fresh session (and, online, this browser's own fresh copy of that customer)
+        s = runtime.sessions.new_for_visitor(visitor, base) if visitor else runtime.sessions.new_for_user(base)
+        if body.get("world"):
+            runtime.bank.reset_user(s.user_id)
+    elif visitor:
         # Online demo: this browser's own demo customer. "Reset demo" resets only their world, never anyone else's;
         # their passkey stays enrolled.
         s = runtime.sessions.reset(sid) if sid else runtime.sessions.new_for_visitor(visitor)
