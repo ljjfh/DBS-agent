@@ -1399,10 +1399,13 @@ document.addEventListener('visibilitychange',()=>{cancelAnimationFrame(animation
 const fieldObserver = new ResizeObserver(resizeField);fieldObserver.observe(welcome);
 resizeField();syncMotion();
 // The launch screen picks the demo customer: Mdm Chen (senior care, the main demo) or Alex Tan (everyday)
-const enterAlt = $('#welcome-alt');
+const pick = $('#welcome-customer');
+const WHO = {chen: '72 years old · plain words, amounts read in words, extra scam protection',
+             alex: 'Working adult · short, direct answers · the same safety checks'};
+pick.addEventListener('change', () => { $('#welcome-who').textContent = WHO[pick.value]; });
 async function enterAs(customerId, btn){
-  if(enter.disabled || enterAlt.disabled)return;
-  enter.disabled=true; enterAlt.disabled=true; btn.setAttribute('aria-busy','true');
+  if(enter.disabled)return;
+  enter.disabled=true; pick.disabled=true; btn.setAttribute('aria-busy','true');
   $('#welcome-status').textContent=`Opening ${customerId === 'alex' ? "Alex Tan's" : "Mdm Chen's"} account…`;
   try{
     await init();
@@ -1416,11 +1419,10 @@ async function enterAs(customerId, btn){
     setTimeout(()=>{welcome.hidden=true;},reducedMotion.matches||motionPaused?0:450);
   }catch(e){
     $('#welcome-status').textContent='Unable to connect to the demo. Please try again in a moment.';
-    enter.disabled=false;enterAlt.disabled=false;btn.removeAttribute('aria-busy');
+    enter.disabled=false;pick.disabled=false;btn.removeAttribute('aria-busy');
   }
 }
-enter.addEventListener('click', () => enterAs('chen', enter));
-enterAlt.addEventListener('click', () => enterAs('alex', enterAlt));
+enter.addEventListener('click', () => enterAs(pick.value, enter));
 
 // Decorative click acknowledgement only. Never dispatches an action or changes
 // disabled, busy, payment, microphone, or confirmation state. Capture runs before

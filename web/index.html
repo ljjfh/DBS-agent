@@ -22,9 +22,17 @@
       <p class="welcome-eyebrow"><span></span> LIVE MORE. BANK LESS.</p>
       <h1 id="welcome-title">Banking, simply<br><span>by speaking.</span></h1>
       <p class="welcome-description">Meet Star, your conversational banking assistant.<br>Just say what's on your mind. We'll take it one step at a time.</p>
-      <button class="welcome-enter" id="welcome-enter" type="button" aria-describedby="welcome-who"><span class="welcome-enter-text"><span class="welcome-rec">Recommended</span>Start as Mdm Chen <span class="welcome-button-divider">/</span> Senior care</span><span class="welcome-arrow" aria-hidden="true">↗</span></button>
-      <p class="welcome-who" id="welcome-who">A 72-year-old customer: plain words, amounts read aloud in words, extra protection against scams.</p>
-      <button class="welcome-alt" id="welcome-alt" type="button">Or try <b>Alex Tan</b>, an everyday customer: shorter answers, same safety checks</button>
+      <div class="welcome-start">
+        <label class="welcome-pick"><span class="welcome-pick-label">Bank as</span>
+          <select id="welcome-customer" aria-describedby="welcome-who">
+            <option value="chen" selected>Mdm Chen · Senior care (recommended)</option>
+            <option value="alex">Alex Tan · Everyday customer</option>
+          </select>
+          <svg class="welcome-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </label>
+        <button class="welcome-enter" id="welcome-enter" type="button"><span>Get started</span><span class="welcome-arrow" aria-hidden="true">↗</span></button>
+      </div>
+      <p class="welcome-who" id="welcome-who">72 years old · plain words, amounts read in words, extra scam protection</p>
       <p class="welcome-caption">Two demo customers. One set of safety checks. Every payment confirmed by you.</p>
       <p class="welcome-status" id="welcome-status" role="status" aria-live="polite"></p>
       <noscript><p>Please enable JavaScript and refresh this page to enter the demo.</p></noscript>
