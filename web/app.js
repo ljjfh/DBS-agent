@@ -529,7 +529,7 @@ async function send(text, endpoint = '/api/chat', voice = false, auto = false, d
   if(demo) push({type:'demo-intro'});
   push({role:'user', text, demo}); push({type:'typing'});
   try{
-    const r = await api(endpoint, {session_id: state.sid, text});
+    const r = await api(endpoint, {session_id: state.sid, text, care: !!state.senior});
     state.sid = r.session_id; store.set('sid', r.session_id);
     state.messages = state.messages.filter(m => m.type !== 'typing');
     addTrace(r.trace); handleTurn(r);

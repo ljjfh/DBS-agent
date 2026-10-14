@@ -60,3 +60,11 @@ class TestCareMode(unittest.TestCase):
     def test_answers(self):
         self.assertEqual([care_answer(t) for t in ("yes please", "OK", "No, thanks", "send 50 to my son")],
                          [True, True, False, None])
+
+
+class TestCareFollowsTheScreen(unittest.TestCase):
+    def test_every_message_carries_the_view(self):
+        c = TestClient(app, base_url="http://localhost")
+        sid = c.post("/api/reset", json={"world": True}).json()["session_id"]
+        care = c.post("/api/chat", json={"session_id": sid, "text": "Send 300 to my daughter", "care": True}).json()
+        self.assertIn("three hundred dollars", care["ui"]["card"]["readback"])

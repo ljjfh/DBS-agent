@@ -167,6 +167,9 @@ async def chat(request: Request):
     s = runtime.sessions.get(body.get("session_id"))
     if len(text) > 500:
         return _err("Please keep each message within 500 characters; nothing was prepared.")
+    if isinstance(body.get("care"), bool):
+        # the screen the customer is looking at decides how Star talks (survives a server restart)
+        s.care_mode = body["care"]
     result = runtime.agent.run_turn(s, text)
     return JSONResponse({"session_id": s.session_id, "phase": s.phase.value, **result.to_dict()})
 
