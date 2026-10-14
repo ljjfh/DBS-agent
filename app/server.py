@@ -319,7 +319,12 @@ async def demo_model_mistake(request: Request):
     s = runtime.sessions.get(body.get("session_id"))
     text = (body.get("text") or "Send 50 to my daughter").strip()[:200]
     result = Agent(runtime.bank, runtime.gateway, runtime.audit, lab.MistakenLLM()).run_turn(s, text)
-    return JSONResponse({"session_id": s.session_id, "phase": s.phase.value, **result.to_dict()})
+    # Tell the app this was the fault-injection demo, so it can show the comparison instead of a puzzling refusal
+    d = s.current_draft
+    heard = ((d.verification or {}).get("extracted") or {}) if d else {}
+    return JSONResponse({"session_id": s.session_id, "phase": s.phase.value, **result.to_dict(),
+                         "demo": {"kind": "model_mistake", "fault": "The demo model multiplies every amount by 10",
+                                  "said": text, "heard_amount": heard.get("amount"), "heard_payee": heard.get("payee")}})
 
 
 async def run_security_lab(_: Request):

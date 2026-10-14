@@ -344,7 +344,11 @@ function renderStage(){
     return;
   }
   st.innerHTML = state.messages.map((m, i) => {
-    if(m.role === 'user') return `<div class="msg user">${esc(m.text)}</div>`;
+    if(m.role === 'user') return `<div class="msg user">${m.demo ? '<small class="demo-tag">Demo input</small>' : ''}${esc(m.text)}</div>`;
+    if(m.type === 'demo-intro') return `<div class="demo-intro" role="note"><b>${icon('lab')} Safety test: a broken AI model</b>
+      For this test we swap in a model with a deliberate bug: it writes <strong>10&times; the amount</strong> you say.
+      The checks after it are the real ones. Watch whether the wrong amount can reach you.</div>`;
+    if(m.type === 'caught') return caughtHTML(m);
     if(m.type === 'typing') return `<div class="typing"><span class="thinking-dot" aria-hidden="true"></span>I'm working on your request…</div>`;
     if(m.type === 'choices') return m.done ? '' : `<div class="choices" role="group" aria-label="Choose one">${m.options.map((o, j) =>
       `<button class="choice" data-i="${i}" data-j="${j}"><span>${esc(o.label)}</span><small>${esc(o.detail || '')}</small></button>`).join('')}</div>`;
@@ -369,6 +373,39 @@ function renderStage(){
   st.lastElementChild?.scrollIntoView({block:'nearest'});
 }
 function push(m){ state.messages.push(m); renderStage(); }
+
+// "Simulate a model mistake": show WHY it stopped, side by side, so nobody wonders why S$50 "failed"
+function showCaught(r){
+  const c = r.ui.card, d = r.demo, frozen = r.ui.type === 'frozen';
+  const heard = d.heard_amount != null ? 'S$' + Number(d.heard_amount).toLocaleString('en-SG', {minimumFractionDigits: 2}) : 'no amount';
+  push({type:'caught', said: d.said, drafted: c.amount, payee: c.payee_name, heard, frozen});
+  speak(`Safety test passed. The faulty model wrote ${c.amount}, but the independent check heard ${heard}. ` +
+        `It was stopped before you were asked to confirm. Nothing was sent.`);
+  state.check = {title: 'Safety test passed', rows: [
+    ['fail', 'Faulty AI draft', `${c.amount} to ${c.payee_name}: the planted 10× bug`],
+    ['pass', 'Independent check', `Re-read your words, heard ${heard}: mismatch found`],
+    ['pass', frozen ? 'Frozen' : 'Blocked', 'No confirmation card, nothing to sign'],
+    ['pass', 'Your money', 'S$0 moved']]};
+  renderSafety(); refresh();
+}
+function caughtHTML(m){
+  const stage = (label, cls, note) => `<li class="${cls}"><span>${label}</span><small>${note}</small></li>`;
+  return `<div class="caught" role="alert">
+    <div class="caught-head"><span class="caught-badge">${m.frozen ? 'Caught and frozen' : 'Caught and blocked'}</span>
+      <b>The wrong amount never reached you. Nothing was sent.</b></div>
+    <div class="caught-grid">
+      <div class="cg said"><small>1 · You said</small><strong class="quote">“${esc(m.said)}”</strong><span>to ${esc(m.payee)}</span></div>
+      <div class="cg bad"><small>2 · The faulty model drafted</small><strong>${esc(m.drafted)}</strong><span>10&times; too much (the planted bug)</span></div>
+      <div class="cg good"><small>3 · The independent check heard</small><strong>${esc(m.heard)}</strong><span>it re-read your own words only</span></div>
+    </div>
+    <ol class="caught-path">
+      ${stage('AI draft', 'x', 'wrong amount')}${stage('2nd check', 'ok', 'mismatch found')}
+      ${stage('Card', 'skip', 'never shown')}${stage('Fingerprint', 'skip', 'never asked')}${stage('Your money', 'ok', 'S$0 moved')}
+    </ol>
+    <small class="caught-foot">Why this matters: an AI can mishear or make things up. Here it can only write a draft, and a second,
+      independent check compares that draft with what you actually said before anything is shown or signed.</small>
+  </div>`;
+}
 // After a payment is confirmed, the next step of the user's own plan is prepared right away (it still needs its own
 // confirmation). After a cancel we ask instead, because the user may have changed their mind.
 function continueWith(task, payment = true){
@@ -399,14 +436,15 @@ async function restorePending(){
 }
 
 function stopSpeaking(){ try{ speechSynthesis?.cancel(); }catch{} }
-async function send(text, endpoint = '/api/chat', voice = false, auto = false){
+async function send(text, endpoint = '/api/chat', voice = false, auto = false, demo = false){
   text = String(text || '').trim(); if(!text || state.busy) return;
   if(!auto) stopSpeaking();                         // a new question interrupts the previous answer
   state.voiceTurn = voice;
   if(state.page !== 'overview') go('overview');
   state.busy = true; $('#text') && ($('#text').value = '');
   state.messages = state.messages.filter(m => m.type !== 'choices' || m.done);
-  push({role:'user', text}); push({type:'typing'});
+  if(demo) push({type:'demo-intro'});
+  push({role:'user', text, demo}); push({type:'typing'});
   try{
     const r = await api(endpoint, {session_id: state.sid, text});
     state.sid = r.session_id; store.set('sid', r.session_id);
@@ -419,6 +457,7 @@ async function send(text, endpoint = '/api/chat', voice = false, auto = false){
 }
 function handleTurn(r){
   const ui = r.ui || {type:'text'};
+  if(r.demo?.kind === 'model_mistake' && ui.card){ showCaught(r); return; }
   if(ui.plan?.length > 1) push({type:'plan', items: ui.plan});
   if(ui.type === 'blocked' && !ui.card){
     push({type:'blocked', text:r.reply, hint: ui.hint}); speak(r.speak);
@@ -802,7 +841,7 @@ function labPage(m){
         <button class="btn secondary" id="lab-mistake">${icon('alert')}Simulate a model mistake</button></div>
       <p class="footnote">"Simulate a model mistake" sends “Send 50 to my daughter” to a deliberately faulty model that drafts S$500. The independent verifier, the kernel and the gateway are the real ones.</p>
       <div id="lab-out"></div></section>`;
-  $('#lab-mistake').onclick = () => send('Send 50 to my daughter', '/api/demo/model-mistake');
+  $('#lab-mistake').onclick = () => send('Send 50 to my daughter', '/api/demo/model-mistake', false, false, true);
   $('#lab-run').onclick = async () => {
     $('#lab-out').innerHTML = '<p class="footnote">Running…</p>';
     try{
