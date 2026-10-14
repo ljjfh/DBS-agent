@@ -120,10 +120,7 @@ class TestSigningAndExecution(KernelTestBase):
         with self.assertRaises(KernelError):
             self.kernel.authorize(self.s, d.draft_id, d.digest, "demo-fingerprint")
         d.cooling_until = time.time() - 1
-        with self.assertRaises(KernelError) as review:
-            self.kernel.authorize(self.s, d.draft_id, d.digest, "demo-fingerprint")
-        self.assertEqual(review.exception.code, "SECONDARY_APPROVAL_REQUIRED")
-        self.kernel.approve_secondary(self.s, d.draft_id, d.digest)
+        # family the customer has paid before: no second reviewer (see test_contract.WhoNeedsAReviewer)
         tok = self.kernel.authorize(self.s, d.draft_id, d.digest, "demo-fingerprint")
         self.assertEqual(self.kernel.commit(self.s, d.draft_id, tok)["status"], "SUCCESS")
 

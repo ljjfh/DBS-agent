@@ -25,7 +25,8 @@ class ContractTest(unittest.TestCase):
         self.sb = sandbox(self.tmp.name)
 
     def large(self):
-        d = self.sb.ask("Send 1500 to my daughter", cents=150000)
+        stranger = self.sb.bank.add_payee("u_chen", "John Tan", "OCBC", "1234567890", "friend")["payee_id"]
+        d = self.sb.ask("Send 1500 to John Tan", payee=stranger, cents=150000)
         d.cooling_until = time.time() - 1
         return d
 
@@ -155,3 +156,25 @@ class ContractTest(unittest.TestCase):
             self.assertEqual(row["ledger_debit_cents"], 5000 if row["id"] == "normal" else 0)
         self.assertEqual(result["comparison"][-1]["unsafe_candidates_admitted"], 0)
         self.assertEqual(result["comparison"][-1]["normal_candidates_admitted"], 1)
+
+
+class WhoNeedsAReviewer(unittest.TestCase):
+    """Family and people paid before: no reviewer. Someone new above the threshold, or a large investment: reviewer."""
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.sb = sandbox(self.tmp.name)
+
+    def card(self, payee_id, cents, kind="transfer"):
+        return {"user_id": "u_chen", "payee_id": payee_id, "amount_cents": cents, "kind": kind}
+
+    def test_rules(self):
+        from app.kernel.contract import secondary_required
+        new = self.sb.bank.add_payee("u_chen", "John Tan", "OCBC", "1234567890", "friend")["payee_id"]
+        self.assertFalse(secondary_required(self.card("p_daughter", 200000), self.sb.bank))   # family, paid before
+        self.assertFalse(secondary_required(self.card("own:JNT-003", 400000), self.sb.bank))  # own accounts
+        self.assertFalse(secondary_required(self.card("p_cc", 120000), self.sb.bank))         # a bill
+        self.assertFalse(secondary_required(self.card(new, 50000), self.sb.bank))             # new, small
+        self.assertTrue(secondary_required(self.card(new, 150000), self.sb.bank))             # new, large
+        self.assertFalse(secondary_required(self.card("s_aapl", 275000, "investment"), self.sb.bank))
+        self.assertTrue(secondary_required(self.card("s_aapl", 350000, "investment"), self.sb.bank))

@@ -1,6 +1,6 @@
 {
   "policy_version": "star-contract-1.0",
-  "generated_at": 1791918459.097788,
+  "generated_at": 1791955096.007151,
   "cases": [
     {
       "id": "normal",
@@ -15,12 +15,12 @@
       "balance_before_cents": 325000,
       "balance_after_cents": 320000,
       "external_balance_change": false,
-      "latency_ms": 421.38,
+      "latency_ms": 32.5,
       "decision_at_draft": {
         "policy_version": "star-contract-1.0",
-        "transaction_id": "d_745f522716",
-        "session_id": "lab-03605e",
-        "digest": "091e40ec24a8eaaa9bf6c1342633d256b34294c75ef4fffb32bdd114b0936e39",
+        "transaction_id": "d_767bc81bf8",
+        "session_id": "lab-530acb",
+        "digest": "174c7250e94b6db52746df6e80b4a2935671d8439a2877406578e1e7bf75dc1b",
         "stage": "before_authorization",
         "action": "request_signature",
         "checks": {
@@ -53,7 +53,7 @@
         "required_evidence": [
           "authorization"
         ],
-        "recorded_at": 1791918458.1906774,
+        "recorded_at": 1791955095.9178638,
         "secondary_approval": null,
         "dependency_ids": [],
         "raw_text": "Send 50 to my daughter",
@@ -78,9 +78,9 @@
       },
       "decision": {
         "policy_version": "star-contract-1.0",
-        "transaction_id": "d_745f522716",
-        "session_id": "lab-03605e",
-        "digest": "091e40ec24a8eaaa9bf6c1342633d256b34294c75ef4fffb32bdd114b0936e39",
+        "transaction_id": "d_767bc81bf8",
+        "session_id": "lab-530acb",
+        "digest": "174c7250e94b6db52746df6e80b4a2935671d8439a2877406578e1e7bf75dc1b",
         "stage": "executed",
         "action": "executed",
         "checks": {
@@ -111,7 +111,7 @@
         },
         "reason_codes": [],
         "required_evidence": [],
-        "recorded_at": 1791918458.56564,
+        "recorded_at": 1791955095.9384286,
         "secondary_approval": null,
         "dependency_ids": [],
         "raw_text": "Send 50 to my daughter",
@@ -137,34 +137,34 @@
       "audit_integrity": {
         "ok": true,
         "records": 11,
-        "head": "47e3f3438bdb4ee6ad45dd1ac078ae97fecab767c7d9a7bc2d43131e63b709a8"
+        "head": "de8fdb2a4b16c9c1768fe9d7f4e886ebb5775fbbe441f9da2f871e2816c68df2"
       },
       "audit": [
         {
           "data": {
             "alg": "ECDSA P-256",
-            "key_id": "0ccdf4a79964fd66"
+            "key_id": "da5505982ac34d2b"
           },
           "event": "device.key_registered",
-          "hash": "4bdadce0141eead6e000b45492aef012e23dc84d2bc7c5d282fb1f004dd83229",
+          "hash": "e7a9042147b27bf6c6a062498a6693c1b04237ad1be4209ffaa9097a96d23c82",
           "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-          "session_id": "lab-03605e",
-          "ts": 1791918458.146
+          "session_id": "lab-530acb",
+          "ts": 1791955095.907
         },
         {
           "data": {
-            "digest": "091e40ec24a8eaaa9bf6c1342633d256b34294c75ef4fffb32bdd114b0936e39",
+            "digest": "174c7250e94b6db52746df6e80b4a2935671d8439a2877406578e1e7bf75dc1b",
             "draft": {
               "amount_cents": 5000,
               "asset_class": "Cash",
               "bill_id": null,
               "currency": "SGD",
               "dependency_ids": [],
-              "draft_id": "d_745f522716",
-              "expires_at": 1791919058,
+              "draft_id": "d_767bc81bf8",
+              "expires_at": 1791955695,
               "from_account": "SAV-001",
               "kind": "transfer",
-              "nonce": "d91c183215ba",
+              "nonce": "cd528c91d01d",
               "payee_id": "p_daughter",
               "payee_name": "Chen Mei Ling",
               "schedule": null,
@@ -212,10 +212,10 @@
             }
           },
           "event": "draft.created",
-          "hash": "cd70f463505055f50012305aa3dc687cd70de67f349e378dbbf083eeded51de7",
-          "prev_hash": "4bdadce0141eead6e000b45492aef012e23dc84d2bc7c5d282fb1f004dd83229",
-          "session_id": "lab-03605e",
-          "ts": 1791918458.187
+          "hash": "bcc5e95f3f76e371cf72d11a074baddc56ccb5355533a08dbffa16a009a8165d",
+          "prev_hash": "e7a9042147b27bf6c6a062498a6693c1b04237ad1be4209ffaa9097a96d23c82",
+          "session_id": "lab-530acb",
+          "ts": 1791955095.917
         },
         {
           "data": {
@@ -247,7 +247,7 @@
               }
             },
             "dependency_ids": [],
-            "digest": "091e40ec24a8eaaa9bf6c1342633d256b34294c75ef4fffb32bdd114b0936e39",
+            "digest": "174c7250e94b6db52746df6e80b4a2935671d8439a2877406578e1e7bf75dc1b",
             "draft": {
               "amount_cents": 5000,
               "from_account": "SAV-001",
@@ -257,14 +257,14 @@
             "policy_version": "star-contract-1.0",
             "raw_text": "Send 50 to my daughter",
             "reason_codes": [],
-            "recorded_at": 1791918458.1906774,
+            "recorded_at": 1791955095.9178638,
             "required_evidence": [
               "authorization"
             ],
             "secondary_approval": null,
-            "session_id": "lab-03605e",
+            "session_id": "lab-530acb",
             "stage": "before_authorization",
-            "transaction_id": "d_745f522716",
+            "transaction_id": "d_767bc81bf8",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -279,10 +279,10 @@
             }
           },
           "event": "contract.decision",
-          "hash": "a53c82294cf1b6a673aa249816db66dbd332f45e91c3362cf6f860132f277f9a",
-          "prev_hash": "cd70f463505055f50012305aa3dc687cd70de67f349e378dbbf083eeded51de7",
-          "session_id": "lab-03605e",
-          "ts": 1791918458.191
+          "hash": "16137c4294ab17ea602efbb431e8b440c9f3bfd2f06000bd501ddd1b510cd77b",
+          "prev_hash": "bcc5e95f3f76e371cf72d11a074baddc56ccb5355533a08dbffa16a009a8165d",
+          "session_id": "lab-530acb",
+          "ts": 1791955095.918
         },
         {
           "data": {
@@ -314,7 +314,7 @@
               }
             },
             "dependency_ids": [],
-            "digest": "091e40ec24a8eaaa9bf6c1342633d256b34294c75ef4fffb32bdd114b0936e39",
+            "digest": "174c7250e94b6db52746df6e80b4a2935671d8439a2877406578e1e7bf75dc1b",
             "draft": {
               "amount_cents": 5000,
               "from_account": "SAV-001",
@@ -324,14 +324,14 @@
             "policy_version": "star-contract-1.0",
             "raw_text": "Send 50 to my daughter",
             "reason_codes": [],
-            "recorded_at": 1791918458.1956806,
+            "recorded_at": 1791955095.918896,
             "required_evidence": [
               "authorization"
             ],
             "secondary_approval": null,
-            "session_id": "lab-03605e",
+            "session_id": "lab-530acb",
             "stage": "before_authorization",
-            "transaction_id": "d_745f522716",
+            "transaction_id": "d_767bc81bf8",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -346,21 +346,21 @@
             }
           },
           "event": "contract.decision",
-          "hash": "9b35a86efee2d78167ed6b450992e37701a222210d38da46269fe263e44825ca",
-          "prev_hash": "a53c82294cf1b6a673aa249816db66dbd332f45e91c3362cf6f860132f277f9a",
-          "session_id": "lab-03605e",
-          "ts": 1791918458.196
+          "hash": "73566ecf95d106602324d0cce754337c1176f11f523158f450ec0957bdfd33eb",
+          "prev_hash": "16137c4294ab17ea602efbb431e8b440c9f3bfd2f06000bd501ddd1b510cd77b",
+          "session_id": "lab-530acb",
+          "ts": 1791955095.919
         },
         {
           "data": {
-            "draft_id": "d_745f522716",
-            "payload_sha256": "4186b6ce4fd78ff3b203ff050ac59cfb38f12dad16ac54c9df8cb4b3bda0406f"
+            "draft_id": "d_767bc81bf8",
+            "payload_sha256": "5aa7a8306fb026ba1d2e6523ec1cb6000e97e5a7b2a247e95eae8dad4e7612ff"
           },
           "event": "auth.challenge_issued",
-          "hash": "c0976b71112e4e26a1838894b46c51f4179b4aed4c6b175b0c89d7ce29ac1c03",
-          "prev_hash": "9b35a86efee2d78167ed6b450992e37701a222210d38da46269fe263e44825ca",
-          "session_id": "lab-03605e",
-          "ts": 1791918458.199
+          "hash": "df0b16498c601f05b78176b866af90341cd3ea998f3ea249b32ccb579cfd86dd",
+          "prev_hash": "73566ecf95d106602324d0cce754337c1176f11f523158f450ec0957bdfd33eb",
+          "session_id": "lab-530acb",
+          "ts": 1791955095.919
         },
         {
           "data": {
@@ -392,7 +392,7 @@
               }
             },
             "dependency_ids": [],
-            "digest": "091e40ec24a8eaaa9bf6c1342633d256b34294c75ef4fffb32bdd114b0936e39",
+            "digest": "174c7250e94b6db52746df6e80b4a2935671d8439a2877406578e1e7bf75dc1b",
             "draft": {
               "amount_cents": 5000,
               "from_account": "SAV-001",
@@ -402,14 +402,14 @@
             "policy_version": "star-contract-1.0",
             "raw_text": "Send 50 to my daughter",
             "reason_codes": [],
-            "recorded_at": 1791918458.2096782,
+            "recorded_at": 1791955095.9224658,
             "required_evidence": [
               "authorization"
             ],
             "secondary_approval": null,
-            "session_id": "lab-03605e",
+            "session_id": "lab-530acb",
             "stage": "before_authorization",
-            "transaction_id": "d_745f522716",
+            "transaction_id": "d_767bc81bf8",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -424,22 +424,22 @@
             }
           },
           "event": "contract.decision",
-          "hash": "d19c7c84982f6194080116eadeb4d8e53378a476f2c7fc839686c828a8a56e5e",
-          "prev_hash": "c0976b71112e4e26a1838894b46c51f4179b4aed4c6b175b0c89d7ce29ac1c03",
-          "session_id": "lab-03605e",
-          "ts": 1791918458.21
+          "hash": "19146f1dfa1d4c62316d313bf464132ec03f0f875eb808e2d1478ec8dc3fd312",
+          "prev_hash": "df0b16498c601f05b78176b866af90341cd3ea998f3ea249b32ccb579cfd86dd",
+          "session_id": "lab-530acb",
+          "ts": 1791955095.922
         },
         {
           "data": {
-            "digest": "091e40ec24a8eaaa9bf6c1342633d256b34294c75ef4fffb32bdd114b0936e39",
-            "draft_id": "d_745f522716",
+            "digest": "174c7250e94b6db52746df6e80b4a2935671d8439a2877406578e1e7bf75dc1b",
+            "draft_id": "d_767bc81bf8",
             "method": "device_key"
           },
           "event": "auth.granted",
-          "hash": "a85459a002b36d845a078622d148cf5a4fbfcdf9e0e80b7598baa083678125de",
-          "prev_hash": "d19c7c84982f6194080116eadeb4d8e53378a476f2c7fc839686c828a8a56e5e",
-          "session_id": "lab-03605e",
-          "ts": 1791918458.549
+          "hash": "1b30074e9f08557cf27fbd313f663d115a318513fd277ca74e8d0e4d92096d43",
+          "prev_hash": "19146f1dfa1d4c62316d313bf464132ec03f0f875eb808e2d1478ec8dc3fd312",
+          "session_id": "lab-530acb",
+          "ts": 1791955095.935
         },
         {
           "data": {
@@ -471,7 +471,7 @@
               }
             },
             "dependency_ids": [],
-            "digest": "091e40ec24a8eaaa9bf6c1342633d256b34294c75ef4fffb32bdd114b0936e39",
+            "digest": "174c7250e94b6db52746df6e80b4a2935671d8439a2877406578e1e7bf75dc1b",
             "draft": {
               "amount_cents": 5000,
               "from_account": "SAV-001",
@@ -481,12 +481,12 @@
             "policy_version": "star-contract-1.0",
             "raw_text": "Send 50 to my daughter",
             "reason_codes": [],
-            "recorded_at": 1791918458.5526404,
+            "recorded_at": 1791955095.9362452,
             "required_evidence": [],
             "secondary_approval": null,
-            "session_id": "lab-03605e",
+            "session_id": "lab-530acb",
             "stage": "authorized",
-            "transaction_id": "d_745f522716",
+            "transaction_id": "d_767bc81bf8",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -501,10 +501,10 @@
             }
           },
           "event": "contract.decision",
-          "hash": "7cd5145804535beaed7b37a1481c692a120ecd4bb308ff3e4c89a777cbadbebb",
-          "prev_hash": "a85459a002b36d845a078622d148cf5a4fbfcdf9e0e80b7598baa083678125de",
-          "session_id": "lab-03605e",
-          "ts": 1791918458.553
+          "hash": "7573f12a07cfd15b7d082c72e0b14aa587c0eb5134d1c2874e9940f75cdf78ba",
+          "prev_hash": "1b30074e9f08557cf27fbd313f663d115a318513fd277ca74e8d0e4d92096d43",
+          "session_id": "lab-530acb",
+          "ts": 1791955095.936
         },
         {
           "data": {
@@ -536,7 +536,7 @@
               }
             },
             "dependency_ids": [],
-            "digest": "091e40ec24a8eaaa9bf6c1342633d256b34294c75ef4fffb32bdd114b0936e39",
+            "digest": "174c7250e94b6db52746df6e80b4a2935671d8439a2877406578e1e7bf75dc1b",
             "draft": {
               "amount_cents": 5000,
               "from_account": "SAV-001",
@@ -546,12 +546,12 @@
             "policy_version": "star-contract-1.0",
             "raw_text": "Send 50 to my daughter",
             "reason_codes": [],
-            "recorded_at": 1791918458.5606406,
+            "recorded_at": 1791955095.9374645,
             "required_evidence": [],
             "secondary_approval": null,
-            "session_id": "lab-03605e",
+            "session_id": "lab-530acb",
             "stage": "pre_execution",
-            "transaction_id": "d_745f522716",
+            "transaction_id": "d_767bc81bf8",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -566,27 +566,27 @@
             }
           },
           "event": "contract.decision",
-          "hash": "8d5add8a83022246137123251d51a21ddaa0173a393d36fcc380ed78465b053b",
-          "prev_hash": "7cd5145804535beaed7b37a1481c692a120ecd4bb308ff3e4c89a777cbadbebb",
-          "session_id": "lab-03605e",
-          "ts": 1791918458.561
+          "hash": "8d1b316e562dc5379e2dc0b077ef5435bd4b60dfb49fe7bbdc2590f0861902a7",
+          "prev_hash": "7573f12a07cfd15b7d082c72e0b14aa587c0eb5134d1c2874e9940f75cdf78ba",
+          "session_id": "lab-530acb",
+          "ts": 1791955095.937
         },
         {
           "data": {
-            "draft_id": "d_745f522716",
+            "draft_id": "d_767bc81bf8",
             "receipt": {
               "authorization": {
                 "alg": "ECDSA P-256 / SHA-256 (browser key, unlocked by the demo's simulated fingerprint)",
-                "key_id": "0ccdf4a79964fd66",
+                "key_id": "da5505982ac34d2b",
                 "method": "device_key",
-                "payload": "{\"amount_cents\":5000,\"asset_class\":\"Cash\",\"currency\":\"SGD\",\"digest\":\"091e40ec24a8eaaa9bf6c1342633d256b34294c75ef4fffb32bdd114b0936e39\",\"domain\":\"STAR-DCTA-AUTH-V1\",\"draft_id\":\"d_745f522716\",\"expires_at\":1791918578,\"from_account\":\"SAV-001\",\"kind\":\"transfer\",\"nonce\":\"28a5297fbd97e04c8537ec1f\",\"payee\":\"Chen Mei Ling\",\"schedule\":null,\"session_id\":\"lab-03605e\",\"you_said\":\"Send 50 to my daughter\"}",
+                "payload": "{\"amount_cents\":5000,\"asset_class\":\"Cash\",\"currency\":\"SGD\",\"digest\":\"174c7250e94b6db52746df6e80b4a2935671d8439a2877406578e1e7bf75dc1b\",\"domain\":\"STAR-DCTA-AUTH-V1\",\"draft_id\":\"d_767bc81bf8\",\"expires_at\":1791955215,\"from_account\":\"SAV-001\",\"kind\":\"transfer\",\"nonce\":\"9ff5296fbb3f21b2ac297669\",\"payee\":\"Chen Mei Ling\",\"schedule\":null,\"session_id\":\"lab-530acb\",\"you_said\":\"Send 50 to my daughter\"}",
                 "public_key": {
                   "crv": "P-256",
                   "kty": "EC",
-                  "x": "mQRIP7nPyg8b6dwLYbLowX6wJvyYr2FsOUmYKjk-0dI",
-                  "y": "kkwqzoCK5BsweSqn6pP5xQ9uyTMqmdXm3Q_dHo9D9VA"
+                  "x": "oJiKu31NmpxXRNLW7DyPQ3VZcAmBxgktBOBvUFNgp-E",
+                  "y": "_eDw2PYPhVoL_SYm7I9cRgf3mMA3iMHK-YZwRTnkdII"
                 },
-                "signature": "jDeGYp6jq7npvSlmT/sI3qixPXG0oP6Tzgg12lXkjKWj77tBie+Iz7sE5VaC3xPokxw/5myKArXIjcCYU5B89A=="
+                "signature": "PSuJGW50g1W2hFSnZ657VKf2ws2lLsMwBfNb/YL8+gVzGYIw8fHRD7FsukHgvStrh0f2WyO3zy5bEJ+8ax9A0w=="
               },
               "card": {
                 "amount_cents": 5000,
@@ -594,11 +594,11 @@
                 "bill_id": null,
                 "currency": "SGD",
                 "dependency_ids": [],
-                "draft_id": "d_745f522716",
-                "expires_at": 1791919058,
+                "draft_id": "d_767bc81bf8",
+                "expires_at": 1791955695,
                 "from_account": "SAV-001",
                 "kind": "transfer",
-                "nonce": "d91c183215ba",
+                "nonce": "cd528c91d01d",
                 "payee_id": "p_daughter",
                 "payee_name": "Chen Mei Ling",
                 "schedule": null,
@@ -634,7 +634,7 @@
                   }
                 },
                 "dependency_ids": [],
-                "digest": "091e40ec24a8eaaa9bf6c1342633d256b34294c75ef4fffb32bdd114b0936e39",
+                "digest": "174c7250e94b6db52746df6e80b4a2935671d8439a2877406578e1e7bf75dc1b",
                 "draft": {
                   "amount_cents": 5000,
                   "from_account": "SAV-001",
@@ -644,12 +644,12 @@
                 "policy_version": "star-contract-1.0",
                 "raw_text": "Send 50 to my daughter",
                 "reason_codes": [],
-                "recorded_at": 1791918458.56564,
+                "recorded_at": 1791955095.9384286,
                 "required_evidence": [],
                 "secondary_approval": null,
-                "session_id": "lab-03605e",
+                "session_id": "lab-530acb",
                 "stage": "executed",
-                "transaction_id": "d_745f522716",
+                "transaction_id": "d_767bc81bf8",
                 "verifier": {
                   "engine": "offline extractor",
                   "extracted": {
@@ -663,13 +663,13 @@
                   "mode": "offline_shared_parser"
                 }
               },
-              "digest": "091e40ec24a8eaaa9bf6c1342633d256b34294c75ef4fffb32bdd114b0936e39",
-              "executed_at": 1791918458,
-              "receipt_sha256": "288062de3b8f260e4e659044c7ec87760ba5861eb2a5a20bea37c23bd8f46621",
+              "digest": "174c7250e94b6db52746df6e80b4a2935671d8439a2877406578e1e7bf75dc1b",
+              "executed_at": 1791955095,
+              "receipt_sha256": "6fa50d6b480311300e06e096227643799a279e387ffcf665964ab8a0eb46cd81",
               "receipt_version": 2,
-              "session_id": "lab-03605e",
+              "session_id": "lab-530acb",
               "status": "SUCCESS",
-              "txn_id": "TXN-8BF6EDADF6",
+              "txn_id": "TXN-346C88B3F7",
               "verification": {
                 "engine": "offline extractor",
                 "fields": {
@@ -683,30 +683,30 @@
                 "status": "match"
               }
             },
-            "txn_id": "TXN-8BF6EDADF6"
+            "txn_id": "TXN-346C88B3F7"
           },
           "event": "gateway.posted",
-          "hash": "0346650d97387aaa184d6702e440f8270093c0a3d6473d3b55ef709c593fa451",
-          "prev_hash": "8d5add8a83022246137123251d51a21ddaa0173a393d36fcc380ed78465b053b",
-          "session_id": "lab-03605e",
-          "ts": 1791918458.567
+          "hash": "fa35567c1e95a05bf670df53d88e7cad0af8b9c9002838d2588f61de139b5583",
+          "prev_hash": "8d1b316e562dc5379e2dc0b077ef5435bd4b60dfb49fe7bbdc2590f0861902a7",
+          "session_id": "lab-530acb",
+          "ts": 1791955095.939
         },
         {
           "data": {
-            "draft_id": "d_745f522716",
+            "draft_id": "d_767bc81bf8",
             "receipt": {
               "authorization": {
                 "alg": "ECDSA P-256 / SHA-256 (browser key, unlocked by the demo's simulated fingerprint)",
-                "key_id": "0ccdf4a79964fd66",
+                "key_id": "da5505982ac34d2b",
                 "method": "device_key",
-                "payload": "{\"amount_cents\":5000,\"asset_class\":\"Cash\",\"currency\":\"SGD\",\"digest\":\"091e40ec24a8eaaa9bf6c1342633d256b34294c75ef4fffb32bdd114b0936e39\",\"domain\":\"STAR-DCTA-AUTH-V1\",\"draft_id\":\"d_745f522716\",\"expires_at\":1791918578,\"from_account\":\"SAV-001\",\"kind\":\"transfer\",\"nonce\":\"28a5297fbd97e04c8537ec1f\",\"payee\":\"Chen Mei Ling\",\"schedule\":null,\"session_id\":\"lab-03605e\",\"you_said\":\"Send 50 to my daughter\"}",
+                "payload": "{\"amount_cents\":5000,\"asset_class\":\"Cash\",\"currency\":\"SGD\",\"digest\":\"174c7250e94b6db52746df6e80b4a2935671d8439a2877406578e1e7bf75dc1b\",\"domain\":\"STAR-DCTA-AUTH-V1\",\"draft_id\":\"d_767bc81bf8\",\"expires_at\":1791955215,\"from_account\":\"SAV-001\",\"kind\":\"transfer\",\"nonce\":\"9ff5296fbb3f21b2ac297669\",\"payee\":\"Chen Mei Ling\",\"schedule\":null,\"session_id\":\"lab-530acb\",\"you_said\":\"Send 50 to my daughter\"}",
                 "public_key": {
                   "crv": "P-256",
                   "kty": "EC",
-                  "x": "mQRIP7nPyg8b6dwLYbLowX6wJvyYr2FsOUmYKjk-0dI",
-                  "y": "kkwqzoCK5BsweSqn6pP5xQ9uyTMqmdXm3Q_dHo9D9VA"
+                  "x": "oJiKu31NmpxXRNLW7DyPQ3VZcAmBxgktBOBvUFNgp-E",
+                  "y": "_eDw2PYPhVoL_SYm7I9cRgf3mMA3iMHK-YZwRTnkdII"
                 },
-                "signature": "jDeGYp6jq7npvSlmT/sI3qixPXG0oP6Tzgg12lXkjKWj77tBie+Iz7sE5VaC3xPokxw/5myKArXIjcCYU5B89A=="
+                "signature": "PSuJGW50g1W2hFSnZ657VKf2ws2lLsMwBfNb/YL8+gVzGYIw8fHRD7FsukHgvStrh0f2WyO3zy5bEJ+8ax9A0w=="
               },
               "card": {
                 "amount_cents": 5000,
@@ -714,11 +714,11 @@
                 "bill_id": null,
                 "currency": "SGD",
                 "dependency_ids": [],
-                "draft_id": "d_745f522716",
-                "expires_at": 1791919058,
+                "draft_id": "d_767bc81bf8",
+                "expires_at": 1791955695,
                 "from_account": "SAV-001",
                 "kind": "transfer",
-                "nonce": "d91c183215ba",
+                "nonce": "cd528c91d01d",
                 "payee_id": "p_daughter",
                 "payee_name": "Chen Mei Ling",
                 "schedule": null,
@@ -754,7 +754,7 @@
                   }
                 },
                 "dependency_ids": [],
-                "digest": "091e40ec24a8eaaa9bf6c1342633d256b34294c75ef4fffb32bdd114b0936e39",
+                "digest": "174c7250e94b6db52746df6e80b4a2935671d8439a2877406578e1e7bf75dc1b",
                 "draft": {
                   "amount_cents": 5000,
                   "from_account": "SAV-001",
@@ -764,12 +764,12 @@
                 "policy_version": "star-contract-1.0",
                 "raw_text": "Send 50 to my daughter",
                 "reason_codes": [],
-                "recorded_at": 1791918458.56564,
+                "recorded_at": 1791955095.9384286,
                 "required_evidence": [],
                 "secondary_approval": null,
-                "session_id": "lab-03605e",
+                "session_id": "lab-530acb",
                 "stage": "executed",
-                "transaction_id": "d_745f522716",
+                "transaction_id": "d_767bc81bf8",
                 "verifier": {
                   "engine": "offline extractor",
                   "extracted": {
@@ -783,13 +783,13 @@
                   "mode": "offline_shared_parser"
                 }
               },
-              "digest": "091e40ec24a8eaaa9bf6c1342633d256b34294c75ef4fffb32bdd114b0936e39",
-              "executed_at": 1791918458,
-              "receipt_sha256": "288062de3b8f260e4e659044c7ec87760ba5861eb2a5a20bea37c23bd8f46621",
+              "digest": "174c7250e94b6db52746df6e80b4a2935671d8439a2877406578e1e7bf75dc1b",
+              "executed_at": 1791955095,
+              "receipt_sha256": "6fa50d6b480311300e06e096227643799a279e387ffcf665964ab8a0eb46cd81",
               "receipt_version": 2,
-              "session_id": "lab-03605e",
+              "session_id": "lab-530acb",
               "status": "SUCCESS",
-              "txn_id": "TXN-8BF6EDADF6",
+              "txn_id": "TXN-346C88B3F7",
               "verification": {
                 "engine": "offline extractor",
                 "fields": {
@@ -803,13 +803,13 @@
                 "status": "match"
               }
             },
-            "txn_id": "TXN-8BF6EDADF6"
+            "txn_id": "TXN-346C88B3F7"
           },
           "event": "commit.executed",
-          "hash": "47e3f3438bdb4ee6ad45dd1ac078ae97fecab767c7d9a7bc2d43131e63b709a8",
-          "prev_hash": "0346650d97387aaa184d6702e440f8270093c0a3d6473d3b55ef709c593fa451",
-          "session_id": "lab-03605e",
-          "ts": 1791918458.57
+          "hash": "de8fdb2a4b16c9c1768fe9d7f4e886ebb5775fbbe441f9da2f871e2816c68df2",
+          "prev_hash": "fa35567c1e95a05bf670df53d88e7cad0af8b9c9002838d2588f61de139b5583",
+          "session_id": "lab-530acb",
+          "ts": 1791955095.939
         }
       ]
     },
@@ -826,12 +826,12 @@
       "balance_before_cents": 325000,
       "balance_after_cents": 325000,
       "external_balance_change": false,
-      "latency_ms": 27.4,
+      "latency_ms": 3.99,
       "decision_at_draft": {
         "policy_version": "star-contract-1.0",
-        "transaction_id": "d_7e2632defa",
-        "session_id": "lab-c4fce8",
-        "digest": "ecf4c4b630638006a8adc86aca278a4208e6171bb9e9fd0662b12cc84d7fe631",
+        "transaction_id": "d_8fdb9d566b",
+        "session_id": "lab-8627af",
+        "digest": "df3b1cc1da7f934314619dc9499a12f85195c587ba2b2523fb54dde01b6bcef8",
         "stage": "before_authorization",
         "action": "freeze",
         "checks": {
@@ -868,7 +868,7 @@
           "policy",
           "authorization"
         ],
-        "recorded_at": 1791918458.6386523,
+        "recorded_at": 1791955095.9475086,
         "secondary_approval": null,
         "dependency_ids": [],
         "raw_text": "Send 50 to my daughter",
@@ -893,9 +893,9 @@
       },
       "decision": {
         "policy_version": "star-contract-1.0",
-        "transaction_id": "d_7e2632defa",
-        "session_id": "lab-c4fce8",
-        "digest": "ecf4c4b630638006a8adc86aca278a4208e6171bb9e9fd0662b12cc84d7fe631",
+        "transaction_id": "d_8fdb9d566b",
+        "session_id": "lab-8627af",
+        "digest": "df3b1cc1da7f934314619dc9499a12f85195c587ba2b2523fb54dde01b6bcef8",
         "stage": "rejected",
         "action": "reject",
         "checks": {
@@ -932,7 +932,7 @@
           "policy",
           "authorization"
         ],
-        "recorded_at": 1791918458.6441834,
+        "recorded_at": 1791955095.9480329,
         "secondary_approval": null,
         "dependency_ids": [],
         "raw_text": "Send 50 to my daughter",
@@ -958,34 +958,34 @@
       "audit_integrity": {
         "ok": true,
         "records": 5,
-        "head": "a3df8dd8de9a21d3dbd53482f5ccf6db0f26536c274988d1d63828f01cc2f499"
+        "head": "54dcaa4cdd6c6b105b37c1edcbbc1d98a954cd207b046158dca132f2cbb72b25"
       },
       "audit": [
         {
           "data": {
             "alg": "ECDSA P-256",
-            "key_id": "0b3a1c87274c388a"
+            "key_id": "f5f994d3250482dd"
           },
           "event": "device.key_registered",
-          "hash": "42d764fb2d854d4f84dc0cac3cda6ea1df8b2eb4be13904f880d3d4002e33233",
+          "hash": "d0ce7772ae3508e0ad002c2606687289e73aef65127e8210dce1b9332b4f905b",
           "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-          "session_id": "lab-c4fce8",
-          "ts": 1791918458.616
+          "session_id": "lab-8627af",
+          "ts": 1791955095.943
         },
         {
           "data": {
-            "digest": "ecf4c4b630638006a8adc86aca278a4208e6171bb9e9fd0662b12cc84d7fe631",
+            "digest": "df3b1cc1da7f934314619dc9499a12f85195c587ba2b2523fb54dde01b6bcef8",
             "draft": {
               "amount_cents": 50000,
               "asset_class": "Cash",
               "bill_id": null,
               "currency": "SGD",
               "dependency_ids": [],
-              "draft_id": "d_7e2632defa",
-              "expires_at": 1791919058,
+              "draft_id": "d_8fdb9d566b",
+              "expires_at": 1791955695,
               "from_account": "SAV-001",
               "kind": "transfer",
-              "nonce": "6e0cda280319",
+              "nonce": "8a86469bc995",
               "payee_id": "p_daughter",
               "payee_name": "Chen Mei Ling",
               "schedule": null,
@@ -1041,23 +1041,23 @@
             }
           },
           "event": "draft.created",
-          "hash": "5ef58e21accfa4b4929a309d25eab875e980467635cc1e218f891b6469e72cd8",
-          "prev_hash": "42d764fb2d854d4f84dc0cac3cda6ea1df8b2eb4be13904f880d3d4002e33233",
-          "session_id": "lab-c4fce8",
-          "ts": 1791918458.631
+          "hash": "f7c0feef10c96a1e486cf9710042c8e7ab0823909f849448288972aeaa3a5b60",
+          "prev_hash": "d0ce7772ae3508e0ad002c2606687289e73aef65127e8210dce1b9332b4f905b",
+          "session_id": "lab-8627af",
+          "ts": 1791955095.947
         },
         {
           "data": {
-            "draft_id": "d_7e2632defa",
+            "draft_id": "d_8fdb9d566b",
             "mismatches": [
               "Amount: you said S$50.00, but this is for S$500.00."
             ]
           },
           "event": "draft.frozen",
-          "hash": "0e8086ac08aa7240bb0c98090708992e230c658cfa3178767240239ace7aac23",
-          "prev_hash": "5ef58e21accfa4b4929a309d25eab875e980467635cc1e218f891b6469e72cd8",
-          "session_id": "lab-c4fce8",
-          "ts": 1791918458.635
+          "hash": "218682a726aef0cb4ecd4795b35fae8726e96e683ecc4e6fff69815007c05116",
+          "prev_hash": "f7c0feef10c96a1e486cf9710042c8e7ab0823909f849448288972aeaa3a5b60",
+          "session_id": "lab-8627af",
+          "ts": 1791955095.947
         },
         {
           "data": {
@@ -1089,7 +1089,7 @@
               }
             },
             "dependency_ids": [],
-            "digest": "ecf4c4b630638006a8adc86aca278a4208e6171bb9e9fd0662b12cc84d7fe631",
+            "digest": "df3b1cc1da7f934314619dc9499a12f85195c587ba2b2523fb54dde01b6bcef8",
             "draft": {
               "amount_cents": 50000,
               "from_account": "SAV-001",
@@ -1102,15 +1102,15 @@
               "R11_ABOVE_USUAL",
               "R50_AMOUNT_NOT_SAID"
             ],
-            "recorded_at": 1791918458.6386523,
+            "recorded_at": 1791955095.9475086,
             "required_evidence": [
               "policy",
               "authorization"
             ],
             "secondary_approval": null,
-            "session_id": "lab-c4fce8",
+            "session_id": "lab-8627af",
             "stage": "before_authorization",
-            "transaction_id": "d_7e2632defa",
+            "transaction_id": "d_8fdb9d566b",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -1125,10 +1125,10 @@
             }
           },
           "event": "contract.decision",
-          "hash": "aea3e89d1e418f57a816ddb4c28da52ddf3c1f63651ef00d20ece93988fe7b2d",
-          "prev_hash": "0e8086ac08aa7240bb0c98090708992e230c658cfa3178767240239ace7aac23",
-          "session_id": "lab-c4fce8",
-          "ts": 1791918458.639
+          "hash": "11251e46b1dd68491210362e25888f3f5b08c0631e09a2744473238a86448e86",
+          "prev_hash": "218682a726aef0cb4ecd4795b35fae8726e96e683ecc4e6fff69815007c05116",
+          "session_id": "lab-8627af",
+          "ts": 1791955095.948
         },
         {
           "data": {
@@ -1160,7 +1160,7 @@
               }
             },
             "dependency_ids": [],
-            "digest": "ecf4c4b630638006a8adc86aca278a4208e6171bb9e9fd0662b12cc84d7fe631",
+            "digest": "df3b1cc1da7f934314619dc9499a12f85195c587ba2b2523fb54dde01b6bcef8",
             "draft": {
               "amount_cents": 50000,
               "from_account": "SAV-001",
@@ -1173,15 +1173,15 @@
               "R11_ABOVE_USUAL",
               "R50_AMOUNT_NOT_SAID"
             ],
-            "recorded_at": 1791918458.6441834,
+            "recorded_at": 1791955095.9480329,
             "required_evidence": [
               "policy",
               "authorization"
             ],
             "secondary_approval": null,
-            "session_id": "lab-c4fce8",
+            "session_id": "lab-8627af",
             "stage": "rejected",
-            "transaction_id": "d_7e2632defa",
+            "transaction_id": "d_8fdb9d566b",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -1196,10 +1196,10 @@
             }
           },
           "event": "contract.decision",
-          "hash": "a3df8dd8de9a21d3dbd53482f5ccf6db0f26536c274988d1d63828f01cc2f499",
-          "prev_hash": "aea3e89d1e418f57a816ddb4c28da52ddf3c1f63651ef00d20ece93988fe7b2d",
-          "session_id": "lab-c4fce8",
-          "ts": 1791918458.644
+          "hash": "54dcaa4cdd6c6b105b37c1edcbbc1d98a954cd207b046158dca132f2cbb72b25",
+          "prev_hash": "11251e46b1dd68491210362e25888f3f5b08c0631e09a2744473238a86448e86",
+          "session_id": "lab-8627af",
+          "ts": 1791955095.948
         }
       ]
     },
@@ -1216,12 +1216,12 @@
       "balance_before_cents": 325000,
       "balance_after_cents": 325000,
       "external_balance_change": false,
-      "latency_ms": 29.7,
+      "latency_ms": 5.74,
       "decision_at_draft": {
         "policy_version": "star-contract-1.0",
-        "transaction_id": "d_1847ea7643",
-        "session_id": "lab-404c11",
-        "digest": "21f91d3ea3ec371d0e825ca0e1912466958a55aad172b76222d11d2a99dad26f",
+        "transaction_id": "d_7d470ad74a",
+        "session_id": "lab-3c4674",
+        "digest": "10e7f5e3b523ac65ce469ab193f882fd9ef49297cfe6d5e84192ba9ebb5e43b0",
         "stage": "before_authorization",
         "action": "freeze",
         "checks": {
@@ -1256,7 +1256,7 @@
         "required_evidence": [
           "authorization"
         ],
-        "recorded_at": 1791918458.7074406,
+        "recorded_at": 1791955095.9555306,
         "secondary_approval": null,
         "dependency_ids": [],
         "raw_text": "Send 50 to my daughter",
@@ -1281,9 +1281,9 @@
       },
       "decision": {
         "policy_version": "star-contract-1.0",
-        "transaction_id": "d_1847ea7643",
-        "session_id": "lab-404c11",
-        "digest": "21f91d3ea3ec371d0e825ca0e1912466958a55aad172b76222d11d2a99dad26f",
+        "transaction_id": "d_7d470ad74a",
+        "session_id": "lab-3c4674",
+        "digest": "10e7f5e3b523ac65ce469ab193f882fd9ef49297cfe6d5e84192ba9ebb5e43b0",
         "stage": "rejected",
         "action": "reject",
         "checks": {
@@ -1318,7 +1318,7 @@
         "required_evidence": [
           "authorization"
         ],
-        "recorded_at": 1791918458.7114432,
+        "recorded_at": 1791955095.9560835,
         "secondary_approval": null,
         "dependency_ids": [],
         "raw_text": "Send 50 to my daughter",
@@ -1344,34 +1344,34 @@
       "audit_integrity": {
         "ok": true,
         "records": 5,
-        "head": "7ecce3bd441c7127d00d4dd7faf9d9da600f4298e513517f125edb9a11b31ace"
+        "head": "f998f2927ec9d3f6b4182a29bc1fe1ffcdf491af51b4e18b3582f9d946975a00"
       },
       "audit": [
         {
           "data": {
             "alg": "ECDSA P-256",
-            "key_id": "88faef6bfc3e7c78"
+            "key_id": "49feb42cf48dbdd2"
           },
           "event": "device.key_registered",
-          "hash": "18c739f8671c3615d82b79bf077b16e6fa1e535d33e660228b73fbb703ad3e61",
+          "hash": "cd7e4d3f86e4cda2496c913c8fd225c7f9c83b0acc115640af58e86ad87069bb",
           "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-          "session_id": "lab-404c11",
-          "ts": 1791918458.685
+          "session_id": "lab-3c4674",
+          "ts": 1791955095.952
         },
         {
           "data": {
-            "digest": "21f91d3ea3ec371d0e825ca0e1912466958a55aad172b76222d11d2a99dad26f",
+            "digest": "10e7f5e3b523ac65ce469ab193f882fd9ef49297cfe6d5e84192ba9ebb5e43b0",
             "draft": {
               "amount_cents": 5000,
               "asset_class": "Cash",
               "bill_id": null,
               "currency": "SGD",
               "dependency_ids": [],
-              "draft_id": "d_1847ea7643",
-              "expires_at": 1791919058,
+              "draft_id": "d_7d470ad74a",
+              "expires_at": 1791955695,
               "from_account": "SAV-001",
               "kind": "transfer",
-              "nonce": "cfc233ed25cf",
+              "nonce": "11461548d8b0",
               "payee_id": "p_son",
               "payee_name": "Chen Zhi Qiang",
               "schedule": null,
@@ -1425,23 +1425,23 @@
             }
           },
           "event": "draft.created",
-          "hash": "ef0d11cdbccdb07e8971fd6caa471770b2826afc3103fb7485aebdabacd5afa1",
-          "prev_hash": "18c739f8671c3615d82b79bf077b16e6fa1e535d33e660228b73fbb703ad3e61",
-          "session_id": "lab-404c11",
-          "ts": 1791918458.699
+          "hash": "244f9f390665bf257e4fcdef839358b57ec45e2d8a448224daf01e85cb48838b",
+          "prev_hash": "cd7e4d3f86e4cda2496c913c8fd225c7f9c83b0acc115640af58e86ad87069bb",
+          "session_id": "lab-3c4674",
+          "ts": 1791955095.955
         },
         {
           "data": {
-            "draft_id": "d_1847ea7643",
+            "draft_id": "d_7d470ad74a",
             "mismatches": [
               "Who: you asked for your daughter Chen Mei Ling, but this is for Chen Zhi Qiang."
             ]
           },
           "event": "draft.frozen",
-          "hash": "e58e373a01ba5b13a1d4349eb1667cfe1b646fbcb5cc89d2ec215968f9c9d4e6",
-          "prev_hash": "ef0d11cdbccdb07e8971fd6caa471770b2826afc3103fb7485aebdabacd5afa1",
-          "session_id": "lab-404c11",
-          "ts": 1791918458.703
+          "hash": "66848620c7a7718ceaa16fcdc8c7e9bb423accfe904dab8dd4cd0399ef06d301",
+          "prev_hash": "244f9f390665bf257e4fcdef839358b57ec45e2d8a448224daf01e85cb48838b",
+          "session_id": "lab-3c4674",
+          "ts": 1791955095.955
         },
         {
           "data": {
@@ -1473,7 +1473,7 @@
               }
             },
             "dependency_ids": [],
-            "digest": "21f91d3ea3ec371d0e825ca0e1912466958a55aad172b76222d11d2a99dad26f",
+            "digest": "10e7f5e3b523ac65ce469ab193f882fd9ef49297cfe6d5e84192ba9ebb5e43b0",
             "draft": {
               "amount_cents": 5000,
               "from_account": "SAV-001",
@@ -1485,14 +1485,14 @@
             "reason_codes": [
               "R51_PAYEE_NOT_SAID"
             ],
-            "recorded_at": 1791918458.7074406,
+            "recorded_at": 1791955095.9555306,
             "required_evidence": [
               "authorization"
             ],
             "secondary_approval": null,
-            "session_id": "lab-404c11",
+            "session_id": "lab-3c4674",
             "stage": "before_authorization",
-            "transaction_id": "d_1847ea7643",
+            "transaction_id": "d_7d470ad74a",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -1507,10 +1507,10 @@
             }
           },
           "event": "contract.decision",
-          "hash": "8455d31b3b5798c88e12b497d3afc011406106665bbd18d8e79723536dc3222a",
-          "prev_hash": "e58e373a01ba5b13a1d4349eb1667cfe1b646fbcb5cc89d2ec215968f9c9d4e6",
-          "session_id": "lab-404c11",
-          "ts": 1791918458.707
+          "hash": "93cf60b56d28a924154854dda54d11c21e368175468c43be7fa2c619a98122a7",
+          "prev_hash": "66848620c7a7718ceaa16fcdc8c7e9bb423accfe904dab8dd4cd0399ef06d301",
+          "session_id": "lab-3c4674",
+          "ts": 1791955095.956
         },
         {
           "data": {
@@ -1542,7 +1542,7 @@
               }
             },
             "dependency_ids": [],
-            "digest": "21f91d3ea3ec371d0e825ca0e1912466958a55aad172b76222d11d2a99dad26f",
+            "digest": "10e7f5e3b523ac65ce469ab193f882fd9ef49297cfe6d5e84192ba9ebb5e43b0",
             "draft": {
               "amount_cents": 5000,
               "from_account": "SAV-001",
@@ -1554,14 +1554,14 @@
             "reason_codes": [
               "R51_PAYEE_NOT_SAID"
             ],
-            "recorded_at": 1791918458.7114432,
+            "recorded_at": 1791955095.9560835,
             "required_evidence": [
               "authorization"
             ],
             "secondary_approval": null,
-            "session_id": "lab-404c11",
+            "session_id": "lab-3c4674",
             "stage": "rejected",
-            "transaction_id": "d_1847ea7643",
+            "transaction_id": "d_7d470ad74a",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -1576,10 +1576,10 @@
             }
           },
           "event": "contract.decision",
-          "hash": "7ecce3bd441c7127d00d4dd7faf9d9da600f4298e513517f125edb9a11b31ace",
-          "prev_hash": "8455d31b3b5798c88e12b497d3afc011406106665bbd18d8e79723536dc3222a",
-          "session_id": "lab-404c11",
-          "ts": 1791918458.711
+          "hash": "f998f2927ec9d3f6b4182a29bc1fe1ffcdf491af51b4e18b3582f9d946975a00",
+          "prev_hash": "93cf60b56d28a924154854dda54d11c21e368175468c43be7fa2c619a98122a7",
+          "session_id": "lab-3c4674",
+          "ts": 1791955095.956
         }
       ]
     },
@@ -1596,12 +1596,12 @@
       "balance_before_cents": 325000,
       "balance_after_cents": 325000,
       "external_balance_change": false,
-      "latency_ms": 30.73,
+      "latency_ms": 4.9,
       "decision_at_draft": {
         "policy_version": "star-contract-1.0",
-        "transaction_id": "d_186b16a7ec",
-        "session_id": "lab-527235",
-        "digest": "9698abf3cd8a540455e720ba349d20e74d5cb45a888d29a7780d13361e0b5d47",
+        "transaction_id": "d_d6191790de",
+        "session_id": "lab-1e23c9",
+        "digest": "355fc366ece83683ac5fd4665a84a19c7e7ca4f7102337dc764d3cf3c817389d",
         "stage": "before_authorization",
         "action": "reject",
         "checks": {
@@ -1634,7 +1634,7 @@
         "required_evidence": [
           "authorization"
         ],
-        "recorded_at": 1791918458.7810698,
+        "recorded_at": 1791955095.9646204,
         "secondary_approval": null,
         "dependency_ids": [
           "unexecuted-parent"
@@ -1661,9 +1661,9 @@
       },
       "decision": {
         "policy_version": "star-contract-1.0",
-        "transaction_id": "d_186b16a7ec",
-        "session_id": "lab-527235",
-        "digest": "9698abf3cd8a540455e720ba349d20e74d5cb45a888d29a7780d13361e0b5d47",
+        "transaction_id": "d_d6191790de",
+        "session_id": "lab-1e23c9",
+        "digest": "355fc366ece83683ac5fd4665a84a19c7e7ca4f7102337dc764d3cf3c817389d",
         "stage": "rejected",
         "action": "reject",
         "checks": {
@@ -1696,7 +1696,7 @@
         "required_evidence": [
           "authorization"
         ],
-        "recorded_at": 1791918458.7920706,
+        "recorded_at": 1791955095.966447,
         "secondary_approval": null,
         "dependency_ids": [
           "unexecuted-parent"
@@ -1724,23 +1724,23 @@
       "audit_integrity": {
         "ok": true,
         "records": 5,
-        "head": "2530a4e22edd4e479a473c6bb919fd6ec38c462142f2bb886c1d13155922098e"
+        "head": "e3a151c3c0801fe4aa9803af8efb1a2653386c313a8fb59493c3c9a2b5f34960"
       },
       "audit": [
         {
           "data": {
             "alg": "ECDSA P-256",
-            "key_id": "0689d6eb2b96568d"
+            "key_id": "dba31423eb3bf61f"
           },
           "event": "device.key_registered",
-          "hash": "8c390df5aa88686c00dc3a39dda86d4f953a5b08e239b384e9ec7976a7aa76bb",
+          "hash": "bf5f9417bfaa9e1d0515551ab3534da2edca36c54e1255b5f1c6358c4094dd1f",
           "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-          "session_id": "lab-527235",
-          "ts": 1791918458.761
+          "session_id": "lab-1e23c9",
+          "ts": 1791955095.961
         },
         {
           "data": {
-            "digest": "9698abf3cd8a540455e720ba349d20e74d5cb45a888d29a7780d13361e0b5d47",
+            "digest": "355fc366ece83683ac5fd4665a84a19c7e7ca4f7102337dc764d3cf3c817389d",
             "draft": {
               "amount_cents": 5000,
               "asset_class": "Cash",
@@ -1749,11 +1749,11 @@
               "dependency_ids": [
                 "unexecuted-parent"
               ],
-              "draft_id": "d_186b16a7ec",
-              "expires_at": 1791919058,
+              "draft_id": "d_d6191790de",
+              "expires_at": 1791955695,
               "from_account": "SAV-001",
               "kind": "transfer",
-              "nonce": "767d117163e5",
+              "nonce": "a091e33604a0",
               "payee_id": "p_daughter",
               "payee_name": "Chen Mei Ling",
               "schedule": null,
@@ -1801,10 +1801,10 @@
             }
           },
           "event": "draft.created",
-          "hash": "0b7d40b6dd2c0ad7d4843e174348231ba8d296f1f3a447a695fa0a8c44219eeb",
-          "prev_hash": "8c390df5aa88686c00dc3a39dda86d4f953a5b08e239b384e9ec7976a7aa76bb",
-          "session_id": "lab-527235",
-          "ts": 1791918458.777
+          "hash": "b21fb9b4ba5863a7552af4676ea7dcdcf185846ec73683469a8ad79e803b7054",
+          "prev_hash": "bf5f9417bfaa9e1d0515551ab3534da2edca36c54e1255b5f1c6358c4094dd1f",
+          "session_id": "lab-1e23c9",
+          "ts": 1791955095.964
         },
         {
           "data": {
@@ -1838,7 +1838,7 @@
             "dependency_ids": [
               "unexecuted-parent"
             ],
-            "digest": "9698abf3cd8a540455e720ba349d20e74d5cb45a888d29a7780d13361e0b5d47",
+            "digest": "355fc366ece83683ac5fd4665a84a19c7e7ca4f7102337dc764d3cf3c817389d",
             "draft": {
               "amount_cents": 5000,
               "from_account": "SAV-001",
@@ -1848,14 +1848,14 @@
             "policy_version": "star-contract-1.0",
             "raw_text": "Send 50 to my daughter",
             "reason_codes": [],
-            "recorded_at": 1791918458.7810698,
+            "recorded_at": 1791955095.9646204,
             "required_evidence": [
               "authorization"
             ],
             "secondary_approval": null,
-            "session_id": "lab-527235",
+            "session_id": "lab-1e23c9",
             "stage": "before_authorization",
-            "transaction_id": "d_186b16a7ec",
+            "transaction_id": "d_d6191790de",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -1870,10 +1870,10 @@
             }
           },
           "event": "contract.decision",
-          "hash": "24ae82be30799806d6254c363cc8e3503da6e6a47ed81706a4420a818570d583",
-          "prev_hash": "0b7d40b6dd2c0ad7d4843e174348231ba8d296f1f3a447a695fa0a8c44219eeb",
-          "session_id": "lab-527235",
-          "ts": 1791918458.781
+          "hash": "4949d5a4218cfe5542b53fdd026e7a20f3c453882d3859dd71c0fc284c2f78ba",
+          "prev_hash": "b21fb9b4ba5863a7552af4676ea7dcdcf185846ec73683469a8ad79e803b7054",
+          "session_id": "lab-1e23c9",
+          "ts": 1791955095.965
         },
         {
           "data": {
@@ -1907,7 +1907,7 @@
             "dependency_ids": [
               "unexecuted-parent"
             ],
-            "digest": "9698abf3cd8a540455e720ba349d20e74d5cb45a888d29a7780d13361e0b5d47",
+            "digest": "355fc366ece83683ac5fd4665a84a19c7e7ca4f7102337dc764d3cf3c817389d",
             "draft": {
               "amount_cents": 5000,
               "from_account": "SAV-001",
@@ -1917,14 +1917,14 @@
             "policy_version": "star-contract-1.0",
             "raw_text": "Send 50 to my daughter",
             "reason_codes": [],
-            "recorded_at": 1791918458.788068,
+            "recorded_at": 1791955095.9656377,
             "required_evidence": [
               "authorization"
             ],
             "secondary_approval": null,
-            "session_id": "lab-527235",
+            "session_id": "lab-1e23c9",
             "stage": "before_authorization",
-            "transaction_id": "d_186b16a7ec",
+            "transaction_id": "d_d6191790de",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -1939,10 +1939,10 @@
             }
           },
           "event": "contract.decision",
-          "hash": "af374eef7c1038ac8b9577726fcda86d6286b93838a5008f97721553f44a4e05",
-          "prev_hash": "24ae82be30799806d6254c363cc8e3503da6e6a47ed81706a4420a818570d583",
-          "session_id": "lab-527235",
-          "ts": 1791918458.788
+          "hash": "72b41dccd3944dc821274a684cdf4b9b8f2f7e92f852d2457212098c8eab094a",
+          "prev_hash": "4949d5a4218cfe5542b53fdd026e7a20f3c453882d3859dd71c0fc284c2f78ba",
+          "session_id": "lab-1e23c9",
+          "ts": 1791955095.966
         },
         {
           "data": {
@@ -1976,7 +1976,7 @@
             "dependency_ids": [
               "unexecuted-parent"
             ],
-            "digest": "9698abf3cd8a540455e720ba349d20e74d5cb45a888d29a7780d13361e0b5d47",
+            "digest": "355fc366ece83683ac5fd4665a84a19c7e7ca4f7102337dc764d3cf3c817389d",
             "draft": {
               "amount_cents": 5000,
               "from_account": "SAV-001",
@@ -1986,14 +1986,14 @@
             "policy_version": "star-contract-1.0",
             "raw_text": "Send 50 to my daughter",
             "reason_codes": [],
-            "recorded_at": 1791918458.7920706,
+            "recorded_at": 1791955095.966447,
             "required_evidence": [
               "authorization"
             ],
             "secondary_approval": null,
-            "session_id": "lab-527235",
+            "session_id": "lab-1e23c9",
             "stage": "rejected",
-            "transaction_id": "d_186b16a7ec",
+            "transaction_id": "d_d6191790de",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -2008,10 +2008,10 @@
             }
           },
           "event": "contract.decision",
-          "hash": "2530a4e22edd4e479a473c6bb919fd6ec38c462142f2bb886c1d13155922098e",
-          "prev_hash": "af374eef7c1038ac8b9577726fcda86d6286b93838a5008f97721553f44a4e05",
-          "session_id": "lab-527235",
-          "ts": 1791918458.792
+          "hash": "e3a151c3c0801fe4aa9803af8efb1a2653386c313a8fb59493c3c9a2b5f34960",
+          "prev_hash": "72b41dccd3944dc821274a684cdf4b9b8f2f7e92f852d2457212098c8eab094a",
+          "session_id": "lab-1e23c9",
+          "ts": 1791955095.966
         }
       ]
     },
@@ -2028,12 +2028,12 @@
       "balance_before_cents": 325000,
       "balance_after_cents": 325000,
       "external_balance_change": false,
-      "latency_ms": 19.4,
+      "latency_ms": 3.28,
       "decision_at_draft": {
         "policy_version": "star-contract-1.0",
-        "transaction_id": "d_75020909fd",
-        "session_id": "lab-61ca59",
-        "digest": "e1143dd684c1714f8c98806650e5b53a520e8aacca8fe6d6f49d65bde72b7178",
+        "transaction_id": "d_52def6e05c",
+        "session_id": "lab-2abd64",
+        "digest": "4114b90f54fd0485683eabc8b128589703016bb87fd62c08666254b426109216",
         "stage": "before_authorization",
         "action": "reject",
         "checks": {
@@ -2068,7 +2068,7 @@
         "required_evidence": [
           "authorization"
         ],
-        "recorded_at": 1791918458.8455992,
+        "recorded_at": 1791955095.9724162,
         "secondary_approval": null,
         "dependency_ids": [],
         "raw_text": "Send 50 to my daughter",
@@ -2093,9 +2093,9 @@
       },
       "decision": {
         "policy_version": "star-contract-1.0",
-        "transaction_id": "d_75020909fd",
-        "session_id": "lab-61ca59",
-        "digest": "e1143dd684c1714f8c98806650e5b53a520e8aacca8fe6d6f49d65bde72b7178",
+        "transaction_id": "d_52def6e05c",
+        "session_id": "lab-2abd64",
+        "digest": "4114b90f54fd0485683eabc8b128589703016bb87fd62c08666254b426109216",
         "stage": "rejected",
         "action": "reject",
         "checks": {
@@ -2130,7 +2130,7 @@
         "required_evidence": [
           "authorization"
         ],
-        "recorded_at": 1791918458.8495972,
+        "recorded_at": 1791955095.9729412,
         "secondary_approval": null,
         "dependency_ids": [],
         "raw_text": "Send 50 to my daughter",
@@ -2156,34 +2156,34 @@
       "audit_integrity": {
         "ok": true,
         "records": 4,
-        "head": "495bc51b2a317c74cf977293d0098e1dcbdd0a753de5a3cdd47bf24dc6fe3c3a"
+        "head": "d8544f7036baabdddbac3229b3c6be8362a1cc6909df6bdfe38abfb377751c21"
       },
       "audit": [
         {
           "data": {
             "alg": "ECDSA P-256",
-            "key_id": "c13afc7f7a931fae"
+            "key_id": "c00de6a5a43b5532"
           },
           "event": "device.key_registered",
-          "hash": "223ed0e0f2fb84b1205aca0b2afd6e1fdf6eb3512d9bcb291b2c099b08727df0",
+          "hash": "98c6c4b759331f7f607a88bfa6d3bea91b9241ecc41caa99a1e8244b4b9b3287",
           "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-          "session_id": "lab-61ca59",
-          "ts": 1791918458.83
+          "session_id": "lab-2abd64",
+          "ts": 1791955095.97
         },
         {
           "data": {
-            "digest": "e1143dd684c1714f8c98806650e5b53a520e8aacca8fe6d6f49d65bde72b7178",
+            "digest": "4114b90f54fd0485683eabc8b128589703016bb87fd62c08666254b426109216",
             "draft": {
               "amount_cents": 5000,
               "asset_class": "Cash",
               "bill_id": null,
               "currency": "SGD",
               "dependency_ids": [],
-              "draft_id": "d_75020909fd",
-              "expires_at": 1791919058,
+              "draft_id": "d_52def6e05c",
+              "expires_at": 1791955695,
               "from_account": "SAV-001",
               "kind": "transfer",
-              "nonce": "2f20edf04e4a",
+              "nonce": "8fd0972d1df1",
               "payee_id": "p_daughter",
               "payee_name": "Chen Mei Ling",
               "schedule": null,
@@ -2235,10 +2235,10 @@
             }
           },
           "event": "draft.created",
-          "hash": "cb6dc9dbb28fe7f9f932db440c560b502cf3e6986724e7cdb6db7ee355464550",
-          "prev_hash": "223ed0e0f2fb84b1205aca0b2afd6e1fdf6eb3512d9bcb291b2c099b08727df0",
-          "session_id": "lab-61ca59",
-          "ts": 1791918458.841
+          "hash": "880124546a02f6a44e50f4e108b32eb50ad7688a7f17ec63a3dc7a1dcf72b862",
+          "prev_hash": "98c6c4b759331f7f607a88bfa6d3bea91b9241ecc41caa99a1e8244b4b9b3287",
+          "session_id": "lab-2abd64",
+          "ts": 1791955095.972
         },
         {
           "data": {
@@ -2270,7 +2270,7 @@
               }
             },
             "dependency_ids": [],
-            "digest": "e1143dd684c1714f8c98806650e5b53a520e8aacca8fe6d6f49d65bde72b7178",
+            "digest": "4114b90f54fd0485683eabc8b128589703016bb87fd62c08666254b426109216",
             "draft": {
               "amount_cents": 5000,
               "from_account": "SAV-001",
@@ -2282,14 +2282,14 @@
             "reason_codes": [
               "R21_VELOCITY"
             ],
-            "recorded_at": 1791918458.8455992,
+            "recorded_at": 1791955095.9724162,
             "required_evidence": [
               "authorization"
             ],
             "secondary_approval": null,
-            "session_id": "lab-61ca59",
+            "session_id": "lab-2abd64",
             "stage": "before_authorization",
-            "transaction_id": "d_75020909fd",
+            "transaction_id": "d_52def6e05c",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -2304,10 +2304,10 @@
             }
           },
           "event": "contract.decision",
-          "hash": "de344b144beabdc8047b3b118cc197137006f0d2043b82f087db48c5f07ff2c8",
-          "prev_hash": "cb6dc9dbb28fe7f9f932db440c560b502cf3e6986724e7cdb6db7ee355464550",
-          "session_id": "lab-61ca59",
-          "ts": 1791918458.846
+          "hash": "0f8584f4f83cf03fc50448bdecea199fb14ebcc0c29719131eb82c929d01052a",
+          "prev_hash": "880124546a02f6a44e50f4e108b32eb50ad7688a7f17ec63a3dc7a1dcf72b862",
+          "session_id": "lab-2abd64",
+          "ts": 1791955095.972
         },
         {
           "data": {
@@ -2339,7 +2339,7 @@
               }
             },
             "dependency_ids": [],
-            "digest": "e1143dd684c1714f8c98806650e5b53a520e8aacca8fe6d6f49d65bde72b7178",
+            "digest": "4114b90f54fd0485683eabc8b128589703016bb87fd62c08666254b426109216",
             "draft": {
               "amount_cents": 5000,
               "from_account": "SAV-001",
@@ -2351,14 +2351,14 @@
             "reason_codes": [
               "R21_VELOCITY"
             ],
-            "recorded_at": 1791918458.8495972,
+            "recorded_at": 1791955095.9729412,
             "required_evidence": [
               "authorization"
             ],
             "secondary_approval": null,
-            "session_id": "lab-61ca59",
+            "session_id": "lab-2abd64",
             "stage": "rejected",
-            "transaction_id": "d_75020909fd",
+            "transaction_id": "d_52def6e05c",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -2373,10 +2373,10 @@
             }
           },
           "event": "contract.decision",
-          "hash": "495bc51b2a317c74cf977293d0098e1dcbdd0a753de5a3cdd47bf24dc6fe3c3a",
-          "prev_hash": "de344b144beabdc8047b3b118cc197137006f0d2043b82f087db48c5f07ff2c8",
-          "session_id": "lab-61ca59",
-          "ts": 1791918458.85
+          "hash": "d8544f7036baabdddbac3229b3c6be8362a1cc6909df6bdfe38abfb377751c21",
+          "prev_hash": "0f8584f4f83cf03fc50448bdecea199fb14ebcc0c29719131eb82c929d01052a",
+          "session_id": "lab-2abd64",
+          "ts": 1791955095.973
         }
       ]
     },
@@ -2393,12 +2393,12 @@
       "balance_before_cents": 325000,
       "balance_after_cents": 325000,
       "external_balance_change": false,
-      "latency_ms": 33.24,
+      "latency_ms": 7.3,
       "decision_at_draft": {
         "policy_version": "star-contract-1.0",
-        "transaction_id": "d_b6a2f4d9fc",
-        "session_id": "lab-073d18",
-        "digest": "63a43e4befae9d73c01154aff1453b924c4dbde0ea921f4a847c140c44db8f6a",
+        "transaction_id": "d_50c14e1818",
+        "session_id": "lab-c34e2c",
+        "digest": "52e236996627211f473b5b9c323f30391079c66b909c48458ad8ee98f8dce110",
         "stage": "before_authorization",
         "action": "request_signature",
         "checks": {
@@ -2431,7 +2431,7 @@
         "required_evidence": [
           "authorization"
         ],
-        "recorded_at": 1791918458.9128668,
+        "recorded_at": 1791955095.9795675,
         "secondary_approval": null,
         "dependency_ids": [],
         "raw_text": "Send 50 to my daughter",
@@ -2456,9 +2456,9 @@
       },
       "decision": {
         "policy_version": "star-contract-1.0",
-        "transaction_id": "d_b6a2f4d9fc",
-        "session_id": "lab-073d18",
-        "digest": "63a43e4befae9d73c01154aff1453b924c4dbde0ea921f4a847c140c44db8f6a",
+        "transaction_id": "d_50c14e1818",
+        "session_id": "lab-c34e2c",
+        "digest": "52e236996627211f473b5b9c323f30391079c66b909c48458ad8ee98f8dce110",
         "stage": "rejected",
         "action": "reject",
         "checks": {
@@ -2491,7 +2491,7 @@
         "required_evidence": [
           "authorization"
         ],
-        "recorded_at": 1791918458.934887,
+        "recorded_at": 1791955095.984201,
         "secondary_approval": null,
         "dependency_ids": [],
         "raw_text": "Send 50 to my daughter",
@@ -2517,34 +2517,34 @@
       "audit_integrity": {
         "ok": true,
         "records": 7,
-        "head": "30851e546b236eab83cfb0ac49697ee74b73dd16cbcf50fe11285b297aadace3"
+        "head": "0b15368d2f094226ae3092e5b6fe4df3f800eb5da7f27a3829a7bed03b266f6c"
       },
       "audit": [
         {
           "data": {
             "alg": "ECDSA P-256",
-            "key_id": "0bd6b9c9d80dbbfd"
+            "key_id": "58fe629656701a2a"
           },
           "event": "device.key_registered",
-          "hash": "3046c853dff2f970dc806d6906b1374f10918f1c025d3d59ff20fa0e20070eab",
+          "hash": "7f81d3af23f079b8fae79e3b1ab9cd50d5ab486b0c9d45b0aacb0e84b66236ab",
           "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-          "session_id": "lab-073d18",
-          "ts": 1791918458.899
+          "session_id": "lab-c34e2c",
+          "ts": 1791955095.976
         },
         {
           "data": {
-            "digest": "63a43e4befae9d73c01154aff1453b924c4dbde0ea921f4a847c140c44db8f6a",
+            "digest": "52e236996627211f473b5b9c323f30391079c66b909c48458ad8ee98f8dce110",
             "draft": {
               "amount_cents": 5000,
               "asset_class": "Cash",
               "bill_id": null,
               "currency": "SGD",
               "dependency_ids": [],
-              "draft_id": "d_b6a2f4d9fc",
-              "expires_at": 1791919058,
+              "draft_id": "d_50c14e1818",
+              "expires_at": 1791955695,
               "from_account": "SAV-001",
               "kind": "transfer",
-              "nonce": "ec81dd12d0b2",
+              "nonce": "40d7e1af758f",
               "payee_id": "p_daughter",
               "payee_name": "Chen Mei Ling",
               "schedule": null,
@@ -2592,10 +2592,10 @@
             }
           },
           "event": "draft.created",
-          "hash": "9764417b5200cfe0ce88d746375d078f2c6ec3965b7b67d5b3922b031f3f467a",
-          "prev_hash": "3046c853dff2f970dc806d6906b1374f10918f1c025d3d59ff20fa0e20070eab",
-          "session_id": "lab-073d18",
-          "ts": 1791918458.909
+          "hash": "23a3f05c0c0bd8383ac6a8853d750303f343958c40a33bdc10c3c163d4309380",
+          "prev_hash": "7f81d3af23f079b8fae79e3b1ab9cd50d5ab486b0c9d45b0aacb0e84b66236ab",
+          "session_id": "lab-c34e2c",
+          "ts": 1791955095.979
         },
         {
           "data": {
@@ -2627,7 +2627,7 @@
               }
             },
             "dependency_ids": [],
-            "digest": "63a43e4befae9d73c01154aff1453b924c4dbde0ea921f4a847c140c44db8f6a",
+            "digest": "52e236996627211f473b5b9c323f30391079c66b909c48458ad8ee98f8dce110",
             "draft": {
               "amount_cents": 5000,
               "from_account": "SAV-001",
@@ -2637,14 +2637,14 @@
             "policy_version": "star-contract-1.0",
             "raw_text": "Send 50 to my daughter",
             "reason_codes": [],
-            "recorded_at": 1791918458.9128668,
+            "recorded_at": 1791955095.9795675,
             "required_evidence": [
               "authorization"
             ],
             "secondary_approval": null,
-            "session_id": "lab-073d18",
+            "session_id": "lab-c34e2c",
             "stage": "before_authorization",
-            "transaction_id": "d_b6a2f4d9fc",
+            "transaction_id": "d_50c14e1818",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -2659,10 +2659,10 @@
             }
           },
           "event": "contract.decision",
-          "hash": "f50db975749e1aaa2ab35c5846ebba29ddb29ea0cb0acc4b92a2cb6e9408f65f",
-          "prev_hash": "9764417b5200cfe0ce88d746375d078f2c6ec3965b7b67d5b3922b031f3f467a",
-          "session_id": "lab-073d18",
-          "ts": 1791918458.913
+          "hash": "e7d32318fe91fd2e213ba5cadef38b280d22ea633f5680f9ae39fe90a8db7220",
+          "prev_hash": "23a3f05c0c0bd8383ac6a8853d750303f343958c40a33bdc10c3c163d4309380",
+          "session_id": "lab-c34e2c",
+          "ts": 1791955095.98
         },
         {
           "data": {
@@ -2694,7 +2694,7 @@
               }
             },
             "dependency_ids": [],
-            "digest": "63a43e4befae9d73c01154aff1453b924c4dbde0ea921f4a847c140c44db8f6a",
+            "digest": "52e236996627211f473b5b9c323f30391079c66b909c48458ad8ee98f8dce110",
             "draft": {
               "amount_cents": 5000,
               "from_account": "SAV-001",
@@ -2704,14 +2704,14 @@
             "policy_version": "star-contract-1.0",
             "raw_text": "Send 50 to my daughter",
             "reason_codes": [],
-            "recorded_at": 1791918458.918863,
+            "recorded_at": 1791955095.9804833,
             "required_evidence": [
               "authorization"
             ],
             "secondary_approval": null,
-            "session_id": "lab-073d18",
+            "session_id": "lab-c34e2c",
             "stage": "before_authorization",
-            "transaction_id": "d_b6a2f4d9fc",
+            "transaction_id": "d_50c14e1818",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -2726,32 +2726,32 @@
             }
           },
           "event": "contract.decision",
-          "hash": "eaba748805b29feb1fdfd5b5a893858354fc4ae2e00c611234e9e55c9e2d56d8",
-          "prev_hash": "f50db975749e1aaa2ab35c5846ebba29ddb29ea0cb0acc4b92a2cb6e9408f65f",
-          "session_id": "lab-073d18",
-          "ts": 1791918458.919
+          "hash": "eda24b79f0587abc50130dd7163988e6d933c1144c987470e9de811ffb29b13f",
+          "prev_hash": "e7d32318fe91fd2e213ba5cadef38b280d22ea633f5680f9ae39fe90a8db7220",
+          "session_id": "lab-c34e2c",
+          "ts": 1791955095.98
         },
         {
           "data": {
-            "draft_id": "d_b6a2f4d9fc",
-            "payload_sha256": "99d8797439efdc97e8f4a09026119e1af9ca1ab61806cc9bba63bd62226a3329"
+            "draft_id": "d_50c14e1818",
+            "payload_sha256": "483a556fe734aac16bd663944941f86a45f7381fa3d93fb2259b6b5c24b02092"
           },
           "event": "auth.challenge_issued",
-          "hash": "b212481169f86f3c1b3e22bf088621a134f4f65c9217fd8840c07aaecb8f1739",
-          "prev_hash": "eaba748805b29feb1fdfd5b5a893858354fc4ae2e00c611234e9e55c9e2d56d8",
-          "session_id": "lab-073d18",
-          "ts": 1791918458.922
+          "hash": "13798bc364efc9e235200bb71a8b3391386c1636edb1db5e5bc05f3b19232d80",
+          "prev_hash": "eda24b79f0587abc50130dd7163988e6d933c1144c987470e9de811ffb29b13f",
+          "session_id": "lab-c34e2c",
+          "ts": 1791955095.981
         },
         {
           "data": {
-            "draft_id": "d_b6a2f4d9fc",
+            "draft_id": "d_50c14e1818",
             "reason": "digest_mismatch"
           },
           "event": "auth.rejected",
-          "hash": "a047ea2ad44e0136e742449887a9afcd300f1d5dca1ea137c5c3ceadfd2404b2",
-          "prev_hash": "b212481169f86f3c1b3e22bf088621a134f4f65c9217fd8840c07aaecb8f1739",
-          "session_id": "lab-073d18",
-          "ts": 1791918458.931
+          "hash": "aab649e4b9361b5d7c26796368b5915f52c9cf1015088684c3158ef4d8d1f1c5",
+          "prev_hash": "13798bc364efc9e235200bb71a8b3391386c1636edb1db5e5bc05f3b19232d80",
+          "session_id": "lab-c34e2c",
+          "ts": 1791955095.984
         },
         {
           "data": {
@@ -2783,7 +2783,7 @@
               }
             },
             "dependency_ids": [],
-            "digest": "63a43e4befae9d73c01154aff1453b924c4dbde0ea921f4a847c140c44db8f6a",
+            "digest": "52e236996627211f473b5b9c323f30391079c66b909c48458ad8ee98f8dce110",
             "draft": {
               "amount_cents": 5100,
               "from_account": "SAV-001",
@@ -2793,14 +2793,14 @@
             "policy_version": "star-contract-1.0",
             "raw_text": "Send 50 to my daughter",
             "reason_codes": [],
-            "recorded_at": 1791918458.934887,
+            "recorded_at": 1791955095.984201,
             "required_evidence": [
               "authorization"
             ],
             "secondary_approval": null,
-            "session_id": "lab-073d18",
+            "session_id": "lab-c34e2c",
             "stage": "rejected",
-            "transaction_id": "d_b6a2f4d9fc",
+            "transaction_id": "d_50c14e1818",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -2815,10 +2815,10 @@
             }
           },
           "event": "contract.decision",
-          "hash": "30851e546b236eab83cfb0ac49697ee74b73dd16cbcf50fe11285b297aadace3",
-          "prev_hash": "a047ea2ad44e0136e742449887a9afcd300f1d5dca1ea137c5c3ceadfd2404b2",
-          "session_id": "lab-073d18",
-          "ts": 1791918458.935
+          "hash": "0b15368d2f094226ae3092e5b6fe4df3f800eb5da7f27a3829a7bed03b266f6c",
+          "prev_hash": "aab649e4b9361b5d7c26796368b5915f52c9cf1015088684c3158ef4d8d1f1c5",
+          "session_id": "lab-c34e2c",
+          "ts": 1791955095.984
         }
       ]
     },
@@ -2835,12 +2835,12 @@
       "balance_before_cents": 325000,
       "balance_after_cents": 1,
       "external_balance_change": true,
-      "latency_ms": 39.23,
+      "latency_ms": 8.14,
       "decision_at_draft": {
         "policy_version": "star-contract-1.0",
-        "transaction_id": "d_229aad60dd",
-        "session_id": "lab-a8b00b",
-        "digest": "bf67e7fd5d445e9d69105dfc1941e44cf76717010f6a4cf91578146a14f9a72d",
+        "transaction_id": "d_ca072e5c48",
+        "session_id": "lab-6d8b0f",
+        "digest": "c329a507b2a579103bb29a1eb52f47c520d9d7e2212087ec2c5c441eaeff7729",
         "stage": "before_authorization",
         "action": "request_signature",
         "checks": {
@@ -2873,7 +2873,7 @@
         "required_evidence": [
           "authorization"
         ],
-        "recorded_at": 1791918458.97725,
+        "recorded_at": 1791955095.9912548,
         "secondary_approval": null,
         "dependency_ids": [],
         "raw_text": "Send 50 to my daughter",
@@ -2898,9 +2898,9 @@
       },
       "decision": {
         "policy_version": "star-contract-1.0",
-        "transaction_id": "d_229aad60dd",
-        "session_id": "lab-a8b00b",
-        "digest": "bf67e7fd5d445e9d69105dfc1941e44cf76717010f6a4cf91578146a14f9a72d",
+        "transaction_id": "d_ca072e5c48",
+        "session_id": "lab-6d8b0f",
+        "digest": "c329a507b2a579103bb29a1eb52f47c520d9d7e2212087ec2c5c441eaeff7729",
         "stage": "rejected",
         "action": "reject",
         "checks": {
@@ -2935,7 +2935,7 @@
         "required_evidence": [
           "authorization"
         ],
-        "recorded_at": 1791918459.005251,
+        "recorded_at": 1791955095.9963238,
         "secondary_approval": null,
         "dependency_ids": [],
         "raw_text": "Send 50 to my daughter",
@@ -2961,34 +2961,34 @@
       "audit_integrity": {
         "ok": true,
         "records": 8,
-        "head": "3f48b44101f2f6391ae0f8d0eb6893b11b445e1b93da98b1bf032cb2879f65b7"
+        "head": "a724b19d095d48325392a783a4110f6a1245baa6bf6ee611d8b040a650efdc15"
       },
       "audit": [
         {
           "data": {
             "alg": "ECDSA P-256",
-            "key_id": "d16bfb1410d9a792"
+            "key_id": "b640fa1668eea3c9"
           },
           "event": "device.key_registered",
-          "hash": "fe1fe180b23d414c2cfc68a53caed2145bd3cb5063e3f26ced63f3c8e8b3065a",
+          "hash": "9c221648b4d213a14db406553b0474dc7eb1218bd89ae3947d2b5d374b63f132",
           "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-          "session_id": "lab-a8b00b",
-          "ts": 1791918458.965
+          "session_id": "lab-6d8b0f",
+          "ts": 1791955095.988
         },
         {
           "data": {
-            "digest": "bf67e7fd5d445e9d69105dfc1941e44cf76717010f6a4cf91578146a14f9a72d",
+            "digest": "c329a507b2a579103bb29a1eb52f47c520d9d7e2212087ec2c5c441eaeff7729",
             "draft": {
               "amount_cents": 5000,
               "asset_class": "Cash",
               "bill_id": null,
               "currency": "SGD",
               "dependency_ids": [],
-              "draft_id": "d_229aad60dd",
-              "expires_at": 1791919058,
+              "draft_id": "d_ca072e5c48",
+              "expires_at": 1791955695,
               "from_account": "SAV-001",
               "kind": "transfer",
-              "nonce": "38255b70e005",
+              "nonce": "37fcfdbaef78",
               "payee_id": "p_daughter",
               "payee_name": "Chen Mei Ling",
               "schedule": null,
@@ -3036,10 +3036,10 @@
             }
           },
           "event": "draft.created",
-          "hash": "dacd3497f5dcd1a0f393105d07e36835f8c59b07478106b12cf01ac6ce0e933a",
-          "prev_hash": "fe1fe180b23d414c2cfc68a53caed2145bd3cb5063e3f26ced63f3c8e8b3065a",
-          "session_id": "lab-a8b00b",
-          "ts": 1791918458.974
+          "hash": "549010bf79a6b88b917d57d1ee3dfcaef72a3503f7cb84c8166e89c12641f098",
+          "prev_hash": "9c221648b4d213a14db406553b0474dc7eb1218bd89ae3947d2b5d374b63f132",
+          "session_id": "lab-6d8b0f",
+          "ts": 1791955095.991
         },
         {
           "data": {
@@ -3071,7 +3071,7 @@
               }
             },
             "dependency_ids": [],
-            "digest": "bf67e7fd5d445e9d69105dfc1941e44cf76717010f6a4cf91578146a14f9a72d",
+            "digest": "c329a507b2a579103bb29a1eb52f47c520d9d7e2212087ec2c5c441eaeff7729",
             "draft": {
               "amount_cents": 5000,
               "from_account": "SAV-001",
@@ -3081,14 +3081,14 @@
             "policy_version": "star-contract-1.0",
             "raw_text": "Send 50 to my daughter",
             "reason_codes": [],
-            "recorded_at": 1791918458.97725,
+            "recorded_at": 1791955095.9912548,
             "required_evidence": [
               "authorization"
             ],
             "secondary_approval": null,
-            "session_id": "lab-a8b00b",
+            "session_id": "lab-6d8b0f",
             "stage": "before_authorization",
-            "transaction_id": "d_229aad60dd",
+            "transaction_id": "d_ca072e5c48",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -3103,10 +3103,10 @@
             }
           },
           "event": "contract.decision",
-          "hash": "37103ef05cc1e618070841df1267a049b8a305591c59315437d11c8789f0415a",
-          "prev_hash": "dacd3497f5dcd1a0f393105d07e36835f8c59b07478106b12cf01ac6ce0e933a",
-          "session_id": "lab-a8b00b",
-          "ts": 1791918458.977
+          "hash": "a070911b4f67b0df5899450c25f80e77ad852d9e91b7a61df114602037b71167",
+          "prev_hash": "549010bf79a6b88b917d57d1ee3dfcaef72a3503f7cb84c8166e89c12641f098",
+          "session_id": "lab-6d8b0f",
+          "ts": 1791955095.991
         },
         {
           "data": {
@@ -3138,7 +3138,7 @@
               }
             },
             "dependency_ids": [],
-            "digest": "bf67e7fd5d445e9d69105dfc1941e44cf76717010f6a4cf91578146a14f9a72d",
+            "digest": "c329a507b2a579103bb29a1eb52f47c520d9d7e2212087ec2c5c441eaeff7729",
             "draft": {
               "amount_cents": 5000,
               "from_account": "SAV-001",
@@ -3148,14 +3148,14 @@
             "policy_version": "star-contract-1.0",
             "raw_text": "Send 50 to my daughter",
             "reason_codes": [],
-            "recorded_at": 1791918458.983252,
+            "recorded_at": 1791955095.99223,
             "required_evidence": [
               "authorization"
             ],
             "secondary_approval": null,
-            "session_id": "lab-a8b00b",
+            "session_id": "lab-6d8b0f",
             "stage": "before_authorization",
-            "transaction_id": "d_229aad60dd",
+            "transaction_id": "d_ca072e5c48",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -3170,21 +3170,21 @@
             }
           },
           "event": "contract.decision",
-          "hash": "97b5ad899befd231564337614b53d55951bfc34a726049d05af389af702e3684",
-          "prev_hash": "37103ef05cc1e618070841df1267a049b8a305591c59315437d11c8789f0415a",
-          "session_id": "lab-a8b00b",
-          "ts": 1791918458.983
+          "hash": "422e1735e4c6d7c454edba519700232134a29a362820776ad31d4428479c021b",
+          "prev_hash": "a070911b4f67b0df5899450c25f80e77ad852d9e91b7a61df114602037b71167",
+          "session_id": "lab-6d8b0f",
+          "ts": 1791955095.992
         },
         {
           "data": {
-            "draft_id": "d_229aad60dd",
-            "payload_sha256": "155a5939c2189faad0c902af068855072ac3be00be0b7c0c66977e4a68f38488"
+            "draft_id": "d_ca072e5c48",
+            "payload_sha256": "792004817b75d9e046604b583c2d4946e28f60ee1662ef325f06f7e6503fd11c"
           },
           "event": "auth.challenge_issued",
-          "hash": "923613ab67162ea64bb9171e398ecdd8c6658495e75cfe1b0160ac854f3829dc",
-          "prev_hash": "97b5ad899befd231564337614b53d55951bfc34a726049d05af389af702e3684",
-          "session_id": "lab-a8b00b",
-          "ts": 1791918458.987
+          "hash": "1376abfddfc83d887965c53c0fa444db434036053951222b047ae405b47ae74e",
+          "prev_hash": "422e1735e4c6d7c454edba519700232134a29a362820776ad31d4428479c021b",
+          "session_id": "lab-6d8b0f",
+          "ts": 1791955095.993
         },
         {
           "data": {
@@ -3216,7 +3216,7 @@
               }
             },
             "dependency_ids": [],
-            "digest": "bf67e7fd5d445e9d69105dfc1941e44cf76717010f6a4cf91578146a14f9a72d",
+            "digest": "c329a507b2a579103bb29a1eb52f47c520d9d7e2212087ec2c5c441eaeff7729",
             "draft": {
               "amount_cents": 5000,
               "from_account": "SAV-001",
@@ -3228,14 +3228,14 @@
             "reason_codes": [
               "R03_INSUFFICIENT"
             ],
-            "recorded_at": 1791918459.000248,
+            "recorded_at": 1791955095.9956517,
             "required_evidence": [
               "authorization"
             ],
             "secondary_approval": null,
-            "session_id": "lab-a8b00b",
+            "session_id": "lab-6d8b0f",
             "stage": "rejected",
-            "transaction_id": "d_229aad60dd",
+            "transaction_id": "d_ca072e5c48",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -3250,23 +3250,23 @@
             }
           },
           "event": "contract.decision",
-          "hash": "c13fa755fd51901d708168b6e41c192346d31838cdb6b111786c55d0f912a2ba",
-          "prev_hash": "923613ab67162ea64bb9171e398ecdd8c6658495e75cfe1b0160ac854f3829dc",
-          "session_id": "lab-a8b00b",
-          "ts": 1791918459.0
+          "hash": "82f4f6f2953d2fadd303e90631de9336a2f1a288ba907685705a60e312bdfc48",
+          "prev_hash": "1376abfddfc83d887965c53c0fa444db434036053951222b047ae405b47ae74e",
+          "session_id": "lab-6d8b0f",
+          "ts": 1791955095.996
         },
         {
           "data": {
-            "draft_id": "d_229aad60dd",
+            "draft_id": "d_ca072e5c48",
             "reason": [
               "R03_INSUFFICIENT"
             ]
           },
           "event": "commit.rejected",
-          "hash": "7aa295bd7735dcf1708b79fe719de54630e2627aff6ce70fdedfaa916e1c674b",
-          "prev_hash": "c13fa755fd51901d708168b6e41c192346d31838cdb6b111786c55d0f912a2ba",
-          "session_id": "lab-a8b00b",
-          "ts": 1791918459.003
+          "hash": "9bf690bd014150445ac940b0a7aeee55b414b2fb90a45876b13643eda37238d5",
+          "prev_hash": "82f4f6f2953d2fadd303e90631de9336a2f1a288ba907685705a60e312bdfc48",
+          "session_id": "lab-6d8b0f",
+          "ts": 1791955095.996
         },
         {
           "data": {
@@ -3298,7 +3298,7 @@
               }
             },
             "dependency_ids": [],
-            "digest": "bf67e7fd5d445e9d69105dfc1941e44cf76717010f6a4cf91578146a14f9a72d",
+            "digest": "c329a507b2a579103bb29a1eb52f47c520d9d7e2212087ec2c5c441eaeff7729",
             "draft": {
               "amount_cents": 5000,
               "from_account": "SAV-001",
@@ -3310,14 +3310,14 @@
             "reason_codes": [
               "R03_INSUFFICIENT"
             ],
-            "recorded_at": 1791918459.005251,
+            "recorded_at": 1791955095.9963238,
             "required_evidence": [
               "authorization"
             ],
             "secondary_approval": null,
-            "session_id": "lab-a8b00b",
+            "session_id": "lab-6d8b0f",
             "stage": "rejected",
-            "transaction_id": "d_229aad60dd",
+            "transaction_id": "d_ca072e5c48",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -3332,18 +3332,18 @@
             }
           },
           "event": "contract.decision",
-          "hash": "3f48b44101f2f6391ae0f8d0eb6893b11b445e1b93da98b1bf032cb2879f65b7",
-          "prev_hash": "7aa295bd7735dcf1708b79fe719de54630e2627aff6ce70fdedfaa916e1c674b",
-          "session_id": "lab-a8b00b",
-          "ts": 1791918459.005
+          "hash": "a724b19d095d48325392a783a4110f6a1245baa6bf6ee611d8b040a650efdc15",
+          "prev_hash": "9bf690bd014150445ac940b0a7aeee55b414b2fb90a45876b13643eda37238d5",
+          "session_id": "lab-6d8b0f",
+          "ts": 1791955095.996
         }
       ]
     },
     {
       "id": "secondary",
-      "title": "Large payment has no reviewer approval",
+      "title": "Large payment to a new payee, no reviewer approval",
       "principle": "Separate approval",
-      "input": "Send 1500 to my daughter",
+      "input": "Send 1500 to John Tan",
       "fault_injected": true,
       "expected_behavior_met": true,
       "result": "rejected",
@@ -3352,12 +3352,12 @@
       "balance_before_cents": 325000,
       "balance_after_cents": 325000,
       "external_balance_change": false,
-      "latency_ms": 21.62,
+      "latency_ms": 5.22,
       "decision_at_draft": {
         "policy_version": "star-contract-1.0",
-        "transaction_id": "d_dd997acaee",
-        "session_id": "lab-d6090f",
-        "digest": "839fc2aaaafb829fd065b26d4c5bc883d5b640cefd3ffe4fc110de77bf7459fc",
+        "transaction_id": "d_38ed2e5395",
+        "session_id": "lab-fb0f22",
+        "digest": "c0130333c33688282b53b400bd1408e3bdb5d6b5196d0850d16eb819049870a4",
         "stage": "before_authorization",
         "action": "wait",
         "checks": {
@@ -3371,7 +3371,7 @@
           },
           "policy": {
             "status": "pending",
-            "detail": "This is quite a bit more than you usually send to Chen Mei Ling (S$200.00). This is more than your limit of S$1,000.00, so we'll wait a little before confirming."
+            "detail": "This is your first transfer to this person, so for safety we'll wait a little before confirming. This is more than your limit of S$1,000.00, so we'll wait a little before confirming."
           },
           "secondary_approval": {
             "status": "pending",
@@ -3387,7 +3387,7 @@
           }
         },
         "reason_codes": [
-          "R11_ABOVE_USUAL",
+          "R10_NEW_PAYEE",
           "R12_ABOVE_THRESHOLD"
         ],
         "required_evidence": [
@@ -3395,12 +3395,12 @@
           "secondary_approval",
           "authorization"
         ],
-        "recorded_at": 1791918459.0507882,
+        "recorded_at": 1791955096.0033293,
         "secondary_approval": null,
         "dependency_ids": [],
-        "raw_text": "Send 1500 to my daughter",
+        "raw_text": "Send 1500 to John Tan",
         "draft": {
-          "payee": "Chen Mei Ling",
+          "payee": "John Tan",
           "amount_cents": 150000,
           "from_account": "SAV-001"
         },
@@ -3408,7 +3408,7 @@
           "engine": "offline extractor",
           "extracted": {
             "intent": "transfer",
-            "payee": "Chen Mei Ling",
+            "payee": "John Tan",
             "amount": 1500.0,
             "asset_class": "cash",
             "from_account": null,
@@ -3420,9 +3420,9 @@
       },
       "decision": {
         "policy_version": "star-contract-1.0",
-        "transaction_id": "d_dd997acaee",
-        "session_id": "lab-d6090f",
-        "digest": "839fc2aaaafb829fd065b26d4c5bc883d5b640cefd3ffe4fc110de77bf7459fc",
+        "transaction_id": "d_38ed2e5395",
+        "session_id": "lab-fb0f22",
+        "digest": "c0130333c33688282b53b400bd1408e3bdb5d6b5196d0850d16eb819049870a4",
         "stage": "rejected",
         "action": "reject",
         "checks": {
@@ -3436,7 +3436,7 @@
           },
           "policy": {
             "status": "pass",
-            "detail": "This is quite a bit more than you usually send to Chen Mei Ling (S$200.00). This is more than your limit of S$1,000.00, so we'll wait a little before confirming."
+            "detail": "This is your first transfer to this person, so for safety we'll wait a little before confirming. This is more than your limit of S$1,000.00, so we'll wait a little before confirming."
           },
           "secondary_approval": {
             "status": "pending",
@@ -3452,19 +3452,19 @@
           }
         },
         "reason_codes": [
-          "R11_ABOVE_USUAL",
+          "R10_NEW_PAYEE",
           "R12_ABOVE_THRESHOLD"
         ],
         "required_evidence": [
           "secondary_approval",
           "authorization"
         ],
-        "recorded_at": 1791918459.0587885,
+        "recorded_at": 1791955096.0050583,
         "secondary_approval": null,
         "dependency_ids": [],
-        "raw_text": "Send 1500 to my daughter",
+        "raw_text": "Send 1500 to John Tan",
         "draft": {
-          "payee": "Chen Mei Ling",
+          "payee": "John Tan",
           "amount_cents": 150000,
           "from_account": "SAV-001"
         },
@@ -3472,7 +3472,7 @@
           "engine": "offline extractor",
           "extracted": {
             "intent": "transfer",
-            "payee": "Chen Mei Ling",
+            "payee": "John Tan",
             "amount": 1500.0,
             "asset_class": "cash",
             "from_account": null,
@@ -3485,39 +3485,39 @@
       "audit_integrity": {
         "ok": true,
         "records": 5,
-        "head": "97604d34850b6ab1d30b091b80a6c84908a99b7954add2b2e03cc078fcc02548"
+        "head": "47b6869e2b7d407b815c03ec4292874ec4e179ea15d3029a95ef1ea1938dffe1"
       },
       "audit": [
         {
           "data": {
             "alg": "ECDSA P-256",
-            "key_id": "c754070b1b1e6b27"
+            "key_id": "096f0d674b7472d9"
           },
           "event": "device.key_registered",
-          "hash": "f43eaffb206714112b9605b343d637ae37fb21b7f4130c14733db57610f74f58",
+          "hash": "0c1efc94892ce956c48217b5c3ba192d7305fd05a27318c5909b24fc3c8a0484",
           "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-          "session_id": "lab-d6090f",
-          "ts": 1791918459.038
+          "session_id": "lab-fb0f22",
+          "ts": 1791955096.0
         },
         {
           "data": {
-            "digest": "839fc2aaaafb829fd065b26d4c5bc883d5b640cefd3ffe4fc110de77bf7459fc",
+            "digest": "c0130333c33688282b53b400bd1408e3bdb5d6b5196d0850d16eb819049870a4",
             "draft": {
               "amount_cents": 150000,
               "asset_class": "Cash",
               "bill_id": null,
               "currency": "SGD",
               "dependency_ids": [],
-              "draft_id": "d_dd997acaee",
-              "expires_at": 1791919059,
+              "draft_id": "d_38ed2e5395",
+              "expires_at": 1791955696,
               "from_account": "SAV-001",
               "kind": "transfer",
-              "nonce": "3495a688d828",
-              "payee_id": "p_daughter",
-              "payee_name": "Chen Mei Ling",
+              "nonce": "5a8c4e9c4c5a",
+              "payee_id": "p_0a85f8",
+              "payee_name": "John Tan",
               "schedule": null,
               "user_id": "u_chen",
-              "you_said": "Send 1500 to my daughter"
+              "you_said": "Send 1500 to John Tan"
             },
             "grounding": {
               "amount": true,
@@ -3525,18 +3525,18 @@
               "derived": "",
               "heard": "",
               "payee": true,
-              "quote": "Send 1500 to my daughter"
+              "quote": "Send 1500 to John Tan"
             },
             "protection": "enhanced",
             "risk": {
               "cooldown_seconds": 20,
               "level": "HIGH",
               "reasons": [
-                "This is quite a bit more than you usually send to Chen Mei Ling (S$200.00).",
+                "This is your first transfer to this person, so for safety we'll wait a little before confirming.",
                 "This is more than your limit of S$1,000.00, so we'll wait a little before confirming."
               ],
               "rule_hits": [
-                "R11_ABOVE_USUAL",
+                "R10_NEW_PAYEE",
                 "R12_ABOVE_THRESHOLD"
               ],
               "verify_question": null
@@ -3550,7 +3550,7 @@
                 "frequency": null,
                 "from_account": null,
                 "intent": "transfer",
-                "payee": "Chen Mei Ling"
+                "payee": "John Tan"
               },
               "fields": {
                 "amount": "match",
@@ -3566,10 +3566,10 @@
             }
           },
           "event": "draft.created",
-          "hash": "8766a23658a4ee3b681f8d2055b2ace008242e49dbe022260bb8997b71491d40",
-          "prev_hash": "f43eaffb206714112b9605b343d637ae37fb21b7f4130c14733db57610f74f58",
-          "session_id": "lab-d6090f",
-          "ts": 1791918459.047
+          "hash": "d02f2a5f3bde4b2731fa2215c9f1bdeba66ee55576092d7e1302c051fd19af8b",
+          "prev_hash": "0c1efc94892ce956c48217b5c3ba192d7305fd05a27318c5909b24fc3c8a0484",
+          "session_id": "lab-fb0f22",
+          "ts": 1791955096.003
         },
         {
           "data": {
@@ -3592,7 +3592,7 @@
                 "status": "not_applicable"
               },
               "policy": {
-                "detail": "This is quite a bit more than you usually send to Chen Mei Ling (S$200.00). This is more than your limit of S$1,000.00, so we'll wait a little before confirming.",
+                "detail": "This is your first transfer to this person, so for safety we'll wait a little before confirming. This is more than your limit of S$1,000.00, so we'll wait a little before confirming.",
                 "status": "pending"
               },
               "secondary_approval": {
@@ -3601,29 +3601,29 @@
               }
             },
             "dependency_ids": [],
-            "digest": "839fc2aaaafb829fd065b26d4c5bc883d5b640cefd3ffe4fc110de77bf7459fc",
+            "digest": "c0130333c33688282b53b400bd1408e3bdb5d6b5196d0850d16eb819049870a4",
             "draft": {
               "amount_cents": 150000,
               "from_account": "SAV-001",
-              "payee": "Chen Mei Ling"
+              "payee": "John Tan"
             },
             "evidence_scope": "Server observations; the customer signs the transaction card, not this report.",
             "policy_version": "star-contract-1.0",
-            "raw_text": "Send 1500 to my daughter",
+            "raw_text": "Send 1500 to John Tan",
             "reason_codes": [
-              "R11_ABOVE_USUAL",
+              "R10_NEW_PAYEE",
               "R12_ABOVE_THRESHOLD"
             ],
-            "recorded_at": 1791918459.0507882,
+            "recorded_at": 1791955096.0033293,
             "required_evidence": [
               "policy",
               "secondary_approval",
               "authorization"
             ],
             "secondary_approval": null,
-            "session_id": "lab-d6090f",
+            "session_id": "lab-fb0f22",
             "stage": "before_authorization",
-            "transaction_id": "d_dd997acaee",
+            "transaction_id": "d_38ed2e5395",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -3632,16 +3632,16 @@
                 "frequency": null,
                 "from_account": null,
                 "intent": "transfer",
-                "payee": "Chen Mei Ling"
+                "payee": "John Tan"
               },
               "mode": "offline_shared_parser"
             }
           },
           "event": "contract.decision",
-          "hash": "4f7630fdecf13228cb46f039b795a3025ac0efc469a5046aa79f2d38cbf87c95",
-          "prev_hash": "8766a23658a4ee3b681f8d2055b2ace008242e49dbe022260bb8997b71491d40",
-          "session_id": "lab-d6090f",
-          "ts": 1791918459.051
+          "hash": "dbba3bc17719872e6a790b664919438fe3bfd0f911991654570bea5ec0d7def9",
+          "prev_hash": "d02f2a5f3bde4b2731fa2215c9f1bdeba66ee55576092d7e1302c051fd19af8b",
+          "session_id": "lab-fb0f22",
+          "ts": 1791955096.003
         },
         {
           "data": {
@@ -3664,7 +3664,7 @@
                 "status": "not_applicable"
               },
               "policy": {
-                "detail": "This is quite a bit more than you usually send to Chen Mei Ling (S$200.00). This is more than your limit of S$1,000.00, so we'll wait a little before confirming.",
+                "detail": "This is your first transfer to this person, so for safety we'll wait a little before confirming. This is more than your limit of S$1,000.00, so we'll wait a little before confirming.",
                 "status": "pass"
               },
               "secondary_approval": {
@@ -3673,28 +3673,28 @@
               }
             },
             "dependency_ids": [],
-            "digest": "839fc2aaaafb829fd065b26d4c5bc883d5b640cefd3ffe4fc110de77bf7459fc",
+            "digest": "c0130333c33688282b53b400bd1408e3bdb5d6b5196d0850d16eb819049870a4",
             "draft": {
               "amount_cents": 150000,
               "from_account": "SAV-001",
-              "payee": "Chen Mei Ling"
+              "payee": "John Tan"
             },
             "evidence_scope": "Server observations; the customer signs the transaction card, not this report.",
             "policy_version": "star-contract-1.0",
-            "raw_text": "Send 1500 to my daughter",
+            "raw_text": "Send 1500 to John Tan",
             "reason_codes": [
-              "R11_ABOVE_USUAL",
+              "R10_NEW_PAYEE",
               "R12_ABOVE_THRESHOLD"
             ],
-            "recorded_at": 1791918459.055789,
+            "recorded_at": 1791955096.0043454,
             "required_evidence": [
               "secondary_approval",
               "authorization"
             ],
             "secondary_approval": null,
-            "session_id": "lab-d6090f",
+            "session_id": "lab-fb0f22",
             "stage": "before_authorization",
-            "transaction_id": "d_dd997acaee",
+            "transaction_id": "d_38ed2e5395",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -3703,16 +3703,16 @@
                 "frequency": null,
                 "from_account": null,
                 "intent": "transfer",
-                "payee": "Chen Mei Ling"
+                "payee": "John Tan"
               },
               "mode": "offline_shared_parser"
             }
           },
           "event": "contract.decision",
-          "hash": "a8fa5b2d3798b4f2ce6742439ce19dd0aa1e3c10c871521f2ce5ed113ca09ef8",
-          "prev_hash": "4f7630fdecf13228cb46f039b795a3025ac0efc469a5046aa79f2d38cbf87c95",
-          "session_id": "lab-d6090f",
-          "ts": 1791918459.056
+          "hash": "3ad4c33148d0984a9b8ec1bc5747dbf2426d089aa5d212dadb0e3ca6b18a4ae8",
+          "prev_hash": "dbba3bc17719872e6a790b664919438fe3bfd0f911991654570bea5ec0d7def9",
+          "session_id": "lab-fb0f22",
+          "ts": 1791955096.004
         },
         {
           "data": {
@@ -3735,7 +3735,7 @@
                 "status": "not_applicable"
               },
               "policy": {
-                "detail": "This is quite a bit more than you usually send to Chen Mei Ling (S$200.00). This is more than your limit of S$1,000.00, so we'll wait a little before confirming.",
+                "detail": "This is your first transfer to this person, so for safety we'll wait a little before confirming. This is more than your limit of S$1,000.00, so we'll wait a little before confirming.",
                 "status": "pass"
               },
               "secondary_approval": {
@@ -3744,28 +3744,28 @@
               }
             },
             "dependency_ids": [],
-            "digest": "839fc2aaaafb829fd065b26d4c5bc883d5b640cefd3ffe4fc110de77bf7459fc",
+            "digest": "c0130333c33688282b53b400bd1408e3bdb5d6b5196d0850d16eb819049870a4",
             "draft": {
               "amount_cents": 150000,
               "from_account": "SAV-001",
-              "payee": "Chen Mei Ling"
+              "payee": "John Tan"
             },
             "evidence_scope": "Server observations; the customer signs the transaction card, not this report.",
             "policy_version": "star-contract-1.0",
-            "raw_text": "Send 1500 to my daughter",
+            "raw_text": "Send 1500 to John Tan",
             "reason_codes": [
-              "R11_ABOVE_USUAL",
+              "R10_NEW_PAYEE",
               "R12_ABOVE_THRESHOLD"
             ],
-            "recorded_at": 1791918459.0587885,
+            "recorded_at": 1791955096.0050583,
             "required_evidence": [
               "secondary_approval",
               "authorization"
             ],
             "secondary_approval": null,
-            "session_id": "lab-d6090f",
+            "session_id": "lab-fb0f22",
             "stage": "rejected",
-            "transaction_id": "d_dd997acaee",
+            "transaction_id": "d_38ed2e5395",
             "verifier": {
               "engine": "offline extractor",
               "extracted": {
@@ -3774,16 +3774,16 @@
                 "frequency": null,
                 "from_account": null,
                 "intent": "transfer",
-                "payee": "Chen Mei Ling"
+                "payee": "John Tan"
               },
               "mode": "offline_shared_parser"
             }
           },
           "event": "contract.decision",
-          "hash": "97604d34850b6ab1d30b091b80a6c84908a99b7954add2b2e03cc078fcc02548",
-          "prev_hash": "a8fa5b2d3798b4f2ce6742439ce19dd0aa1e3c10c871521f2ce5ed113ca09ef8",
-          "session_id": "lab-d6090f",
-          "ts": 1791918459.06
+          "hash": "47b6869e2b7d407b815c03ec4292874ec4e179ea15d3029a95ef1ea1938dffe1",
+          "prev_hash": "3ad4c33148d0984a9b8ec1bc5747dbf2426d089aa5d212dadb0e3ca6b18a4ae8",
+          "session_id": "lab-fb0f22",
+          "ts": 1791955096.005
         }
       ]
     }

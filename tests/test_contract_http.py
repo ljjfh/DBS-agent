@@ -17,7 +17,8 @@ class ReviewHttpTest(unittest.TestCase):
         self.addCleanup(key.stop)
         security._hits.clear()
         self.s = runtime.sessions.new_for_visitor("abcdef0123456789")
-        runtime.agent.run_turn(self.s, "Send 1500 to my daughter")
+        runtime.bank.add_payee(self.s.user_id, "John Tan", "OCBC", "1234567890", "friend")
+        runtime.agent.run_turn(self.s, "Send 1500 to John Tan")
         self.d = self.s.current_draft
         self.ticket = {"session_id":self.s.session_id, "draft_id":self.d.draft_id,
                        "digest":self.d.digest, "operation":"approve"}

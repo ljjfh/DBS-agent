@@ -10,15 +10,24 @@ import secrets
 import threading
 import time
 
+from app.config import settings
 from app.kernel import protection
 
 POLICY_VERSION = "star-contract-1.0"
 
 
 def secondary_required(card, bank):
-    payee = bank.payee(card["user_id"], card["payee_id"]) or {}
-    return (payee.get("type") != "own" and
-            card["amount_cents"] > protection.high_threshold(protection.effective(bank, card["user_id"])) * 100)
+    """Who must a separate bank reviewer look at? Money to someone the customer has never paid before, above the
+    protection threshold (impersonation scams always use a new account), and large investments. Not: moves between
+    the customer's own accounts, bills, or family / payees they have paid before (cooling-off, the verification
+    question and the signature still apply to those)."""
+    user = card["user_id"]
+    if card.get("kind") == "investment":
+        return card["amount_cents"] > settings.review_invest_threshold * 100
+    payee = bank.payee(user, card["payee_id"]) or {}
+    if payee.get("type") in ("own", "biller") or bank.payee_history(user, card["payee_id"]):
+        return False
+    return card["amount_cents"] > protection.high_threshold(protection.effective(bank, user)) * 100
 
 
 class SecondaryReviews:

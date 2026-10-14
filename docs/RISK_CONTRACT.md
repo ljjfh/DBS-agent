@@ -42,8 +42,8 @@ required_evidence、验证器模式及审核证据。内核的新增依赖和审
 - 依赖未执行：拒绝；重新确认用户请求。
 - 达到默认 10 分钟 3 笔的窗口：拒绝新交易，窗口释放后重新发起。支付和投资在账本写锁内再次检查，
   包括内部转账；历史计数持久化。幂等重试不会消耗新名额。定期指令仅登记计划，不代表已执行未来扣款。
-- 超过当前保护等级金额阈值的对外交易（含账单、投资、定期指令登记）：需模拟银行审核。
-  内部账户互转不触发此项。默认 Enhanced 为 S$1,000，Standard 为 S$3,000；原有硬上限仍有效。
+- 需要模拟银行审核：向**从未转过账的收款人**转账且超过当前保护等级金额阈值（Enhanced 为 S$1,000，Standard 为 S$3,000），或投资超过 S$3,000（`REVIEW_INVEST_THRESHOLD`）。冒充亲友的诈骗几乎都用新账户，所以这是审核的重点。
+  不需要审核：自己账户之间转账、缴账单、给以前转过账的家人／收款人（冷静期、核实问题和签名照常适用）。原有硬上限仍有效。
 - 冷静期、额外问题、模拟审核、设备签名是不同条件，不能互相替代。
 - 签名无效、重放或执行前风险升级：拒绝。
 
@@ -61,7 +61,7 @@ python -m app.serve
 可通过 `python -c "import secrets; print(secrets.token_urlsafe(32))"` 生成，只交给模拟银行审核员。
 没有配置时审核接口返回 REVIEW_DISABLED，大额交易保持阻断；不会自动跳过审核。
 
-1. 客户输入 `Send 1500 to my daughter`，在确认卡下载 review-ticket.json。
+1. 先新增一个从未转过账的收款人（例如 `Add a new payee John Tan, OCBC account 123-456789-0` 并签名），再输入 `Send 1500 to John Tan`，在确认卡下载 review-ticket.json。
 2. 审核员使用**另一个浏览器配置文件或无痕窗口**打开应用，进入 Security lab → Simulated bank review desk。
 3. 输入审核员口令，上传客户票据，点击 Inspect pending transaction。先核对原话、金额、对象、账户和卡片摘要。
 4. 点击 Approve as simulated bank reviewer。审核有效期最长五分钟，且不能超过草稿有效期。

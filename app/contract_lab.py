@@ -20,7 +20,7 @@ CASES = (
     ("velocity", "Transaction window is full", "Safe execution conditions", "Send 50 to my daughter", 5000),
     ("tamper", "Card changes after signing", "Exact authorization", "Send 50 to my daughter", 5000),
     ("balance", "Balance changes after signing", "Safe execution conditions", "Send 50 to my daughter", 5000),
-    ("secondary", "Large payment has no reviewer approval", "Separate approval", "Send 1500 to my daughter", 150000),
+    ("secondary", "Large payment to a new payee, no reviewer approval", "Separate approval", "Send 1500 to John Tan", 150000),
 )
 EXPECTED_CODES = {"normal": "", "amount": "NOT_AWAITING_AUTH", "payee": "NOT_AWAITING_AUTH",
                   "dependency": "DEPENDENCY_NOT_COMPLETED", "velocity": "NOT_AWAITING_AUTH",
@@ -40,7 +40,10 @@ def run_showcase():
             sb.session.messages.append({"role": "user", "content": text,
                 **({"reference_parent_id": "unexecuted-parent"} if ident == "dependency" else {})})
             from app.agent.verifier import Verifier
-            d = sb.kernel.create_draft(sb.session, kind="transfer", payee_id="p_son" if ident == "payee" else "p_daughter",
+            payee_id = "p_son" if ident == "payee" else "p_daughter"
+            if ident == "secondary":   # someone the customer has never paid: the case that needs a second person
+                payee_id = sb.bank.add_payee("u_chen", "John Tan", "OCBC", "1234567890", "friend")["payee_id"]
+            d = sb.kernel.create_draft(sb.session, kind="transfer", payee_id=payee_id,
                 amount_cents=cents, verification=Verifier(None, sb.bank).verdict(sb.session))
             created = d.decision
             code, receipt = "", None
