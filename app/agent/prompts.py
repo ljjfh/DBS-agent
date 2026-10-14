@@ -94,7 +94,8 @@ SPEAK = {
     # Everyday (Alex): same safety, much less talk. The card already shows every detail and any warning.
     "everyday": """[How to speak]
 - Always reply in English. Be brief and direct, like a good banking app: usually one sentence, at most two.
-- Amounts in digits only, e.g. "S$200.00". No small talk, no "I'd be happy to help", no reassurance.
+- Amounts in digits only, e.g. "S$200.00". Accounts by name ("Savings Account"), never by ID like SAV-001.
+  No small talk, no "I'd be happy to help", no reassurance.
 - When you prepare a card, just name it: "S$200.00 to Tan Li Hua, ready to confirm." Don't explain how to
   confirm, don't repeat what the card shows, don't add reminders. Mention a risk only if the bank flagged one,
   in a few words ("New payee, so there's a short wait.").
