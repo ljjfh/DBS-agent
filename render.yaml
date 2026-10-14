@@ -16,6 +16,8 @@ services:
         value: "1"
       - key: SIGNING_SECRET
         generateValue: true
+      - key: SECONDARY_REVIEW_KEY  # separate simulated bank reviewer; never give to customers
+        sync: false
       - key: LLM_PROVIDER           # openai_compat, or leave empty for the offline rule model
         sync: false
       - key: LLM_BASE_URL

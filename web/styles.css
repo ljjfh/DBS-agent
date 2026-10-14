@@ -708,3 +708,31 @@ body.senior .cg strong{font-size:28px}
   .caught-grid{grid-template-columns:1fr}
   .caught-path{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+/* Transaction contract evidence: secondary to the customer task, expandable for judges. */
+.decision-panel{margin:16px 0;border:1px solid #d8dce2;border-radius:12px;padding:14px;background:#f8fafc;color:#172b4d;overflow-wrap:anywhere}
+.decision-panel summary{cursor:pointer;font-weight:650;line-height:1.5}
+.decision-panel blockquote,.contract-case blockquote{margin:12px 0;padding:10px 14px;border-left:3px solid #d71920;background:#fff}
+.evidence-compare{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.evidence-compare>div{padding:12px;background:#fff;border-radius:8px}
+.contract-checks{list-style:none;padding:0;margin:12px 0}
+.contract-checks li{padding:10px 0;border-bottom:1px solid #d8dce2;display:grid;grid-template-columns:1fr auto;gap:6px}
+.contract-checks small{grid-column:1/-1;line-height:1.5}
+.contract-checks span{font-size:12px;font-weight:700}
+.contract-checks .pass span,.contract-pass{color:#146b42}
+.contract-checks .fail span,.contract-fail{color:#b42318}
+.contract-checks .pending span{color:#875600}
+.contract-checks .not_applicable span{color:#5b6472}
+.contract-cases{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:16px;margin:20px 0}
+.contract-showcase{scroll-margin-top:96px}
+.contract-case{border:1px solid #d8dce2;border-radius:12px;padding:18px;min-width:0}
+.contract-case h3{margin:0 0 8px}
+.contract-table{overflow-x:auto}
+.contract-table th{text-align:left;padding:10px}
+.secondary-wait{margin:14px 0;padding:16px;border:1px solid #e6bb64;border-radius:10px;background:#fff8e8}
+.secondary-wait small{display:block;margin-top:8px}
+.secondary-wait button{margin:4px}
+#review-key,#review-file{display:block;max-width:100%;width:100%;margin:8px 0 16px;padding:12px;box-sizing:border-box}
+#review-out{overflow-wrap:anywhere;margin-top:16px}
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:.04em;color:#a31319}
+@media(max-width:700px){.contract-cases,.evidence-compare{grid-template-columns:1fr}.contract-checks li{grid-template-columns:1fr}.contract-checks small{grid-column:auto}}

@@ -378,6 +378,11 @@ class TestPlans(Base):
     def test_long_plan_runs_in_order_each_step_signed(self):
         import time as _t
         from app.config import settings
+        from unittest.mock import patch
+        # This fixture isolates plan sequencing. Default three-per-window enforcement has separate contract tests.
+        limit = patch.object(settings, "velocity_max", 6)
+        limit.start()
+        self.addCleanup(limit.stop)
         key, jwk = p256.generate_keypair()
         self.kernel.register_key(self.s, jwk)
         self.bank.risk_profile("u_chen")["max_product_risk"] = 5

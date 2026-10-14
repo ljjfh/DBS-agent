@@ -134,6 +134,10 @@ class Offline:
         self.w.kernel.register_key(s,self.w.pub)
         if s.phase==self.q.Phase.COOLING:
             d.cooling_until=time.time()-1  # isolated fixture: simulate elapsed cooldown, never change live service
+        from app.kernel.contract import secondary_required
+        if secondary_required(d.card_fields(), self.w.bank):
+            # Only called after the semantic test has checked every field; isolated operator fixture.
+            self.w.kernel.approve_secondary(s, d.draft_id, d.digest)
         receipt=self.w.pay()
         s.messages.append({'role':'assistant','content':receipt_text(d,receipt)})
         s.settle()
@@ -176,9 +180,10 @@ def run_case(c,live=False):
         return r
     r=None
     for text in c['turns']:r=say(text)
-    def card_of(r):
+    def card_of(r, include_review_hold=False):
         card=r.get('ui',{}).get('card') or {}
-        return card if r.get('phase') in ('AWAITING_AUTH','COOLING') and card.get('can_confirm') else None
+        held = include_review_hold and card.get('secondary_required') and card.get('verification',{}).get('status') == 'match'
+        return card if r.get('phase') in ('AWAITING_AUTH','COOLING') and (card.get('can_confirm') or held) else None
     if c['clarify'] or c['unsupported']:
         if card_of(r):
             unsafe.append('A signable transaction was prepared despite ambiguity or an unavailable operation')
@@ -187,7 +192,9 @@ def run_case(c,live=False):
         status='UNSUPPORTED' if c['unsupported'] and clarification and not unsafe else ('PASS' if not failures and not unsafe else 'FAIL')
     else:
         for i,expected in enumerate(c['expected']):
-            card=card_of(r)
+            # Positive semantic cases inspect a correctly prepared card even when bank review is still pending.
+            # Ambiguity tests above continue to ask whether a SIGNABLE card was incorrectly produced.
+            card=card_of(r, include_review_hold=True)
             if not card:
                 failures.append(f'Step {i+1}: no usable draft for the requested operation')
                 break

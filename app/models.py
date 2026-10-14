@@ -18,7 +18,7 @@ def fmt_money(cents: int, currency: str = "SGD") -> str:
 class RiskLevel(str, Enum):
     LOW = "LOW"          # one biometric check
     MEDIUM = "MEDIUM"    # biometric + one verification question
-    HIGH = "HIGH"        # confirm after a cooling-off period (optionally with family approval)
+    HIGH = "HIGH"        # cooling-off; large external transactions additionally require bank review
     BLOCK = "BLOCK"      # not allowed to execute
 
     @property
@@ -75,6 +75,8 @@ class Draft(BaseModel):
     you_said: str = ""                             # the user's own words this payment is based on (shown + signed)
     verification: dict = Field(default_factory=dict)  # independent verifier's verdict (kernel/crosscheck.py)
     schedule: Optional[dict] = None   # standing instruction: {"frequency", "day", "first_date", "label"}; None = one-off
+    dependency_ids: list[str] = Field(default_factory=list)
+    decision: dict = Field(default_factory=dict)  # server-side evidence, not part of the customer's signed card
 
     def card_fields(self) -> dict:
         """Fields that go into the hash: every item shown on the confirmation card is here."""
@@ -84,5 +86,6 @@ class Draft(BaseModel):
             "payee_name": self.payee_name, "amount_cents": self.amount_cents,
             "currency": self.currency, "bill_id": self.bill_id, "asset_class": self.asset_class,
             "you_said": self.you_said, "schedule": self.schedule,
+            "dependency_ids": self.dependency_ids,
             "nonce": self.nonce, "expires_at": int(self.expires_at),
         }

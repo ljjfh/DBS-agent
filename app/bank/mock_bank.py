@@ -324,6 +324,12 @@ class MockBank(LedgerStorage):
         now = time.time()
         return sum(1 for t in self.recent_exec_times.get(user_id, []) if now - t <= window_sec)
 
+    def _check_velocity(self, user_id):
+        # Called inside the atomic ledger lock: two signed requests cannot both take the last slot.
+        from app.config import settings
+        if self.recent_exec_count(user_id, settings.velocity_window_min * 60) >= settings.velocity_max:
+            raise ValueError("R21_VELOCITY: transaction frequency limit reached; wait and prepare a new request")
+
     # ---------- Write: only the execution gateway may call these ----------
     @atomic_write
     def execute_investment(self, user_id: str, from_account: str, product_id: str, amount_cents: int,
@@ -337,6 +343,7 @@ class MockBank(LedgerStorage):
                     previous.get("verifiable", {}).get("digest") != metadata.get("digest")):
                     raise ValueError("Idempotency key belongs to a different instruction")
                 return {**copy.deepcopy(previous), "idempotent_replay": True}
+            self._check_velocity(user_id)
             acct, prod = self.account(user_id, from_account), self.product(product_id)
             if acct is None or prod is None:
                 raise ValueError("Account or product not found")
@@ -382,6 +389,7 @@ class MockBank(LedgerStorage):
                     previous.get("verifiable", {}).get("digest") != metadata.get("digest")):
                     raise ValueError("Idempotency key belongs to a different instruction")
                 return {**copy.deepcopy(previous), "idempotent_replay": True}
+            self._check_velocity(user_id)
             acct = self.account(user_id, from_account)
             if acct is None:
                 raise ValueError("Account not found")
