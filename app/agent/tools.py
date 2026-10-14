@@ -63,6 +63,10 @@ class LockCardArgs(BaseModel):
     card_id: str = Field(description="card_id from get_cards, or \"all\" to lock every card (e.g. a lost wallet)")
 
 
+class CareArgs(BaseModel):
+    on: bool = Field(description="true = the easier care mode; false = the standard view")
+
+
 class HandoffArgs(BaseModel):
     reason: str = Field(max_length=120)
 
@@ -118,6 +122,10 @@ class ToolGateway:
                  "FIRST one now, and call this once for each remaining one. It is prepared automatically right after "
                  "the user confirms or cancels the current card. Only for things the user actually asked for.",
                  QueueArgs, self._queue),
+            Tool("set_care_mode", "read", "Switch the easier care mode on or off: bigger text, simpler and slower "
+                 "answers, answers read aloud. On when the user asks for that, or says the screen is hard to read or "
+                 "you talk too fast; off when they ask for the normal view. It changes only how things look and sound, "
+                 "never the safety checks.", CareArgs, self._care),
             Tool("handoff_to_human", "control", "Hand off to a human staff member when the user asks for a real person, or when you can't complete the task safely.",
                  HandoffArgs, self._handoff),
         ]}
@@ -317,6 +325,13 @@ class ToolGateway:
                 "status": status}
 
     # ---------------------------------------------------------------- Control
+    def _care(self, s: Session, a: CareArgs):
+        s.care_mode = s.care_changed = a.on
+        s.care_offer_pending = False
+        s.add_trace("ui", f"Care mode {'on' if a.on else 'off'} (asked in conversation)")
+        self.kernel.audit.append("ui.care_mode", s.session_id, {"on": a.on, "by": "agent"})
+        return {"care_mode": a.on, "status": "Done; the app has switched view. Tell the user in one short sentence."}
+
     def _handoff(self, s: Session, a: HandoffArgs):
         if s.phase == Phase.IDLE:
             s.transition(Phase.HANDOFF)

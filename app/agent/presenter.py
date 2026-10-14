@@ -27,7 +27,7 @@ def product_line(p: dict, amount_cents: int) -> str:
     return f"Risk {p['risk']} of 5 · not a deposit, can lose value"
 
 
-def build_card(d: Draft, bank: MockBank, phase: Phase) -> dict:
+def build_card(d: Draft, bank: MockBank, phase: Phase, care: bool = True) -> dict:
     invest = d.kind == "investment"
     payee = (bank.product(d.payee_id) if invest else bank.payee(d.user_id, d.payee_id)) or {}
     acct = bank.account(d.user_id, d.from_account) or {}
@@ -46,7 +46,7 @@ def build_card(d: Draft, bank: MockBank, phase: Phase) -> dict:
         when = f" {sched['label'][0].lower()}{sched['label'][1:]}" if sched else ""
         readback = (f"You want to {verb} {words} ({fmt_money(d.amount_cents)}) to {who}{when}, "
                     f"from your {acct.get('name', 'account')}. Is that right?")
-    if bank.user(d.user_id).get("persona") == "everyday":      # same card, shorter read-back
+    if not care:                                    # standard mode: the same card, a shorter read-back
         when = f", {sched['label'][0].lower()}{sched['label'][1:]}" if sched else ""
         readback = (f"{fmt_money(d.amount_cents)} {'in' if invest else 'to'} {d.payee_name}{when}, "
                     f"from {acct.get('name', 'your account')}.")

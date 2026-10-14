@@ -18,7 +18,7 @@ from starlette.routing import Route
 
 from app import lab, runtime
 from app.agent import presenter
-from app.bank.mock_bank import DEMO_USER, PERSONAS, base_user
+from app.bank.mock_bank import DEMO_USER
 from app.config import ROOT, settings
 from app.kernel import protection as prot
 from app.kernel import contract
@@ -106,7 +106,6 @@ async def state(request: Request):
     user = bank.user(uid)
     return JSONResponse({
         "session_id": s.session_id, "phase": s.phase.value, "user": user["name"],
-        "persona": user.get("persona", "senior"), "customer": base_user(uid).removeprefix("u_"),
         "accounts": [{**a, "balance": fmt_money(a["balance_cents"])} for a in bank.accounts(uid)],
         "total_balance": fmt_money(sum(a["balance_cents"] for a in bank.accounts(uid))),
         "payees": [{k: p[k] for k in ("payee_id", "name", "relation", "type", "masked_account")}
@@ -356,7 +355,7 @@ async def review_secondary(request: Request):
             d = runtime.kernel._get_draft(s, body["draft_id"])
             if d.digest != body["digest"]:
                 raise KernelError("The review ticket is for another card.", "DIGEST_MISMATCH")
-            return JSONResponse({"card": presenter.build_card(d, runtime.bank, s.phase)})
+            return JSONResponse({"card": presenter.build_card(d, runtime.bank, s.phase, care=s.care_mode)})
         if body.get("operation") != "approve":
             raise BadInput("operation must be inspect or approve")
         approval = runtime.kernel.approve_secondary(s, body["draft_id"], body["digest"])
@@ -414,7 +413,7 @@ async def current_card(request: Request):
     runtime.kernel._refresh_cooling(s, d)  # noqa: SLF001
     if s.phase.value in ("COOLING", "AWAITING_AUTH"):
         d.decision = contract.decision(d, s, runtime.bank, runtime.kernel.reviews)
-    return JSONResponse({"card": presenter.build_card(d, runtime.bank, s.phase), "phase": s.phase.value})
+    return JSONResponse({"card": presenter.build_card(d, runtime.bank, s.phase, care=s.care_mode), "phase": s.phase.value})
 
 
 async def trace(request: Request):
@@ -426,18 +425,35 @@ async def audit_verify(_: Request):
     return JSONResponse(runtime.audit.verify())
 
 
+async def care(request: Request):
+    """The Simple view switch in the app: keep Star's way of talking in step with the screen."""
+    body = await _json(request)
+    s = runtime.sessions.get(body.get("session_id"))
+    s.care_mode, s.care_offer_pending = bool(body.get("on")), False
+    runtime.audit.append("ui.care_mode", s.session_id, {"on": s.care_mode, "by": "switch"})
+    return JSONResponse({"care_mode": s.care_mode})
+
+
+async def care_offer(request: Request):
+    """When the customer arrives, Star asks once whether they'd like the easier version."""
+    from app.agent.loop import CARE_OFFER
+    body = await _json(request)
+    s = runtime.sessions.get(body.get("session_id"))
+    if s.care_mode or any(m.get("role") == "user" for m in s.messages):
+        return JSONResponse({"offer": None})
+    text = CARE_OFFER.format(name=runtime.bank.user(s.user_id)["name"])
+    s.messages.append({"role": "assistant", "content": text})
+    s.care_offer_pending = True
+    return JSONResponse({"offer": text, "options": [
+        {"label": "Yes, make it easier", "detail": "Bigger text, simpler words, read aloud", "send": "Yes, please"},
+        {"label": "No, standard is fine", "detail": "You can switch any time", "send": "No, thanks"}]})
+
+
 async def reset(request: Request):
     body = await _json(request)
     sid = body.get("session_id")
     visitor = valid_visitor(body.get("visitor"))
-    base = PERSONAS.get(str(body.get("persona") or "").lower())        # customer switcher: "chen" / "alex"
-    current = runtime.sessions.get(sid).user_id if (sid and base) else None
-    if base and (not sid or base_user(current) != base):
-        # Switch customer: a fresh session (and, online, this browser's own fresh copy of that customer)
-        s = runtime.sessions.new_for_visitor(visitor, base) if visitor else runtime.sessions.new_for_user(base)
-        if body.get("world"):
-            runtime.bank.reset_user(s.user_id)
-    elif visitor:
+    if visitor:
         # Online demo: this browser's own demo customer. "Reset demo" resets only their world, never anyone else's;
         # their passkey stays enrolled.
         s = runtime.sessions.reset(sid) if sid else runtime.sessions.new_for_visitor(visitor)
@@ -484,6 +500,8 @@ routes = [
     Route("/api/trace/{session_id}", trace),
     Route("/api/audit/verify", audit_verify),
     Route("/api/reset", reset, methods=["POST"]),
+    Route("/api/care", care, methods=["POST"]),
+    Route("/api/care/offer", care_offer, methods=["POST"]),
 ]
 
 app = Starlette(routes=routes, middleware=[Middleware(SecurityMiddleware)],

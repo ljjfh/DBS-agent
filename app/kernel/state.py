@@ -61,6 +61,9 @@ class Session:
     passkey_reg: dict | None = None                          # pending passkey registration challenge
     pending_choice: dict | None = None                       # "which one?" we just asked: request + candidate payees
     pending_change: dict | None = None                       # signed account change waiting for the fingerprint
+    care_mode: bool = False                                  # easier "care" mode: bigger text, simpler words, read aloud
+    care_offer_pending: bool = False                         # Star just asked "would you like the easier version?"
+    care_changed: bool | None = None                         # set this turn (by the user's answer or set_care_mode)
     amount_hint: tuple | None = None                         # (cents, "half of your Savings Account (S$...)") this turn
     created_at: float = field(default_factory=time.time)
 
@@ -172,15 +175,10 @@ class SessionStore:
         with self._lock:
             return self._create(uuid.uuid4().hex, old.user_id)
 
-    def new_for_visitor(self, visitor: str, base: str = "u_chen") -> Session:
+    def new_for_visitor(self, visitor: str) -> Session:
         # A client-chosen visitor label is not an identity or a credential.
         with self._lock:
-            return self._create(uuid.uuid4().hex, f"{base}~" + uuid.uuid4().hex)
-
-    def new_for_user(self, user_id: str) -> Session:
-        """Local demo: a fresh session for one of the seeded customers (customer switcher)."""
-        with self._lock:
-            return self._create(uuid.uuid4().hex, user_id)
+            return self._create(uuid.uuid4().hex, "u_chen~" + uuid.uuid4().hex)
 
 
 sessions = SessionStore()

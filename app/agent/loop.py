@@ -45,6 +45,22 @@ _CLAIMS_CHANGED = re.compile(r"\b(has|have|had) been (added|set up|raised|increa
                              r"\b(is|are) now (added|set up|raised|active|registered|one of your payees)\b|"
                              r"\b(added|registered) (him|her|them|it|\w+(?: \w+)?) (as|to) (a |your )?(new )?payees?\b|"
                              r"\bnow (one of )?your payees?\b|\bi'?ve (added|raised|increased|set up)\b", re.I)
+CARE_OFFER = ("Hello {name}, I'm Star. Would you like the easier version? Bigger text, simpler words, and I'll read my "
+              "answers aloud. Just say yes or no.")
+CARE_ON = "Done. I've made everything bigger and I'll keep things simple. Tell me what you'd like to do, in your own words."
+CARE_OFF = "OK, we'll keep the standard view. Say \"make it easier\" any time to switch."
+_YES = re.compile(r"^\W*(yes|yeah|yep|yup|ya|ok(ay)?|sure|please|alright|of course|good|can|why not|easier|"
+                  r"bigger|larger)\b", re.I)
+_NO = re.compile(r"^\W*(no|nope|nah|not now|no thanks|standard|normal|i'?m (fine|ok))\b", re.I)
+
+
+def care_answer(text: str) -> bool | None:
+    """'Yes please' -> True, 'No thanks' -> False; anything else (e.g. a request) -> None."""
+    if _NO.match(text):
+        return False
+    return True if _YES.match(text) else None
+
+
 _NOTE = re.compile(r"\s*\[system note:[^\]]*\]", re.I)
 NUDGE = ("[Harness check] No draft exists: you did not call any draft tool in this turn, so nothing has been prepared. "
          "Do not say it is prepared. If you know who/what and how much, call list_payees (or list_investments) and then "
@@ -168,6 +184,20 @@ class Agent:
         s.add_trace("user", text)
         self.audit.append("user.utterance", s.session_id, {"text": text})
 
+        # Star asked "would you like the easier version?" when the customer arrived: a plain yes / no answers it
+        s.care_changed = None
+        if s.care_offer_pending:
+            s.care_offer_pending = False
+            answer = care_answer(text)
+            if answer is not None:
+                s.care_mode = s.care_changed = answer
+                reply = CARE_ON if answer else CARE_OFF
+                s.messages.extend([{"role": "user", "content": text}, {"role": "assistant", "content": reply}])
+                s.task_start = len(s.messages)
+                s.add_trace("ui", f"Care mode {'on' if answer else 'off'} (the customer answered Star's question)")
+                self.audit.append("ui.care_mode", s.session_id, {"on": answer, "by": "answer", "text": text})
+                return TurnResult(reply, {"type": "text", "care_mode": answer}, reply, s.trace[start:], "care mode")
+
         raw_text = text
         reference_parent_id = None
         s.plan_pos = None
@@ -244,7 +274,7 @@ class Agent:
                         s.plan_drafts[pos] = d.draft_id
                 reply = "The old confirmation is cancelled. Please review the corrected payment."
                 s.messages.append({"role": "assistant", "content": reply})
-                card = presenter.build_card(d, self.bank, s.phase)
+                card = presenter.build_card(d, self.bank, s.phase, care=s.care_mode)
                 return TurnResult(reply, {"type": {Phase.FROZEN: "frozen", Phase.BLOCKED: "blocked", Phase.COOLING: "cooldown"}.get(s.phase, "confirm"), "card": card},
                                   reply, s.trace[start:], "request correction")
             reply = error or "Please make a new payment request with the recipient and amount."
@@ -369,7 +399,7 @@ class Agent:
         ui = {"type": "text"}
         speak = reply
         if new_draft:
-            card = presenter.build_card(new_draft, self.bank, s.phase)
+            card = presenter.build_card(new_draft, self.bank, s.phase, care=s.care_mode)
             ui = {"type": {Phase.BLOCKED: "blocked", Phase.COOLING: "cooldown", Phase.FROZEN: "frozen"}.get(
                 s.phase, "confirm"), "card": card}
             if s.phase not in (Phase.BLOCKED, Phase.FROZEN):
@@ -377,7 +407,7 @@ class Agent:
         elif pending and s.phase in (Phase.AWAITING_AUTH, Phase.COOLING):
             # Whatever the user asked, keep the waiting card in front of them (e.g. after "I'm ready")
             ui = {"type": "cooldown" if s.phase == Phase.COOLING else "confirm",
-                  "card": presenter.build_card(pending, self.bank, s.phase), "reopened": True}
+                  "card": presenter.build_card(pending, self.bank, s.phase, care=s.care_mode), "reopened": True}
         elif s.pending_change and s.pending_change["change_id"] != change_before:
             ui = {"type": "change", "card": s.pending_change["card"]}     # add payee / raise limit / GIRO: sign it
         elif s.phase == Phase.HANDOFF:
@@ -403,6 +433,8 @@ class Agent:
             ui["plan"] = parts          # "I'll do this in N steps; you confirm each one"
         elif [t for t in s.plan if t not in plan_before]:
             ui["plan"] = [text_now, *s.plan]    # the model queued follow-up steps (queue_follow_up)
+        if s.care_changed is not None:
+            ui["care_mode"] = s.care_changed           # the app switches its view (the model called set_care_mode)
         self.audit.append("agent.reply", s.session_id, {"reply": reply, "ui": ui["type"], "llm": llm_name})
         return TurnResult(reply=reply, ui=ui, speak=speak, trace=s.trace[start:], llm=llm_name)
 
@@ -481,7 +513,7 @@ class Agent:
         for step in range(settings.max_steps):
             # Fixed prefix (system prompt) first, dynamic state after: works with APIs that accept only one system
             # message, and helps prompt caching
-            msgs = [{"role": "system", "content": system_prompt(self.bank.user(s.user_id).get("persona", "senior")) +
+            msgs = [{"role": "system", "content": system_prompt("senior" if s.care_mode else "everyday") +
                      "\n\n" + state_summary(s, self.bank)},
                     *history, *working]
             forced = money and step == 0 and getattr(llm, "supports_tool_choice", False)
@@ -604,7 +636,7 @@ class Agent:
         s.add_trace("guard", "A payment is still waiting for the user; showing its card again and queuing the new request",
                     {"pending": d.draft_id, "queued": text})
         self.audit.append("agent.reply", s.session_id, {"reply": reply, "ui": "confirm", "llm": "guard"})
-        card = presenter.build_card(d, self.bank, s.phase)
+        card = presenter.build_card(d, self.bank, s.phase, care=s.care_mode)
         return TurnResult(reply=reply, ui={"type": "cooldown" if s.phase == Phase.COOLING else "confirm", "card": card,
                                            "reopened": True}, speak=reply, trace=s.trace[start:], llm="guard")
 
@@ -643,7 +675,7 @@ class Agent:
         if draft:
             prep = "in" if draft.kind == "investment" else "to"
             template = (f"{fmt_money(draft.amount_cents)} {prep} {draft.payee_name}, ready to confirm."
-                        if self.bank.user(s.user_id).get("persona") == "everyday" else
+                        if not s.care_mode else
                         f"Please check the card: {fmt_money(draft.amount_cents)} {prep} {draft.payee_name}.")
             if draft.risk and draft.risk.level == RiskLevel.BLOCK:
                 template = "I can't process this: " + " ".join(draft.risk.reasons[:2])

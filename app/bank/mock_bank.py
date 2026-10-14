@@ -109,90 +109,9 @@ _WORLD = {
                 {"date": "2026-08-27", "desc": "Transfer to Chen Mei Ling", "amount_cents": -20000, "payee_id": "p_daughter"},
                 {"date": "2026-08-20", "desc": "NTUC FairPrice purchase", "amount_cents": -6450, "payee_id": None},
             ],
-        },
-        # A second, everyday customer: same bank, same risk engine and controls, but Star talks to him differently
-        # (brief, no reassurance) and his account settings are a working adult's (Standard protection, Growth profile).
-        "u_alex": {
-            "name": "Alex Tan",
-            "persona": "everyday",
-            "lang": "en",
-            "risk_profile": {"label": "Growth", "max_product_risk": 4},
-            "protection": {"level": "standard", "pending": None},
-            "accounts": [
-                {"account_id": "SAV-001", "name": "Savings Account", "balance_cents": 1284500, "currency": "SGD",
-                 "type": "savings", "product": "DBS Multiplier Account", "masked": "DBS ••••5520",
-                 "interest_pct": 1.8, "holders": ["Alex Tan"]},
-                {"account_id": "CUR-002", "name": "Current Account", "balance_cents": 342000, "currency": "SGD",
-                 "type": "current", "product": "DBS Current Account", "masked": "DBS ••••0938",
-                 "interest_pct": 0.0, "holders": ["Alex Tan"]},
-            ],
-            "limits": {"daily_transfer_cents": 500000, "pending": None},
-            "standing_instructions": [
-                {"si_id": "SI-0101", "payee_id": "p_landlord", "amount_cents": 180000, "frequency": "monthly",
-                 "day": 1, "from_account": "SAV-001", "next_date": "2026-11-01", "status": "active",
-                 "description": "Monthly rent to Mr Goh"},
-            ],
-            "giro": [
-                {"giro_id": "GIRO-11", "biller": "Singtel Mobile", "aliases": ["singtel", "mobile", "phone bill"],
-                 "reference": "••••4410", "limit_cents": 10000, "frequency": "monthly", "from_account": "SAV-001",
-                 "last_deduction": "2026-10-03 · S$58.90", "status": "active"},
-                {"giro_id": "GIRO-12", "biller": "Anytime Fitness", "aliases": ["gym", "anytime fitness", "fitness"],
-                 "reference": "••••7261", "limit_cents": 12000, "frequency": "monthly", "from_account": "SAV-001",
-                 "last_deduction": "2026-10-01 · S$98.00", "status": "active"},
-            ],
-            "payees": [
-                {"payee_id": "p_mum", "name": "Tan Li Hua", "relation": "mother", "type": "person",
-                 "aliases": ["mum", "mom", "mother", "ma", "li hua"], "masked_account": "POSB ••••3307"},
-                {"payee_id": "p_sister", "name": "Tan Wei Ling", "relation": "sister", "type": "person",
-                 "aliases": ["sister", "sis", "wei ling"], "masked_account": "DBS ••••8162"},
-                {"payee_id": "p_ryan", "name": "Ryan Lee", "relation": "flatmate", "type": "person",
-                 "aliases": ["ryan", "flatmate", "housemate"], "masked_account": "OCBC ••••2045"},
-                {"payee_id": "p_landlord", "name": "Goh Kok Wah", "relation": "landlord", "type": "person",
-                 "aliases": ["landlord", "mr goh", "goh", "rent"], "masked_account": "UOB ••••6390"},
-                {"payee_id": "p_sp", "name": "SP Group Utilities", "relation": "bill", "type": "biller",
-                 "aliases": ["utilities", "utility", "electricity", "water", "sp", "sp group"],
-                 "masked_account": "Bill no. ••••7718"},
-                {"payee_id": "p_cc", "name": "DBS Cards", "relation": "bill", "type": "biller",
-                 "aliases": ["credit card", "card bill", "altitude", "credit card bill"],
-                 "masked_account": "Altitude Card ••••9021"},
-            ],
-            "bills": [
-                {"bill_id": "b_sp_oct", "payee_id": "p_sp", "title": "October utilities bill",
-                 "amount_cents": 11320, "due": "2026-10-22", "status": "unpaid"},
-                {"bill_id": "b_cc_oct", "payee_id": "p_cc", "title": "DBS Altitude Card statement",
-                 "amount_cents": 268415, "min_due_cents": 5000, "due": "2026-10-28", "status": "unpaid"},
-            ],
-            "holdings": [
-                {"product_id": "e_sti", "units": 400.0, "cost_cents": 132000},
-                {"product_id": "s_aapl", "units": 10.0, "cost_cents": 290000},
-            ],
-            "cards": [
-                {"card_id": "c_debit", "name": "DBS Visa Debit Card", "masked": "•••• 4417", "status": "active"},
-                {"card_id": "c_credit", "name": "DBS Altitude Card", "masked": "•••• 9021", "status": "active"},
-            ],
-            "transactions": [
-                {"date": "2026-10-01", "desc": "Salary ACME Pte Ltd", "amount_cents": 620000, "payee_id": None},
-                {"date": "2026-10-01", "desc": "Transfer to Goh Kok Wah (rent)", "amount_cents": -180000, "payee_id": "p_landlord"},
-                {"date": "2026-09-30", "desc": "Transfer to Tan Li Hua", "amount_cents": -50000, "payee_id": "p_mum"},
-                {"date": "2026-09-26", "desc": "Transfer to Ryan Lee (dinner)", "amount_cents": -4500, "payee_id": "p_ryan"},
-                {"date": "2026-09-21", "desc": "Transfer to Tan Wei Ling", "amount_cents": -8000, "payee_id": "p_sister"},
-                {"date": "2026-09-14", "desc": "SP Group Utilities", "amount_cents": -10480, "payee_id": "p_sp"},
-                {"date": "2026-09-01", "desc": "Salary ACME Pte Ltd", "amount_cents": 620000, "payee_id": None},
-                {"date": "2026-09-01", "desc": "Transfer to Goh Kok Wah (rent)", "amount_cents": -180000, "payee_id": "p_landlord"},
-                {"date": "2026-08-31", "desc": "Transfer to Tan Li Hua", "amount_cents": -50000, "payee_id": "p_mum"},
-                {"date": "2026-08-24", "desc": "GrabFood", "amount_cents": -3260, "payee_id": None},
-            ],
-        },
+        }
     }
 }
-# Demo customers you can switch between (the risk engine is the same for both)
-PERSONAS = {"chen": "u_chen", "alex": "u_alex"}
-
-
-def base_user(user_id: str) -> str:
-    """'u_alex~<visitor>' -> 'u_alex': which seeded customer a per-visitor copy was made from."""
-    base = (user_id or "").split("~")[0]
-    return base if base in _WORLD["users"] else DEMO_USER
 
 # What Star can buy, modelled on what DBS digibank offers (synthetic products, DEMO prices and rates).
 # risk: 1 (lowest) .. 5 (highest). price is per unit in `currency`; units can be fractional in this demo.
@@ -256,17 +175,11 @@ class MockBank(LedgerStorage):
     MAX_VISITORS = 2000
 
     @staticmethod
-    def visitor_user_id(visitor: str, base: str = DEMO_USER) -> str:
-        return f"{base}~{visitor}"
+    def visitor_user_id(visitor: str) -> str:
+        return f"{DEMO_USER}~{visitor}"
 
     def _ensure(self, user_id: str) -> None:
-        if user_id in self.world["users"]:
-            return
-        if user_id in _WORLD["users"]:          # a seeded customer missing from an older saved ledger
-            with self._lock:
-                self.world["users"].setdefault(user_id, copy.deepcopy(_WORLD["users"][user_id]))
-            return
-        if "~" not in user_id:
+        if user_id in self.world["users"] or not user_id.startswith(DEMO_USER + "~"):
             return
         with self._lock:
             users = self.world["users"]
@@ -274,13 +187,13 @@ class MockBank(LedgerStorage):
                 visitors = [u for u in users if "~" in u]
                 for old in visitors[:max(0, len(visitors) - self.MAX_VISITORS + 1)]:   # forget the oldest
                     users.pop(old, None)
-                users[user_id] = copy.deepcopy(_WORLD["users"][base_user(user_id)])
+                users[user_id] = copy.deepcopy(_WORLD["users"][DEMO_USER])
 
     @atomic_write
     def reset_user(self, user_id: str) -> None:
         """Reset one demo customer's accounts, payees, bills, holdings and cards (nobody else's)."""
         with self._lock:
-            self.world["users"][user_id] = copy.deepcopy(_WORLD["users"][base_user(user_id)])
+            self.world["users"][user_id] = copy.deepcopy(_WORLD["users"][DEMO_USER])
             self.recent_exec_times.pop(user_id, None)
             self.executed = {k: r for k, r in self.executed.items() if r.get("user_id") != user_id}
 
@@ -289,8 +202,8 @@ class MockBank(LedgerStorage):
         self._ensure(user_id)
         user = self.world["users"][user_id]
         for field in ("limits", "standing_instructions", "giro"):
-            user.setdefault(field, copy.deepcopy(_WORLD["users"][base_user(user_id)][field]))
-        templates = {a["account_id"]: a for a in _WORLD["users"][base_user(user_id)]["accounts"]}
+            user.setdefault(field, copy.deepcopy(_WORLD["users"][DEMO_USER][field]))
+        templates = {a["account_id"]: a for a in _WORLD["users"][DEMO_USER]["accounts"]}
         for account in user["accounts"]:
             for key, value in templates.get(account["account_id"], {}).items():
                 if key != "balance_cents":
@@ -301,7 +214,7 @@ class MockBank(LedgerStorage):
         accounts = self.user(user_id)["accounts"]
         # Synthetic, single-signatory joint account for the competition example.
         # This does not implement a real bank's joint-account mandate.
-        if base_user(user_id) == DEMO_USER and not any(a["account_id"] == "JNT-003" for a in accounts):
+        if not any(a["account_id"] == "JNT-003" for a in accounts):
             accounts.append({"account_id": "JNT-003", "name": "Joint Account", "balance_cents": 0, "currency": "SGD"})
         return accounts
 
