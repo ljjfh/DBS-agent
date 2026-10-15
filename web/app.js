@@ -20,6 +20,7 @@ const visitorMode = () => !!state.health.public_demo;
 const state = {
   sid: store.get('sid', null), page: 'overview', data: null, health: {},
   senior: store.get('senior', false), large: store.get('large', false), readAloud: store.get('readAloud', null),
+  speechRate: store.get('speechRate', null),
   messages: [], check: null, card: null, verify: null, coolTimer: null, busy: false,
 };
 
@@ -77,6 +78,8 @@ function download(name, obj){
 const today = () => new Date().toLocaleDateString('en-SG', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
 const greeting = () => { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'; };
 const readAloudOn = () => state.readAloud === null ? state.senior : state.readAloud;
+const SPEECH_RATES = [0.65, 0.82, 1, 1.2, 1.5];
+const speechRate = () => SPEECH_RATES.includes(state.speechRate) ? state.speechRate : (state.senior ? 0.82 : 0.95);
 const live = () => state.health.llm && !String(state.health.llm).startsWith('offline');
 const protLevel = () => state.data?.protection?.level || 'enhanced';
 const protPending = () => protLevel() === 'enhanced' && !!state.data?.protection?.pending;
@@ -113,47 +116,49 @@ function pickVoice(){
 }
 if('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => { voiceCache = null; };
 // Spoken question -> spoken answer, in every mode. Typed questions follow the "Read every answer aloud" setting.
-// The speaker button on a message plays it, pauses it, and carries on from where it stopped (not from the start).
-// Each answer is spoken a sentence at a time, and word positions are tracked, so pausing works the same in every
-// browser (some phones treat speechSynthesis.pause() as stop).
-const tts = {cur: null, q: [], paused: false, token: 0};
-const lastBotIdx = () => { for(let i = state.messages.length - 1; i >= 0; i--) if(state.messages[i].role === 'bot') return i; return -1; };
-function speak(text, force = false, idx = null){
+const speechQueue = [];
+function syncSpeechButtons(){
+  const current = speechQueue[0];
+  document.querySelectorAll('.replay').forEach(b => {
+    const active = current && current.message === state.messages[Number(b.dataset.i)];
+    const label = active ? (current.paused ? 'Resume reading' : 'Pause reading') : 'Read this aloud';
+    b.textContent = active ? (current.paused ? '▶' : '⏸') : '🔊';
+    b.setAttribute('aria-label', label); b.title = label;
+  });
+}
+function toggleMessageSpeech(message){
+  if(!('speechSynthesis' in window)) return;
+  const current = speechQueue[0];
+  if(current && current.message === message){
+    current.paused = !current.paused;
+    if(current.paused) speechSynthesis.pause(); else speechSynthesis.resume();
+    syncSpeechButtons();
+  }else{
+    state.queueSpeech = false;
+    speak(message.text, true, message);
+  }
+}
+function speak(text, force = false, message = state.messages.at(-1)){
   const want = force || readAloudOn() || state.voiceTurn;
   if(!want || !('speechSynthesis' in window) || !text) return;
-  const item = {idx: idx ?? lastBotIdx(), parts: String(text).split(/(?<=[.!?])\s+/).filter(Boolean), at: 0, char: 0};
-  const queue = state.queueSpeech && tts.cur; state.queueSpeech = false;
-  if(queue){ tts.q.push(item); return; }      // don't cut off the answer being read; read this one next
-  stopSpeaking(); tts.cur = item; ttsPlay();
-}
-function ttsPlay(){
-  const c = tts.cur; if(!c) return syncReplay();
-  const my = ++tts.token, base = c.char;
-  const u = new SpeechSynthesisUtterance(c.parts[c.at].slice(base)); const v = pickVoice();
+  if(!state.queueSpeech) stopSpeaking();
+  state.queueSpeech = false;
+  const u = new SpeechSynthesisUtterance(text); const v = pickVoice();
   if(v){ u.voice = v; u.lang = v.lang; } else u.lang = 'en-US';
-  u.rate = state.senior ? 0.82 : 0.95;
-  u.onboundary = e => { if(my === tts.token && e.name !== 'sentence') c.char = base + e.charIndex; };
-  u.onend = u.onerror = () => {
-    if(my !== tts.token) return;                           // stopped or paused on purpose
-    c.at++; c.char = 0;
-    if(c.at < c.parts.length) return ttsPlay();
-    tts.cur = tts.q.shift() || null; tts.cur ? ttsPlay() : syncReplay();
+  u.rate = speechRate();
+  const entry = {utterance:u, message:message?.role === 'bot' ? message : null, paused:false};
+  speechQueue.push(entry);
+  const finish = () => {
+    const i = speechQueue.indexOf(entry);
+    if(i < 0) return; // Ignore late callbacks from cancelled readings.
+    speechQueue.splice(i, 1); syncSpeechButtons();
   };
-  tts.paused = false; speechSynthesis.speak(u); syncReplay();
-}
-function toggleReplay(i){
-  const c = tts.cur;
-  if(c && c.idx === i && !tts.paused){ tts.paused = true; tts.token++; speechSynthesis.cancel(); syncReplay(); }
-  else if(c && c.idx === i){ ttsPlay(); }                  // carry on from the word where it stopped
-  else speak(state.messages[i].text, true, i);
-}
-function syncReplay(){
-  document.querySelectorAll('.replay').forEach(b => {
-    const on = tts.cur && tts.cur.idx === +b.dataset.i, playing = on && !tts.paused;
-    b.textContent = playing ? '⏸' : on ? '▶' : '🔊';
-    b.classList.toggle('playing', !!playing);
-    b.setAttribute('aria-label', playing ? 'Pause reading' : on ? 'Continue reading' : 'Read this aloud');
-  });
+  u.onend = finish; u.onerror = finish;
+  u.onstart = () => { if(speechQueue.includes(entry)) syncSpeechButtons(); };
+  u.onpause = () => { if(speechQueue.includes(entry)){ entry.paused = true; syncSpeechButtons(); } };
+  u.onresume = () => { if(speechQueue.includes(entry)){ entry.paused = false; syncSpeechButtons(); } };
+  speechSynthesis.speak(u);
+  syncSpeechButtons();
 }
 
 // ---------------------------------------------------------------- Shell
@@ -489,8 +494,8 @@ function renderStage(){
     return `<div class="msg bot ${m.ok ? 'ok' : ''}"><span class="who">Star</span>${m.receipt ? '<strong class="receipt-heading">Transaction completed</strong>' : ''}${esc(m.text)}<button class="replay" data-i="${i}" aria-label="Read this aloud">🔊</button>${m.receipt ? `<button class="receipt" data-i="${i}">${icon('download')} Download signed receipt</button>` : ''}</div>`;
   }).join('');
   st.querySelectorAll('.choice').forEach(b => b.onclick = () => { const m = state.messages[b.dataset.i]; m.done = true; send(m.options[b.dataset.j].send); });
-  st.querySelectorAll('.replay').forEach(b => b.onclick = () => toggleReplay(+b.dataset.i));
-  syncReplay();
+  st.querySelectorAll('.replay').forEach(b => b.onclick = () => toggleMessageSpeech(state.messages[b.dataset.i]));
+  syncSpeechButtons();
   st.querySelectorAll('.receipt').forEach(b => b.onclick = () => { const r = state.messages[b.dataset.i].receipt; download(`receipt-${r.txn_id}.json`, r); });
   st.querySelectorAll('.again').forEach(b => b.onclick = () => { $('#text')?.focus(); if(state.senior) micToggle(); });
   st.querySelectorAll('.notify').forEach(b => b.onclick = () => push({role:'bot', text:'This demo cannot send family alerts. Please call your family contact, Chen Mei Ling, directly.'}));
@@ -562,7 +567,11 @@ async function restorePending(){
   }catch{}
 }
 
-function stopSpeaking(){ tts.token++; tts.cur = null; tts.q = []; tts.paused = false; try{ speechSynthesis?.cancel(); }catch{} syncReplay(); }
+function stopSpeaking(){
+  speechQueue.length = 0;
+  try{ if('speechSynthesis' in window){ speechSynthesis.cancel(); speechSynthesis.resume(); } }catch{}
+  syncSpeechButtons();
+}
 async function send(text, endpoint = '/api/chat', voice = false, auto = false, demo = false){
   text = String(text || '').trim(); if(!text || state.busy) return;
   if(!auto) stopSpeaking();                         // a new question interrupts the previous answer
@@ -1044,6 +1053,11 @@ function settingsPage(m){
       ${sw('s-senior', state.senior, 'Simple view', 'Larger text, fewer choices and an easy-to-find voice button. You can choose whether replies are read aloud in Settings.')}
       ${sw('s-large', state.large, 'Larger text in standard view', 'Makes the normal dashboard easier to read.')}
       ${sw('s-read', readAloudOn(), 'Read every answer aloud', 'Answers to questions you speak are always read aloud. Tap the microphone to stop one.')}
+      <div class="setting speech-setting"><div><label for="s-speech-rate">Reading speed</label><small>Applies to automatic reading and the speaker button. Your choice is saved on this browser. Changes apply to the next reading.</small></div>
+        <div class="speech-controls"><select id="s-speech-rate">
+          <option value="auto" ${!SPEECH_RATES.includes(state.speechRate) ? 'selected' : ''}>Automatic (by view)</option>
+          ${SPEECH_RATES.map((rate, i) => `<option value="${rate}" ${state.speechRate === rate ? 'selected' : ''}>${['Very slow','Slow','Normal','Faster','Fast'][i]} (${rate}×)</option>`).join('')}
+        </select><button class="btn secondary" id="s-speech-preview" type="button">Preview voice</button></div></div>
       <div class="setting"><div>Language model<small>${esc(state.health.model || '')}</small></div><code class="k">${live() ? 'live' : 'offline rules'}</code></div>
       <div class="setting"><div>Speech recognition<small>Without Tencent Cloud keys the browser's own recognition is used.</small></div><code class="k">${esc(state.health.asr || '')}</code></div>
       <div class="setting"><div>Independent verifier<small>The second engine that re-reads only your words and can freeze a payment.</small></div><code class="k">${esc(state.health.verifier || '')}</code></div>
@@ -1054,6 +1068,16 @@ function settingsPage(m){
   $('#s-large').onclick = () => { state.large = !state.large; store.set('large', state.large); render(); };
   $('#s-read').onclick = () => { state.readAloud = !readAloudOn(); store.set('readAloud', state.readAloud); if(!state.readAloud) stopSpeaking(); renderPage(); };
   $('#s-reset').onclick = resetDemo;
+  $('#s-speech-rate').onchange = e => {
+    const rate = Number(e.target.value);
+    state.speechRate = SPEECH_RATES.includes(rate) ? rate : null;
+    store.set('speechRate', state.speechRate);
+    toast('Reading speed saved. Applies to the next reading.');
+  };
+  $('#s-speech-preview').onclick = () => {
+    state.queueSpeech = false;
+    speak("Hello, I'm Star. Take your time. You can check every payment before you confirm.", true, null);
+  };
   m.querySelectorAll('.level').forEach(b => b.onclick = () => setProtection(b.dataset.to));
   $('#p-cancel') && ($('#p-cancel').onclick = () => setProtection('enhanced'));
   protCountdown();

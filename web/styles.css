@@ -261,6 +261,10 @@ main{width:100%;max-width:1480px;margin:0 auto;padding:28px 32px 40px}
 .arch span.edge{background:var(--brand-soft);border-color:#e898a2;color:#9a2635;font-weight:700}
 .arch i{color:#9aa0a6;font-style:normal}
 .settings{display:grid;gap:0}
+.speech-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0}
+.speech-controls select{min-height:44px;max-width:100%;padding:10px 12px;border:1px solid #dfc8d2;border-radius:12px;background:#fff}
+.speech-controls select:focus-visible{outline:3px solid #b81540;outline-offset:3px}
+@media(max-width:820px){.speech-setting{flex-direction:column;align-items:stretch}.speech-controls{flex-shrink:1}.speech-controls select{flex:1;min-width:0}}
 .setting{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 22px;border-top:1px solid #eef0f2}
 .setting:first-child{border-top:0}
 .setting small{display:block;color:var(--muted);font-size:12px}
