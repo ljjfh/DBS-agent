@@ -48,6 +48,7 @@ class RiskDecision(BaseModel):
     reasons: list[str] = Field(default_factory=list)       # plain-language reasons shown to the user
     rule_hits: list[str] = Field(default_factory=list)     # rule codes for the audit log
     verify_question: Optional[str] = None
+    verify_kind: Optional[str] = None                      # "new_payee": a "no" stops the payment as a likely scam
     cooldown_seconds: int = 0
     blocking: list[str] = Field(default_factory=list)      # the reasons that stop it outright (BLOCK rules only)
 

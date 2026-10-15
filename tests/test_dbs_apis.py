@@ -17,8 +17,8 @@ from app.models import Phase, RiskLevel  # noqa: E402
 class ApiBase(Base):
     def setUp(self):
         super().setUp()
-        self.key, jwk = p256.generate_keypair()
-        self.kernel.register_key(self.s, jwk)
+        self.key, self.jwk = p256.generate_keypair()
+        self.kernel.register_key(self.s, self.jwk)
 
     def sign(self, payload: str) -> dict:
         return {"payload": payload, "signature": base64.b64encode(p256.sign(self.key, payload.encode())).decode()}
@@ -191,6 +191,33 @@ class TestPayees(ApiBase):
         self.s = type(self.s)(session_id="h3")
         d = self.model_drafts("send 50 to John Tan", "draft_transfer", {"payee_id": p["payee_id"], "amount": 50})
         self.assertIn("R10_NEW_PAYEE", d.risk.rule_hits)
+
+    def _new_payee_draft(self, amount=200):
+        r = self.turn("Add a new payee John Tan, OCBC account 123-456789-0")
+        cid = r.ui["card"]["change_id"]
+        self.kernel.apply_change(self.s, cid, self.sign(self.kernel.change_challenge(self.s, cid)))
+        p = next(p for p in self.bank.payees("u_chen") if p["name"] == "John Tan")
+        self.s = type(self.s)(session_id="h4")
+        self.kernel.register_key(self.s, self.jwk)
+        return self.model_drafts(f"send {amount} to John Tan", "draft_transfer", {"payee_id": p["payee_id"], "amount": amount})
+
+    def test_enhanced_asks_whether_paying_a_new_person_is_their_own_idea(self):
+        d = self._new_payee_draft()
+        self.assertEqual(d.risk.verify_kind, "new_payee")
+        self.assertIn("John Tan", d.risk.verify_question)
+        d.cooling_until = 0
+        self.s.settle()
+        with self.assertRaises(KernelError):                     # no "yes", no signature
+            self.kernel.issue_challenge(self.s, d.draft_id, d.digest, verify_answer=False)
+        ch = self.kernel.issue_challenge(self.s, d.draft_id, d.digest, verify_answer=True)
+        tok = self.kernel.authorize(self.s, d.draft_id, d.digest, self.sign(ch), verify_answer=True)
+        self.assertEqual(self.kernel.commit(self.s, d.draft_id, tok)["status"], "SUCCESS")
+
+    def test_standard_protection_does_not_ask(self):
+        self.bank.protection("u_chen")["level"] = "standard"
+        d = self._new_payee_draft()
+        self.assertIsNone(d.risk.verify_kind)
+        self.assertIn("R10_NEW_PAYEE", d.risk.rule_hits)          # still waits a little
 
     def test_account_number_must_be_what_the_user_said(self):
         self.s.messages.append({"role": "user", "content": "add my friend John Tan as a payee, OCBC 123456789"})

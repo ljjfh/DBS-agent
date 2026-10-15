@@ -25,6 +25,7 @@ class ContractTest(unittest.TestCase):
         self.sb = sandbox(self.tmp.name)
 
     def large(self):
+        # a never-paid person: Enhanced protection also asks "is this your own idea?", answered yes below
         stranger = self.sb.bank.add_payee("u_chen", "John Tan", "OCBC", "1234567890", "friend")["payee_id"]
         d = self.sb.ask("Send 1500 to John Tan", payee=stranger, cents=150000)
         d.cooling_until = time.time() - 1
@@ -33,7 +34,7 @@ class ContractTest(unittest.TestCase):
     def test_secondary_is_required_even_after_cooling(self):
         d = self.large()
         with self.assertRaises(KernelError) as e:
-            self.sb.sign(d)
+            self.sb.sign(d, verify_answer=True)
         self.assertEqual(e.exception.code, "SECONDARY_APPROVAL_REQUIRED")
         self.assertEqual(self.sb.bank.executed, {})
         self.assertEqual(d.decision["action"], "wait_for_secondary_approval")
@@ -41,7 +42,7 @@ class ContractTest(unittest.TestCase):
     def test_approved_exact_card_executes_and_persists_evidence(self):
         d = self.large()
         self.sb.kernel.approve_secondary(self.sb.session, d.draft_id, d.digest)
-        r = self.sb.pay(d, self.sb.sign(d))
+        r = self.sb.pay(d, self.sb.sign(d, verify_answer=True), verify_answer=True)
         record = r["verifiable"]["decision"]
         self.assertEqual(record["action"], "executed")
         self.assertEqual(record["checks"]["execution"]["status"], "pass")
@@ -53,7 +54,7 @@ class ContractTest(unittest.TestCase):
     def test_expired_review_after_signing_stops_commit(self):
         d = self.large()
         self.sb.kernel.approve_secondary(self.sb.session, d.draft_id, d.digest)
-        token = self.sb.kernel.authorize(self.sb.session, d.draft_id, d.digest, self.sb.sign(d))
+        token = self.sb.kernel.authorize(self.sb.session, d.draft_id, d.digest, self.sb.sign(d, verify_answer=True), verify_answer=True)
         self.sb.kernel.reviews.records[(self.sb.session.session_id, d.draft_id)]["expires_at"] = 0
         with self.assertRaises(KernelError) as e:
             self.sb.kernel.commit(self.sb.session, d.draft_id, token)
@@ -63,7 +64,7 @@ class ContractTest(unittest.TestCase):
     def test_gateway_checks_review_independently(self):
         d = self.large()
         self.sb.kernel.approve_secondary(self.sb.session, d.draft_id, d.digest)
-        self.sb.kernel.authorize(self.sb.session, d.draft_id, d.digest, self.sb.sign(d))
+        self.sb.kernel.authorize(self.sb.session, d.draft_id, d.digest, self.sb.sign(d, verify_answer=True), verify_answer=True)
         self.sb.kernel.reviews.revoke(self.sb.session.session_id, d.draft_id)
         with self.assertRaises(GatewayError) as e:
             self.sb.kernel.gateway.execute(user_id="u_chen", session_id=self.sb.session.session_id,

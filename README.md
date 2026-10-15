@@ -94,6 +94,7 @@ on Enhanced.
 | --- | --- | --- |
 | Wait before confirming (transfers and investments) | above S$1,000 | above S$3,000 |
 | Scam signs in the request | stopped before the model | warning + "is this your own idea?" |
+| First payment to a newly added person | a wait, plus "do you know them, is this your own idea?" A "no" stops it and points to ScamShield 1799 | a wait only |
 | Late night (23:00–06:00 Singapore time) | extra question | none |
 | Investment above the customer's risk profile | treated as high risk, with a wait | warning + "do you understand it can lose value?" |
 | Separate reviewer for money to a never-paid person | above S$1,000 | above S$3,000 |

@@ -421,6 +421,11 @@ async def cancel(request: Request):
         return _err(str(e), e.code)
     s.settle()
     msg = "OK, it's cancelled. No money was sent."
+    if body.get("reason") == "new_payee_not_own_idea":
+        name = s.drafts[body["draft_id"]].payee_name
+        msg = (f"I've stopped this payment to {name}. If someone on the phone or in a message asked you to pay a new "
+               "person, it is very likely a scam. Please don't send it. Call ScamShield on 1799, or talk to your "
+               "family first.")
     _say(s, msg)
     next_task = s.plan.pop(0) if s.plan else None      # offered as a button, never run automatically
     return JSONResponse({"reply": msg, "speak": msg, "phase": s.phase.value, "next_task": next_task,

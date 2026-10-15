@@ -170,6 +170,13 @@ def evaluate(draft: Draft, bank: MockBank, ctx: RuleContext | None = None) -> Ri
         question = "Do you understand this investment can lose value, and do you still want it?"
     elif level == RiskLevel.MEDIUM:
         question = "Do you know this person, and is this payment your own idea?"
+    verify_kind = None
+    if enhanced and "R10_NEW_PAYEE" in hits and level != RiskLevel.BLOCK:
+        # The first payment to someone new is how most scams end: ask outright whether someone else is behind it.
+        # The card can't be signed without a "yes"; a "no" stops it and points to ScamShield.
+        question = (f"Do you know {payee['name']} yourself, and is sending this money your own idea? "
+                    "Say no if someone on the phone or in a message asked you to pay them.")
+        verify_kind = "new_payee"
     cooldown = settings.cooldown_seconds if level == RiskLevel.HIGH else 0
     return RiskDecision(level=level, reasons=reasons, rule_hits=hits, blocking=blocking,
-                        verify_question=question, cooldown_seconds=cooldown)
+                        verify_question=question, verify_kind=verify_kind, cooldown_seconds=cooldown)

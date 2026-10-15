@@ -714,8 +714,8 @@ function renderConfirm(){
       ${c.decision ? decisionPanel(c.decision) : ''}
       ${c.risk_level !== 'LOW' ? `<div class="risk ${esc(c.risk_level)}"><b>${c.risk_level === 'MEDIUM' ? 'Please take a second look' : "For your safety, let's wait a little"}</b><ul>${c.reasons.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
       ${needVerify ? `<div class="verify"><div class="q">${esc(c.verify_question)}</div><div class="yesno">
-        <button type="button" data-v="yes" aria-pressed="${state.verify === true}">Yes</button>
-        <button type="button" data-v="no" aria-pressed="${state.verify === false}">No / Not sure</button></div></div>` : ''}
+        <button type="button" data-v="yes" aria-pressed="${state.verify === true}">${c.verify_kind === 'new_payee' ? 'Yes, my own idea' : 'Yes'}</button>
+        <button type="button" data-v="no" aria-pressed="${state.verify === false}">${c.verify_kind === 'new_payee' ? 'No / someone asked me' : 'No / Not sure'}</button></div></div>` : ''}
       ${state.uvFail ? `<div class="uvhelp">${icon('fingerprint')}<div><b>Your fingerprint wasn't checked</b><small>A password manager signed without asking for your fingerprint, face or PIN, so the bank refused it. Set it up again and choose <b>Windows Hello / this device</b> when asked where to save it.</small>
         <button type="button" class="btn secondary" id="c-repk">Set up fingerprint again</button></div></div>` : ''}
       ${cooling ? `<div class="cool">Please wait ${c.cooldown_left} more second${c.cooldown_left === 1 ? '' : 's'}<small>A good moment to call your family and check.</small></div>` : ''}
@@ -729,6 +729,7 @@ function renderConfirm(){
       : "your device checks your fingerprint or face, then signs exactly this card. The bank and its payment gateway each verify the signature."}</div>`;
   $('#confirm').querySelectorAll('.yesno button').forEach(b => b.onclick = () => {
     state.verify = b.dataset.v === 'yes';
+    if(state.verify === false && c.verify_kind === 'new_payee') return stopNewPayee(c);
     if(state.verify === false){ const t = "That's OK. If you're not sure, let's not send it yet. You can check with your family first."; push({role:'bot', text:t}); speak(t); }
     renderConfirm();
   });
@@ -750,6 +751,14 @@ function renderConfirm(){
 }
 $('#confirm').addEventListener('cancel', e => { e.preventDefault(); cancelCard(); });
 function closeConfirm(){ clearInterval(state.coolTimer); const d = $('#confirm'); if(d.open) d.close(); state.card = null; state.change = null; state.uvFail = false; }
+// "No" to "is paying this new person your own idea?": stop it at once and point to ScamShield, like a scam stop
+async function stopNewPayee(c){
+  try{
+    const r = await api('/api/cancel', {session_id: state.sid, draft_id: c.draft_id, reason: 'new_payee_not_own_idea'});
+    closeConfirm(); push({type:'blocked', text:r.reply}); speak(r.speak, true);
+    state.check = checksFromCard({...c, decision:r.decision}, 'cancelled'); renderSafety();
+  }catch(e){ push({role:'bot', text:'Cancellation could not be confirmed. The payment is still waiting. Please try again.'}); renderConfirm(); }
+}
 async function cancelCard(){
   const c = state.card; if(!c || state.confirming) return;
   try{

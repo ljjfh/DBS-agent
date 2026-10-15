@@ -82,6 +82,7 @@ def build_card(d: Draft, bank: MockBank, phase: Phase, care: bool = True) -> dic
         "risk_level": risk.level.value if risk else "LOW",
         "reasons": risk.reasons if risk else [],
         "verify_question": risk.verify_question if risk else None,
+        "verify_kind": risk.verify_kind if risk else None,
         "cooldown_left": max(0, int(d.cooling_until - time.time())) if phase == Phase.COOLING else 0,
         "can_confirm": phase in (Phase.AWAITING_AUTH, Phase.COOLING) and (not risk or risk.level != RiskLevel.BLOCK)
                        and v.get("status") == "match"
