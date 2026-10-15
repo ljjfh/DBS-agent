@@ -1,7 +1,8 @@
 # Security: what is implemented, what is simulated, what remains
 
 The transaction contract update adds server-owned, expiring secondary approvals bound to customer/session/card digest,
-independently checked again at the gateway; hard velocity limits enforced under the ledger write lock; and signed plan
+independently checked again at the gateway; hard velocity limits enforced under the ledger write lock (steps of one spoken request share a signed `plan_id` and
+don't count against each other; a plan has at most 5 steps, and anything said separately counts as usual); and signed plan
 dependency IDs checked against completed ledger receipts. The reviewer is a simulated bank role authenticated by a
 separate configured secret, not a real out-of-band banking channel or KYC. See [RISK_CONTRACT.md](RISK_CONTRACT.md).
 Decision records are server observations: only the transaction card is covered by the customer's device signature.

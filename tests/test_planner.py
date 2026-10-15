@@ -104,6 +104,64 @@ class TestPhrasingsNoRuleKnows(PlannerBase):
         self.assertEqual((d.payee_id, d.amount_cents, d.from_account), ("f_income", 65000, "SAV-001"))
 
 
+FOUR_STEPS = [
+    {"said": "I want to send 300 to my daughter", "request": "Send 300 dollars to my daughter", "action": "transfer",
+     "amount": {"kind": "fixed", "value": 300}, "from": {"kind": "none"}},
+    {"said": "200 to my son", "request": "Send 200 dollars to my son", "action": "transfer",
+     "amount": {"kind": "fixed", "value": 200}, "from": {"kind": "none"}},
+    {"said": "half of the money in my savings account invest in apple stock", "request": "Buy Apple shares",
+     "action": "investment", "amount": {"kind": "share_of_balance", "account": "savings", "fraction": 0.5},
+     "from": {"kind": "none"}},
+    {"said": "the rest of the money invests in Microsoft stock", "request": "Buy Microsoft shares", "action": "investment",
+     "amount": {"kind": "rest_of_account", "account": "savings", "after_step": 3}, "from": {"kind": "none"}},
+]
+SAID_FOUR = ("I want to send 300 to my daughter, 200 to my son. And half of the money in my savings account invest in "
+             "apple stock, and the rest of the money invests in Microsoft stock.")
+
+
+class TestOneSentenceManySteps(PlannerBase):
+    """Steps the customer said in one sentence are one request: the frequency limit doesn't stop step 4."""
+
+    def test_four_steps_rest_goes_to_microsoft(self):
+        self.use_plan(FOUR_STEPS)
+        self.turn(SAID_FOUR)
+        for _ in range(3):
+            self.assertEqual(self.sign_all()["status"], "SUCCESS")
+            self.next_step()
+        d = self.s.current_draft
+        left = self.bal("SAV-001")
+        self.assertEqual((d.payee_id, d.amount_cents, d.from_account), ("s_msft", left, "SAV-001"))
+        self.assertNotIn("R21_VELOCITY", d.risk.rule_hits)
+        self.assertNotEqual(d.risk.level, RiskLevel.BLOCK)
+        self.assertEqual(self.sign_all()["status"], "SUCCESS")
+        self.assertEqual(self.bal("SAV-001"), 0)
+
+    def test_a_new_request_after_the_plan_still_hits_the_limit(self):
+        self.use_plan(FOUR_STEPS)
+        self.turn(SAID_FOUR)
+        for _ in range(3):
+            self.sign_all()
+            self.next_step()
+        self.sign_all()
+        self.turn("Send 20 to my daughter")                       # not part of that sentence: counted as usual
+        self.assertIn("R21_VELOCITY", self.s.current_draft.risk.rule_hits)
+
+    def test_separate_requests_still_hit_the_limit(self):
+        for amount in (10, 11, 12):
+            self.turn(f"Send {amount} to my daughter")
+            self.sign_all()
+        r = self.turn("Send 13 to my daughter")
+        self.assertIn("R21_VELOCITY", self.s.current_draft.risk.rule_hits)
+        self.assertTrue(r.reply.startswith("I can't process this: Too many payments"))
+
+    def test_plan_id_is_signed(self):
+        self.use_plan(FOUR_STEPS)
+        self.turn(SAID_FOUR)
+        d = self.s.current_draft
+        self.assertTrue(d.plan_id.startswith("p_"))
+        self.assertEqual(d.card_fields()["plan_id"], d.plan_id)
+
+
 class TestThePlanCannotMoveMoney(PlannerBase):
     def test_reference_to_an_unsigned_step_asks(self):
         self.use_plan(HALF_THAT_MONEY)

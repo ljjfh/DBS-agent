@@ -165,7 +165,8 @@ class Kernel:
             draft_id="d_" + uuid.uuid4().hex[:10], user_id=s.user_id, kind=kind,
             from_account=from_account, payee_id=payee_id, payee_name=name, asset_class=asset,
             amount_cents=amount_cents, bill_id=bill_id, created_at=now,
-            expires_at=now + settings.draft_ttl, nonce=secrets.token_hex(6), taint=taint or [], schedule=schedule)
+            expires_at=now + settings.draft_ttl, nonce=secrets.token_hex(6), taint=taint or [], schedule=schedule,
+            plan_id=s.plan_id)
         bill = self.bank.bill(s.user_id, bill_id) if bill_id else None
         g = ground(user_utterances(s.messages), target, amount_cents, kind, bill=bill, model_quote=evidence,
                    accounts=self.bank.accounts(s.user_id), from_account=from_account, heard=heard,

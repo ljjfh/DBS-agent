@@ -32,6 +32,7 @@ def evaluate(draft: Draft, bank: MockBank, ctx: RuleContext | None = None) -> Ri
     level = RiskLevel.LOW
     reasons: list[str] = []
     hits: list[str] = []
+    blocking: list[str] = []
     question = None
 
     def raise_to(new: RiskLevel, code: str, why: str):
@@ -39,6 +40,8 @@ def evaluate(draft: Draft, bank: MockBank, ctx: RuleContext | None = None) -> Ri
         level = RiskLevel.max(level, new)
         hits.append(code)
         reasons.append(why)
+        if new == RiskLevel.BLOCK:
+            blocking.append(why)
 
     invest = draft.kind == "investment"
     payee = bank.product(draft.payee_id) if invest else bank.payee(draft.user_id, draft.payee_id)
@@ -130,7 +133,8 @@ def evaluate(draft: Draft, bank: MockBank, ctx: RuleContext | None = None) -> Ri
             hour = time.gmtime(ctx.now + 8 * 3600).tm_hour
     if enhanced and (hour >= settings.night_start or hour < settings.night_end):
         raise_to(RiskLevel.MEDIUM, "R20_NIGHT", "It's late at night, so let's double-check.")
-    recent = bank.recent_exec_count(draft.user_id, settings.velocity_window_min * 60)
+    # Earlier steps of the same request (one sentence, each step signed on its own) don't count against the limit
+    recent = bank.recent_exec_count(draft.user_id, settings.velocity_window_min * 60, plan_id=draft.plan_id)
     if recent >= settings.velocity_max:
         raise_to(RiskLevel.BLOCK, "R21_VELOCITY", "Too many payments in a short time. Please wait until the transaction window clears, then prepare a new request.")
 
@@ -167,5 +171,5 @@ def evaluate(draft: Draft, bank: MockBank, ctx: RuleContext | None = None) -> Ri
     elif level == RiskLevel.MEDIUM:
         question = "Do you know this person, and is this payment your own idea?"
     cooldown = settings.cooldown_seconds if level == RiskLevel.HIGH else 0
-    return RiskDecision(level=level, reasons=reasons, rule_hits=hits,
+    return RiskDecision(level=level, reasons=reasons, rule_hits=hits, blocking=blocking,
                         verify_question=question, cooldown_seconds=cooldown)

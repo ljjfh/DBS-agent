@@ -49,6 +49,7 @@ class RiskDecision(BaseModel):
     rule_hits: list[str] = Field(default_factory=list)     # rule codes for the audit log
     verify_question: Optional[str] = None
     cooldown_seconds: int = 0
+    blocking: list[str] = Field(default_factory=list)      # the reasons that stop it outright (BLOCK rules only)
 
 
 class Draft(BaseModel):
@@ -76,6 +77,7 @@ class Draft(BaseModel):
     verification: dict = Field(default_factory=dict)  # independent verifier's verdict (kernel/crosscheck.py)
     schedule: Optional[dict] = None   # standing instruction: {"frequency", "day", "first_date", "label"}; None = one-off
     dependency_ids: list[str] = Field(default_factory=list)
+    plan_id: str = ""                 # steps of ONE request the user said in one go share this id (signed with the card)
     decision: dict = Field(default_factory=dict)  # server-side evidence, not part of the customer's signed card
 
     def card_fields(self) -> dict:
@@ -86,6 +88,6 @@ class Draft(BaseModel):
             "payee_name": self.payee_name, "amount_cents": self.amount_cents,
             "currency": self.currency, "bill_id": self.bill_id, "asset_class": self.asset_class,
             "you_said": self.you_said, "schedule": self.schedule,
-            "dependency_ids": self.dependency_ids,
+            "dependency_ids": self.dependency_ids, "plan_id": self.plan_id,
             "nonce": self.nonce, "expires_at": int(self.expires_at),
         }

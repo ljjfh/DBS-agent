@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import re
 import time
+import uuid
 from dataclasses import dataclass, field
 
 from app.agent import fraud, planner, presenter, request_guard
@@ -202,6 +203,8 @@ class Agent:
         reference_parent_id = None
         s.plan_pos = None
         step_meta = None              # this turn drafts one step of a model-planned request
+        if text not in s.plan_specs and text not in s.plan_texts:
+            s.plan_id, s.plan_texts = "", []     # a new request: not a step of the earlier one
         spec = s.plan_specs.pop(text, None)
         if spec:
             done = self._planned_step(s, start, spec, s.plan_raw or raw_text)
@@ -313,6 +316,7 @@ class Agent:
             s.plan_specs = {st["said"]: st for st in steps[1:]}
             s.plan[:] = parts[1:]
             s.plan_drafts, s.plan_raw = {}, raw_text
+            s.plan_id, s.plan_texts = (f"p_{uuid.uuid4().hex[:10]}", parts[1:]) if len(parts) > 1 else ("", [])
             done = self._planned_step(s, start, steps[0], raw_text)
             if isinstance(done, TurnResult):
                 return done
@@ -321,6 +325,7 @@ class Agent:
             s.plan_references.clear()
             s.plan_specs.clear()
             s.plan[:] = parts[1:]          # a restated compound request replaces what was queued before
+            s.plan_id, s.plan_texts = f"p_{uuid.uuid4().hex[:10]}", parts[1:]
             s.add_trace("plan", "Compound request split into ordered tasks", parts)
             text_now = parts[0]
         else:
@@ -678,7 +683,9 @@ class Agent:
                         if not s.care_mode else
                         f"Please check the card: {fmt_money(draft.amount_cents)} {prep} {draft.payee_name}.")
             if draft.risk and draft.risk.level == RiskLevel.BLOCK:
-                template = "I can't process this: " + " ".join(draft.risk.reasons[:2])
+                # Stopped by the bank: always the code's wording and the rule that actually stopped it
+                s.add_trace("guard", "Draft blocked by the rules; using the code template", {"model_reply": reply})
+                return "I can't process this: " + " ".join((draft.risk.blocking or draft.risk.reasons)[:2])
             elif draft.verification.get("status") == "mismatch":
                 # Frozen: always the code's wording, never the model's
                 s.add_trace("guard", "Draft frozen by the independent verifier; using the code template", {"model_reply": reply})

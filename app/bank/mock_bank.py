@@ -320,14 +320,22 @@ class MockBank(LedgerStorage):
         p["pending"] = pending
         return copy.deepcopy(p)
 
-    def recent_exec_count(self, user_id: str, window_sec: int) -> int:
+    def recent_exec_count(self, user_id: str, window_sec: int, plan_id: str = "") -> int:
+        """Payments executed in the window. With plan_id: not counting earlier steps of that same request (the
+        customer said all the steps in one sentence and signed each one; a plan has at most 5 steps)."""
         now = time.time()
-        return sum(1 for t in self.recent_exec_times.get(user_id, []) if now - t <= window_sec)
+        n = sum(1 for t in self.recent_exec_times.get(user_id, []) if now - t <= window_sec)
+        if plan_id:
+            n -= sum(1 for r in self.executed.values() if r.get("user_id") == user_id
+                     and now - r.get("executed_at", 0) <= window_sec
+                     and r.get("verifiable", {}).get("card", {}).get("plan_id") == plan_id)
+        return max(0, n)
 
-    def _check_velocity(self, user_id):
+    def _check_velocity(self, user_id, metadata: dict | None = None):
         # Called inside the atomic ledger lock: two signed requests cannot both take the last slot.
         from app.config import settings
-        if self.recent_exec_count(user_id, settings.velocity_window_min * 60) >= settings.velocity_max:
+        plan_id = ((metadata or {}).get("card") or {}).get("plan_id", "")
+        if self.recent_exec_count(user_id, settings.velocity_window_min * 60, plan_id=plan_id) >= settings.velocity_max:
             raise ValueError("R21_VELOCITY: transaction frequency limit reached; wait and prepare a new request")
 
     # ---------- Write: only the execution gateway may call these ----------
@@ -343,7 +351,7 @@ class MockBank(LedgerStorage):
                     previous.get("verifiable", {}).get("digest") != metadata.get("digest")):
                     raise ValueError("Idempotency key belongs to a different instruction")
                 return {**copy.deepcopy(previous), "idempotent_replay": True}
-            self._check_velocity(user_id)
+            self._check_velocity(user_id, metadata)
             acct, prod = self.account(user_id, from_account), self.product(product_id)
             if acct is None or prod is None:
                 raise ValueError("Account or product not found")
@@ -389,7 +397,7 @@ class MockBank(LedgerStorage):
                     previous.get("verifiable", {}).get("digest") != metadata.get("digest")):
                     raise ValueError("Idempotency key belongs to a different instruction")
                 return {**copy.deepcopy(previous), "idempotent_replay": True}
-            self._check_velocity(user_id)
+            self._check_velocity(user_id, metadata)
             acct = self.account(user_id, from_account)
             if acct is None:
                 raise ValueError("Account not found")
