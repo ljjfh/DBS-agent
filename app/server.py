@@ -170,7 +170,12 @@ async def chat(request: Request):
     if isinstance(body.get("care"), bool):
         # the screen the customer is looking at decides how Star talks (survives a server restart)
         s.care_mode = body["care"]
-    result = runtime.agent.run_turn(s, text)
+    from app.kernel.voice import bind_utterance
+    s.turn_audio = bind_utterance(s, text, body.get("audio_sha256"))   # spoken: link the words to the recording
+    try:
+        result = runtime.agent.run_turn(s, text)
+    finally:
+        s.turn_audio = None
     return JSONResponse({"session_id": s.session_id, "phase": s.phase.value, **result.to_dict()})
 
 
@@ -189,7 +194,22 @@ async def speech_to_text(request: Request):
     except asr.ASRError as e:
         return _err(str(e), "ASR_ERROR", 502)
     s.add_trace("asr", f"Speech recognition ({res['engine']}, {res['latency_ms']}ms): {res['text']}")
+    from app.kernel.voice import record_clip
+    try:
+        res["audio_sha256"] = record_clip(s, runtime.voices, runtime.audit, wav, res)   # kept for the audit trail
+    except OSError as e:
+        s.add_trace("asr", f"Recording could not be stored: {e}")
     return JSONResponse(res)
+
+
+async def voice_clip(request: Request):
+    """Play back one of this session's own recordings (Audit trail page)."""
+    s = runtime.sessions.get(request.path_params["session_id"])
+    sha = request.path_params["sha"]
+    path = runtime.voices.path(sha) if sha in s.voice_clips else None
+    if not path:
+        return _err("Recording not found (recordings are kept until the demo server restarts).", "NOT_FOUND", 404)
+    return FileResponse(path, media_type="audio/wav", filename=f"voice-{sha[:12]}.wav")
 
 
 async def register_key(request: Request):
@@ -481,6 +501,7 @@ routes = [
     *[Route(path, static) for path in STATIC],
     Route("/api/state", state),
     Route("/api/audit/session/{session_id}", audit_export),
+    Route("/api/voice/{session_id}/{sha}", voice_clip),
     Route("/api/health", health),
     Route("/api/world", world),
     Route("/api/chat", chat, methods=["POST"]),

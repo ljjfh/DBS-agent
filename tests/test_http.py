@@ -54,6 +54,21 @@ class HttpTest(unittest.TestCase):
     def post(self, path, body=None, **kw):
         return requests.post(self.base + path, json=body if body is not None else {}, timeout=10, **kw)
 
+    def test_voice_clip_only_for_its_own_session(self):
+        from app import runtime
+        from app.kernel.voice import record_clip
+        from tests.test_voice import wav
+        mine = self.post("/api/reset", {"visitor": "0123456789abcdee"}).json()["session_id"]
+        other = self.post("/api/reset", {"visitor": "0123456789abcded"}).json()["session_id"]
+        audio = wav(0.5)
+        sha = record_clip(runtime.sessions.get(mine), runtime.voices, runtime.audit, audio, {"text": "hi"})
+        r = requests.get(f"{self.base}/api/voice/{mine}/{sha}")
+        self.assertEqual((r.status_code, r.content, r.headers["content-type"]), (200, audio, "audio/wav"))
+        self.assertEqual(requests.get(f"{self.base}/api/voice/{other}/{sha}").status_code, 404)
+        self.assertEqual(requests.get(f"{self.base}/api/voice/{mine}/{'0' * 64}").status_code, 404)
+        r = self.post("/api/chat", {"session_id": mine, "text": "Send 50 to my daughter", "audio_sha256": sha})
+        self.assertEqual(r.json()["ui"]["card"]["you_said_audio"], [])     # that clip said "hi": not linked to these words
+
     def test_reset_after_a_server_restart_starts_a_new_session(self):
         """A browser still holding a session the server forgot (redeploy) gets a fresh one, not an error."""
         r = self.post("/api/reset", {"session_id": "f" * 32, "world": True, "visitor": "0123456789abcdef"})

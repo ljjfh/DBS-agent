@@ -183,7 +183,8 @@ class Agent:
         s.settle()
         start = len(s.trace)
         s.add_trace("user", text)
-        self.audit.append("user.utterance", s.session_id, {"text": text})
+        self.audit.append("user.utterance", s.session_id,
+                          {"text": text, **({"audio_sha256": s.turn_audio} if s.turn_audio else {})})
 
         # Star asked "would you like the easier version?" when the customer arrived: a plain yes / no answers it
         s.care_changed = None

@@ -11,10 +11,12 @@ from app.kernel.audit import AuditLog
 from app.kernel.credentials import CredentialRegistry
 from app.kernel.executor import Kernel
 from app.kernel.state import SessionStore
+from app.kernel.voice import VoiceStore
 
 sessions = SessionStore(settings.ledger_path)
 bank = MockBank(settings.ledger_path)
 audit = AuditLog(settings.audit_path)
+voices = VoiceStore(settings.voice_dir)
 bank.flush_audit(audit)
 registry = CredentialRegistry(settings.passkey_path)
 execution_gateway = ExecutionGateway(bank, registry, audit, allow_unsigned=settings.auth_mode == "mock")

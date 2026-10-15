@@ -96,6 +96,7 @@ class Settings:
 
     # ---- Storage ----
     audit_path = Path(_f("AUDIT_PATH", str(ROOT / "data" / "audit.jsonl")))
+    voice_dir = Path(_f("VOICE_DIR", str(ROOT / "data" / "voice")))   # recordings kept for the audit trail
     # Enrolled passkeys (public keys only). Kept across demo resets, like a phone enrolled with the bank.
     passkey_path = Path(_f("PASSKEY_PATH", str(ROOT / "data" / "passkeys.json")))
 

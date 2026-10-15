@@ -49,6 +49,13 @@ takes effect after a wait (24 h at a real bank; 2 minutes in this demo, `PROTECT
 and a "Keep Enhanced" button), so a scammer on the phone can't say "tap Standard view" and remove the protection. The hard
 safety boundary (draft only, two-engine check, device signature, gateway) is the same for everyone.
 
+**Every step is on record.** As the brief asks, the audit trail keeps the raw recording (each clip sent to Tencent
+ASR, stored under its SHA-256 and playable on the Audit trail page), the transcript, every draft with its rule and
+verifier results, and the device signature in the signed receipt. A card built from spoken words carries the
+recordings' hashes, so the fingerprint signs "this recording -> this card". Recordings are only linked when their
+transcript is exactly the words sent. Demo storage is the server disk (cleared on redeploy); a bank would use
+encrypted storage with a retention policy. With browser speech recognition (no Tencent keys) there is no audio to keep.
+
 ## Mock DBS APIs the agent calls
 
 `app/bank/dbs_api/` has one module per API from the [DBS developer catalogue](https://www.dbs.com/dbsdevelopers/discover/index.html)
@@ -268,6 +275,7 @@ User (voice / text)
           │   ├─ signing.py      What you see is what you sign: digest, signed challenge, one-time token
           │   ├─ p256.py         ECDSA P-256 verification of browser Web Crypto signatures (no dependency)
           │   ├─ executor.py     Draft → authorize → pre-execution recheck → hand-off to the execution gateway
+          │   ├─ voice.py        Voice recordings for the audit trail (SHA-256 in the chain, signed on the card)
           │   └─ audit.py        Append-only hash-chained audit log
           ├─ app/lab.py      Security lab: 22 attacks against the real kernel in an isolated sandbox
           ├─ app/bank/gateway.py     Zero-trust execution gateway: the only door to the ledger, re-verifies signatures

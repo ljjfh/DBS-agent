@@ -193,6 +193,8 @@ class Kernel:
                 g.derived = f"{resolved['why']}, which is {fmt_money(resolved['amount_cents'])}"
             g.quote = latest_user.get("raw_content", g.quote)[:160]
         draft.grounding, draft.you_said = g.as_dict(), g.quote
+        from app.kernel.voice import task_audio
+        draft.you_said_audio = task_audio(s)            # the recordings behind these words, signed with the card
         draft.digest = compute_digest(draft)
         level = prot.effective(self.bank, s.user_id, now)
         ctx = rules.RuleContext(now=now, scam_level=s.scam_level, scam_reasons=list(s.scam_reasons),

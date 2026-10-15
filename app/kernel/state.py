@@ -50,6 +50,9 @@ class Session:
     plan_drafts: dict[int, str] = field(default_factory=dict)      # planner step number -> its draft id
     plan_raw: str = ""                                             # the user's original words for the current plan
     plan_pos: int | None = None
+    voice_clips: dict[str, dict] = field(default_factory=dict)     # recordings of this session, by SHA-256
+    utterance_audio: dict[str, str] = field(default_factory=dict)  # words the user sent -> the recording they came from
+    turn_audio: str | None = None                                  # the recording behind the message being handled
     plan_id: str = ""                                              # the multi-step request this turn belongs to
     plan_texts: list[str] = field(default_factory=list)            # its later steps' words (to recognise them)                                    # planner step being drafted in this turn
     trace: list[dict] = field(default_factory=list)

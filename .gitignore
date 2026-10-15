@@ -19,3 +19,6 @@ eval/report.html
 /qa/runs/
 /qa/current-run.json
 /qa/results/*.wav
+
+# Voice recordings kept for the audit trail (never committed)
+/data/voice/

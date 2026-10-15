@@ -77,6 +77,7 @@ class Draft(BaseModel):
     verification: dict = Field(default_factory=dict)  # independent verifier's verdict (kernel/crosscheck.py)
     schedule: Optional[dict] = None   # standing instruction: {"frequency", "day", "first_date", "label"}; None = one-off
     dependency_ids: list[str] = Field(default_factory=list)
+    you_said_audio: list[str] = Field(default_factory=list)  # SHA-256 of the recordings you_said came from (signed)
     plan_id: str = ""                 # steps of ONE request the user said in one go share this id (signed with the card)
     decision: dict = Field(default_factory=dict)  # server-side evidence, not part of the customer's signed card
 
@@ -87,7 +88,7 @@ class Draft(BaseModel):
             "from_account": self.from_account, "payee_id": self.payee_id,
             "payee_name": self.payee_name, "amount_cents": self.amount_cents,
             "currency": self.currency, "bill_id": self.bill_id, "asset_class": self.asset_class,
-            "you_said": self.you_said, "schedule": self.schedule,
+            "you_said": self.you_said, "you_said_audio": self.you_said_audio, "schedule": self.schedule,
             "dependency_ids": self.dependency_ids, "plan_id": self.plan_id,
             "nonce": self.nonce, "expires_at": int(self.expires_at),
         }

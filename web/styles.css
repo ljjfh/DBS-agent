@@ -292,6 +292,17 @@ dialog.confirm::backdrop{background:#1b1f2980}
 .said{padding:11px 14px;border-left:4px solid var(--brand);background:#f6f4f0;border-radius:0 10px 10px 0;margin-bottom:6px}
 .said .k{display:block;color:var(--muted);font-size:10px;letter-spacing:.6px;text-transform:uppercase;font-weight:700}
 .said q{font-style:italic}
+.said-audio{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px;font-size:12px;color:var(--muted)}
+.said-audio svg{width:14px;height:14px;flex:none}
+.said-audio .linkish{background:none;border:0;padding:0;color:var(--brand);font-weight:600;text-decoration:underline;cursor:pointer;font-size:inherit}
+.voice-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 4px;font-size:13px}
+.voice-row audio{height:34px;max-width:100%}
+.voice-row small{display:block;color:var(--muted);font-size:11.5px}
+.voices{margin:14px 0 18px;padding:14px 16px;border:1px solid var(--line, #e6e1e5);border-radius:12px;background:#fbf9fa}
+.voices h3{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-size:15px}
+.voices h3 svg{width:16px;height:16px}
+.voice-note{opacity:.85}
+.composer-foot.voice-note svg{width:13px;height:13px}
 .crow{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px dashed var(--line)}
 .crow .k{color:var(--muted)}
 .crow .v{font-weight:700;text-align:right}

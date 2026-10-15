@@ -90,6 +90,7 @@ def build_card(d: Draft, bank: MockBank, phase: Phase, care: bool = True) -> dic
         "readback": readback,
         "expires_at": int(d.expires_at),
         "you_said": d.you_said,
+        "you_said_audio": d.you_said_audio,
         "amount_from_user": d.grounding.get("amount", True),
         "amount_source": d.grounding.get("amount_source", "user"),
         "payee_from_user": d.grounding.get("payee", True),

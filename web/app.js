@@ -444,6 +444,7 @@ function assistantHtml(){
       </form>
       <div class="hint" id="hint" role="status" aria-live="polite" aria-atomic="true"></div>
       <div class="composer-foot">${icon('lock')}Star prepares · you check · your phone signs. No money moves without you.</div>
+      ${state.health.asr === 'tencent' ? `<div class="composer-foot voice-note">${icon('mic')}For your security, what you say is recorded and kept in this session's audit trail.</div>` : ''}
     </div></section>`;
 }
 function bindAssistant(){
@@ -582,8 +583,9 @@ async function send(text, endpoint = '/api/chat', voice = false, auto = false, d
   if(demo) push({type:'demo-intro'});
   push({role:'user', text, demo}); push({type:'typing'});
   try{
+    const audio = voice ? state.nextAudio : null; state.nextAudio = null;   // the recording these words came from
     let r;
-    try{ r = await api(endpoint, {session_id: state.sid, text, care: !!state.senior}); }
+    try{ r = await api(endpoint, {session_id: state.sid, text, care: !!state.senior, ...(audio ? {audio_sha256: audio} : {})}); }
     catch(e){
       if(e.data?.code !== 'SESSION_NOT_FOUND') throw e;
       await newSession(); await refresh();               // the server was restarted: carry on in a fresh session
@@ -696,7 +698,9 @@ function renderConfirm(){
     <div class="cbody">
       <h2 id="c-title">${esc(c.title)}</h2>
       <p class="review-intro">Check the recipient, amount and account. Nothing is sent until you confirm. You can cancel below.</p>
-      ${c.you_said ? `<div class="said"><span class="k">Based on what you said</span><q>${esc(c.you_said)}</q></div>` : ''}
+      ${c.you_said ? `<div class="said"><span class="k">Based on what you said</span><q>${esc(c.you_said)}</q>${(c.you_said_audio || []).length ? `
+        <span class="said-audio">${icon('mic')}From your voice recording ${esc(c.you_said_audio[0].slice(0, 8))}… · signed with this card
+          <button type="button" class="linkish" id="c-play">Play</button></span>` : ''}</div>` : ''}
       <div class="crow ${c.payee_from_user === false ? 'unsaid' : ''}"><span class="k">${c.kind === 'investment' ? 'Invest in' : 'To'}</span><span class="v">${esc(c.payee_name)}${rel}<small>${esc(c.payee_account)}</small>
         ${c.payee_from_user === false ? `<span class="flag">You didn't mention this ${c.kind === 'investment' ? 'product' : 'person'}</span>` : ''}</span></div>
       ${c.kind === 'investment' ? `<div class="crow"><span class="k">Asset</span><span class="v">${esc(c.asset_class)}</span></div>` : ''}
@@ -730,6 +734,7 @@ function renderConfirm(){
   });
   $('#c-cancel').onclick = cancelCard;
   $('#c-go').onclick = () => { stopSpeaking(); confirmCard(); };
+  $('#c-play') && ($('#c-play').onclick = () => playClip(c.you_said_audio[0]));
   $('#review-ticket') && ($('#review-ticket').onclick = () => download('review-ticket.json', {
     session_id:state.sid, draft_id:c.draft_id, digest:c.digest}));
   $('#review-refresh') && ($('#review-refresh').onclick = async () => {
@@ -969,17 +974,30 @@ function contacts(m){
   m.innerHTML = head('Your workspace', 'Payees', 'Star can only send money to people saved here. Adding a new payee needs the bank app or a branch.') +
     `<div class="contacts">${people.map(card).join('')}</div><h2 class="sub-head">Billers</h2><div class="contacts">${billers.map(card).join('')}</div>`;
 }
+let clip = null;
+function playClip(sha){
+  stopSpeaking(); try{ clip?.pause(); }catch{}
+  clip = new Audio(`/api/voice/${encodeURIComponent(state.sid)}/${sha}`);
+  clip.play().catch(() => toast('This recording is no longer on the demo server (it restarts on every update).'));
+}
 async function auditPage(m){
-  m.innerHTML = head('Trust & transparency', 'Audit trail', 'Every step is appended to a hash chain: each record carries the hash of the one before, so edits are detectable.') +
+  m.innerHTML = head('Trust & transparency', 'Audit trail', 'Every step is appended to a hash chain: each record carries the hash of the one before, so edits are detectable. Your voice recordings, what was transcribed, each draft, the checks and your signature are all here.') +
     `<section class="card panel"><div class="row-actions"><span id="integrity" class="status ok">Checking…</span>
       <button class="btn secondary" id="a-refresh">${icon('refresh')}Refresh</button><button class="btn secondary" id="a-export">${icon('download')}Export JSON</button></div>
-      <div id="entries" class="lab-list"></div></section>`;
+      <div id="voices"></div><div id="entries" class="lab-list"></div></section>`;
   const load = async () => {
     const a = await api(`/api/audit/session/${encodeURIComponent(state.sid)}`);
     $('#integrity').className = 'status ' + (a.integrity.ok ? 'ok' : 'bad');
     $('#integrity').textContent = a.integrity.ok ? `✓ Chain intact · ${a.integrity.records} records` : `✕ Chain broken at line ${a.integrity.broken_at_line}`;
+    const clips = a.entries.filter(e => e.event === 'voice.recorded');
+    $('#voices').innerHTML = clips.length ? `<div class="voices"><h3>${icon('mic')}Voice recordings (${clips.length})</h3>${clips.slice().reverse().map(e => `
+      <div class="voice-row"><audio controls preload="none" src="/api/voice/${encodeURIComponent(state.sid)}/${esc(e.data.audio_sha256)}"></audio>
+        <span>“${esc(e.data.transcript)}”<small>${new Date(e.ts * 1000).toLocaleTimeString()} · ${esc(String(e.data.seconds))} s · SHA-256 ${esc(e.data.audio_sha256.slice(0, 12))}…</small></span></div>`).join('')}
+      <p class="footnote">Each recording's SHA-256 is in the hash chain, and cards made from it carry the same hash, so your signature covers it. Demo recordings are deleted when the server restarts.</p></div>` : '';
     $('#entries').innerHTML = a.entries.length ? a.entries.slice().reverse().map(e => `<div class="audit-entry"><b>${esc(e.event)}</b>
       <div class="meta">${new Date(e.ts * 1000).toLocaleTimeString()} · ${esc(e.hash.slice(0, 16))}…</div>
+      ${e.event === 'voice.recorded' ? `<div class="voice-row"><audio controls preload="none" src="/api/voice/${encodeURIComponent(state.sid)}/${esc(e.data.audio_sha256)}"></audio>
+        <span>“${esc(e.data.transcript)}” · ${esc(String(e.data.seconds))} s · SHA-256 ${esc(e.data.audio_sha256.slice(0, 12))}…</span></div>` : ''}
       <details><summary>Details</summary><pre>${esc(JSON.stringify(e.data, null, 2))}</pre></details></div>`).join('') : '<p class="footnote">No activity in this session yet.</p>';
     $('#a-export').onclick = () => download(`audit-${state.sid}.json`, a);
   };
@@ -1251,6 +1269,7 @@ async function stopRec(){
   try{
     const r = await api('/api/asr', {session_id: state.sid, audio_b64: b64(wav)});
     hint(''); addTrace([{kind:'asr', label:`Tencent Cloud ASR (${r.engine}, ${r.latency_ms}ms): ${r.text}`}]);
+    state.nextAudio = r.audio_sha256 || null;
     if(r.text) send(r.text, undefined, true); else hint("I didn't catch that. You can try again or type your request.");
   }catch(e){ hint('Voice input is unavailable right now. Please try again or type your request.'); }
 }
