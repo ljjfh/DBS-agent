@@ -455,6 +455,10 @@ async def care_offer(request: Request):
 async def reset(request: Request):
     body = await _json(request)
     sid = body.get("session_id")
+    try:
+        sid and runtime.sessions.get(sid)
+    except (UnknownSession, ValueError):
+        sid = None                      # the server restarted and forgot it: reset just starts a new session
     visitor = valid_visitor(body.get("visitor"))
     if visitor:
         # Online demo: this browser's own demo customer. "Reset demo" resets only their world, never anyone else's;

@@ -83,6 +83,11 @@ const protPending = () => protLevel() === 'enhanced' && !!state.data?.protection
 const protLabel = () => protLevel() === 'enhanced'
   ? (protPending() ? '<span>Enhanced · Standard in <span class="prot-count"></span></span>' : 'Enhanced protection') : 'Standard protection';
 
+// The server forgets sessions when it is redeployed: start a fresh one for this browser (its own demo customer)
+async function newSession(){
+  state.sid = null; store.set('sid', null);
+  try{ const r = await api('/api/reset', visitorMode() ? {visitor: VISITOR} : {}); state.sid = r.session_id; store.set('sid', r.session_id); }catch{}
+}
 async function refresh(){
   try{
     const d = await api('/api/state' + (state.sid ? `?session_id=${encodeURIComponent(state.sid)}` : ''));
@@ -92,7 +97,7 @@ async function refresh(){
     if(['activity', 'contacts', 'settings'].includes(state.page)) renderPage();
     protCountdown();
   }catch(e){
-    if(e.data?.code === 'SESSION_NOT_FOUND'){ state.sid = null; store.set('sid', null); return refresh(); }
+    if(e.data?.code === 'SESSION_NOT_FOUND'){ await newSession(); return refresh(); }
     console.error(e);
   }
 }
@@ -108,15 +113,47 @@ function pickVoice(){
 }
 if('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => { voiceCache = null; };
 // Spoken question -> spoken answer, in every mode. Typed questions follow the "Read every answer aloud" setting.
-function speak(text, force = false){
+// The speaker button on a message plays it, pauses it, and carries on from where it stopped (not from the start).
+// Each answer is spoken a sentence at a time, and word positions are tracked, so pausing works the same in every
+// browser (some phones treat speechSynthesis.pause() as stop).
+const tts = {cur: null, q: [], paused: false, token: 0};
+const lastBotIdx = () => { for(let i = state.messages.length - 1; i >= 0; i--) if(state.messages[i].role === 'bot') return i; return -1; };
+function speak(text, force = false, idx = null){
   const want = force || readAloudOn() || state.voiceTurn;
   if(!want || !('speechSynthesis' in window) || !text) return;
-  if(!state.queueSpeech) speechSynthesis.cancel();
-  state.queueSpeech = false;
-  const u = new SpeechSynthesisUtterance(text); const v = pickVoice();
+  const item = {idx: idx ?? lastBotIdx(), parts: String(text).split(/(?<=[.!?])\s+/).filter(Boolean), at: 0, char: 0};
+  const queue = state.queueSpeech && tts.cur; state.queueSpeech = false;
+  if(queue){ tts.q.push(item); return; }      // don't cut off the answer being read; read this one next
+  stopSpeaking(); tts.cur = item; ttsPlay();
+}
+function ttsPlay(){
+  const c = tts.cur; if(!c) return syncReplay();
+  const my = ++tts.token, base = c.char;
+  const u = new SpeechSynthesisUtterance(c.parts[c.at].slice(base)); const v = pickVoice();
   if(v){ u.voice = v; u.lang = v.lang; } else u.lang = 'en-US';
   u.rate = state.senior ? 0.82 : 0.95;
-  speechSynthesis.speak(u);
+  u.onboundary = e => { if(my === tts.token && e.name !== 'sentence') c.char = base + e.charIndex; };
+  u.onend = u.onerror = () => {
+    if(my !== tts.token) return;                           // stopped or paused on purpose
+    c.at++; c.char = 0;
+    if(c.at < c.parts.length) return ttsPlay();
+    tts.cur = tts.q.shift() || null; tts.cur ? ttsPlay() : syncReplay();
+  };
+  tts.paused = false; speechSynthesis.speak(u); syncReplay();
+}
+function toggleReplay(i){
+  const c = tts.cur;
+  if(c && c.idx === i && !tts.paused){ tts.paused = true; tts.token++; speechSynthesis.cancel(); syncReplay(); }
+  else if(c && c.idx === i){ ttsPlay(); }                  // carry on from the word where it stopped
+  else speak(state.messages[i].text, true, i);
+}
+function syncReplay(){
+  document.querySelectorAll('.replay').forEach(b => {
+    const on = tts.cur && tts.cur.idx === +b.dataset.i, playing = on && !tts.paused;
+    b.textContent = playing ? '⏸' : on ? '▶' : '🔊';
+    b.classList.toggle('playing', !!playing);
+    b.setAttribute('aria-label', playing ? 'Pause reading' : on ? 'Continue reading' : 'Read this aloud');
+  });
 }
 
 // ---------------------------------------------------------------- Shell
@@ -452,7 +489,8 @@ function renderStage(){
     return `<div class="msg bot ${m.ok ? 'ok' : ''}"><span class="who">Star</span>${m.receipt ? '<strong class="receipt-heading">Transaction completed</strong>' : ''}${esc(m.text)}<button class="replay" data-i="${i}" aria-label="Read this aloud">🔊</button>${m.receipt ? `<button class="receipt" data-i="${i}">${icon('download')} Download signed receipt</button>` : ''}</div>`;
   }).join('');
   st.querySelectorAll('.choice').forEach(b => b.onclick = () => { const m = state.messages[b.dataset.i]; m.done = true; send(m.options[b.dataset.j].send); });
-  st.querySelectorAll('.replay').forEach(b => b.onclick = () => speak(state.messages[b.dataset.i].text, true));
+  st.querySelectorAll('.replay').forEach(b => b.onclick = () => toggleReplay(+b.dataset.i));
+  syncReplay();
   st.querySelectorAll('.receipt').forEach(b => b.onclick = () => { const r = state.messages[b.dataset.i].receipt; download(`receipt-${r.txn_id}.json`, r); });
   st.querySelectorAll('.again').forEach(b => b.onclick = () => { $('#text')?.focus(); if(state.senior) micToggle(); });
   st.querySelectorAll('.notify').forEach(b => b.onclick = () => push({role:'bot', text:'This demo cannot send family alerts. Please call your family contact, Chen Mei Ling, directly.'}));
@@ -524,7 +562,7 @@ async function restorePending(){
   }catch{}
 }
 
-function stopSpeaking(){ try{ speechSynthesis?.cancel(); }catch{} }
+function stopSpeaking(){ tts.token++; tts.cur = null; tts.q = []; tts.paused = false; try{ speechSynthesis?.cancel(); }catch{} syncReplay(); }
 async function send(text, endpoint = '/api/chat', voice = false, auto = false, demo = false){
   text = String(text || '').trim(); if(!text || state.busy) return;
   if(!auto) stopSpeaking();                         // a new question interrupts the previous answer
@@ -535,7 +573,13 @@ async function send(text, endpoint = '/api/chat', voice = false, auto = false, d
   if(demo) push({type:'demo-intro'});
   push({role:'user', text, demo}); push({type:'typing'});
   try{
-    const r = await api(endpoint, {session_id: state.sid, text, care: !!state.senior});
+    let r;
+    try{ r = await api(endpoint, {session_id: state.sid, text, care: !!state.senior}); }
+    catch(e){
+      if(e.data?.code !== 'SESSION_NOT_FOUND') throw e;
+      await newSession(); await refresh();               // the server was restarted: carry on in a fresh session
+      r = await api(endpoint, {session_id: state.sid, text, care: !!state.senior});
+    }
     state.sid = r.session_id; store.set('sid', r.session_id);
     state.messages = state.messages.filter(m => m.type !== 'typing');
     addTrace(r.trace); handleTurn(r);
@@ -1008,7 +1052,7 @@ function settingsPage(m){
     </section>`;
   $('#s-senior').onclick = () => setSenior(!state.senior);
   $('#s-large').onclick = () => { state.large = !state.large; store.set('large', state.large); render(); };
-  $('#s-read').onclick = () => { state.readAloud = !readAloudOn(); store.set('readAloud', state.readAloud); if(!state.readAloud) speechSynthesis?.cancel(); renderPage(); };
+  $('#s-read').onclick = () => { state.readAloud = !readAloudOn(); store.set('readAloud', state.readAloud); if(!state.readAloud) stopSpeaking(); renderPage(); };
   $('#s-reset').onclick = resetDemo;
   m.querySelectorAll('.level').forEach(b => b.onclick = () => setProtection(b.dataset.to));
   $('#p-cancel') && ($('#p-cancel').onclick = () => setProtection('enhanced'));
@@ -1064,9 +1108,12 @@ async function setProtection(to){
   await refresh();
 }
 async function resetDemo(){
-  const r = await api('/api/reset', {session_id: state.sid, world: true, ...(visitorMode() ? {visitor: VISITOR} : {})});
+  const body = {world: true, ...(visitorMode() ? {visitor: VISITOR} : {})};
+  let r;
+  try{ r = await api('/api/reset', {session_id: state.sid, ...body}); }
+  catch(e){ if(e.data?.code !== 'SESSION_NOT_FOUND') throw e; r = await api('/api/reset', body); }  // server restarted
   state.sid = r.session_id; store.set('sid', r.session_id);
-  state.messages = []; state.check = null; $('#tlist').innerHTML = ''; closeConfirm();
+  stopSpeaking(); state.messages = []; state.check = null; $('#tlist').innerHTML = ''; closeConfirm();
   await refresh(); go('overview'); toast('Demo reset'); offerCare();
 }
 

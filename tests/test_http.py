@@ -54,6 +54,14 @@ class HttpTest(unittest.TestCase):
     def post(self, path, body=None, **kw):
         return requests.post(self.base + path, json=body if body is not None else {}, timeout=10, **kw)
 
+    def test_reset_after_a_server_restart_starts_a_new_session(self):
+        """A browser still holding a session the server forgot (redeploy) gets a fresh one, not an error."""
+        r = self.post("/api/reset", {"session_id": "f" * 32, "world": True, "visitor": "0123456789abcdef"})
+        self.assertEqual(r.status_code, 200, r.text)
+        sid = r.json()["session_id"]
+        self.assertNotEqual(sid, "f" * 32)
+        self.assertEqual(self.post("/api/chat", {"session_id": sid, "text": "Send 50 to my daughter"}).status_code, 200)
+
     # ---- static files ----
     def test_page_and_assets(self):
         r = requests.get(self.base + "/", headers={"Host": f"localhost:{self.port}"})
