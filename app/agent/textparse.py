@@ -18,11 +18,13 @@ _NUM_WORDS = set(_ONES) | set(_TENS) | set(_SCALES)
 
 
 def words_to_number(tokens: list[str]) -> float | None:
-    """['two', 'hundred', 'and', 'fifty'] -> 250, ['a', 'thousand'] -> 1000, ['twelve', 'point', 'five'] -> 12.5"""
+    """['two', 'hundred', 'and', 'fifty'] -> 250, ['a', 'thousand'] -> 1000, ['twelve', 'point', 'five'] -> 12.5.
+    Spoken shorthand: ['one', 'fifty'] -> 150, ['two', 'twenty', 'five'] -> 225, ['nineteen', 'fifty'] -> 1950
+    (a number up to nineteen straight before a tens word means hundreds, as people say prices)."""
     if not tokens:
         return None
     total, current, frac, seen = 0, 0, "", False
-    in_frac = False
+    in_frac, prev = False, ""
     for i, t in enumerate(tokens):
         if in_frac:
             if t in _ONES and _ONES[t] < 10:
@@ -39,7 +41,10 @@ def words_to_number(tokens: list[str]) -> float | None:
             current += _ONES[t]
             seen = True
         elif t in _TENS:
-            current += _TENS[t]
+            if prev in _ONES and 1 <= current <= 19:
+                current = current * 100 + _TENS[t]          # "one fifty" = 150, not 51
+            else:
+                current += _TENS[t]
             seen = True
         elif t == "hundred":
             current = (current or 1) * 100
@@ -49,6 +54,7 @@ def words_to_number(tokens: list[str]) -> float | None:
             current, seen = 0, True
         else:
             return None
+        prev = t
     if not seen:
         return None
     value = total + current

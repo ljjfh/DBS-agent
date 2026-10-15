@@ -344,7 +344,10 @@ class TestTextParse(unittest.TestCase):
                  "twenty dollars and fifty cents": 20.5, "twelve thousand": 12000,
                  "three thousand and five": 3005, "transfer $1,500": 1500, "two hundred and fifty": 250,
                  "a hundred dollars": 100, "1.5k": 1500, "send some money": None,
-                 "send two hundread to my daughter": None, "account 12345678": None}
+                 "send two hundread to my daughter": None, "account 12345678": None,
+                 # how people say amounts: "one fifty" is 150, not 51
+                 "send my son two hundred, no wait, one fifty": 150, "two fifty to my daughter": 250,
+                 "one twenty five dollars": 125, "fifty five dollars": 55, "twenty one dollars": 21}
         for text, want in cases.items():
             self.assertEqual(parse_amount(text), want, text)
 
