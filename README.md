@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/images/banner.jpg" alt="Star: banking, your way. Speak naturally, review clearly, authorize every transaction." width="100%"></p>
+
 # Star · a voice banking agent for DBS digibank
 
 Star lets customers bank by talking: "send 300 to my daughter", "pay the electricity bill, then put 1,000 into
@@ -10,6 +12,10 @@ One rule runs through the whole design: **the model understands, the code decide
 language model can look things up and prepare a draft. It has no tool that can move money. Every payment is checked by
 deterministic code, shown on a card built by code, signed on the customer's own device, and verified again by a
 payment gateway that trusts nothing upstream.
+
+| The dashboard: Star asks Mdm Chen if she wants the easier version | Care mode: a card built by code from her own words, signed with her fingerprint |
+| --- | --- |
+| <img src="docs/images/home.jpg" alt="DBS digibank dashboard with balances and the Star assistant" width="100%"> | <img src="docs/images/care-card.jpg" alt="Confirm transfer card: S$50.00 to Chen Mei Ling, based on what you said" width="100%"> |
 
 > Concept prototype for the Tencent Cloud AI Hackathon (DBS track), not an official DBS product. Bank APIs are mocked
 > and all money is synthetic. The fingerprint sensor is simulated by default (allowed by the brief); Settings →
@@ -255,7 +261,8 @@ web/                   index.html, app.js (dashboard, assistant, Care mode, card
 tests/                 Unit, harness, planner, care mode, voice, contract and HTTP tests
 eval/                  Conversation evaluation (84 core + 23 hard cases) and contract fault injection
 qa/                    Extended and browser acceptance tests, semantic robustness reports
-docs/                  SECURITY.md (threats, what is real vs simulated), RISK_CONTRACT.md (transaction contract)
+docs/                  SECURITY.md (threats, what is real vs simulated), RISK_CONTRACT.md (transaction contract),
+                       images/ (banner and screenshots for this README)
 scripts/               verify_receipt.py: offline check of a signed receipt
 deploy/, Dockerfile, render.yaml   Deployment
 ```
