@@ -84,17 +84,26 @@ class Session:
         if self.phase in (Phase.EXECUTED, Phase.CANCELLED, Phase.BLOCKED, Phase.FROZEN, Phase.HANDOFF):
             self.transition(Phase.IDLE)
             self.current_draft_id = None
-            self.task_start = len(self.messages)
+            self.start_task()
             self.verifier_job = None
+
+    def start_task(self) -> None:
+        """A new request starts here. The scam LEVEL stays (one-way, for the whole session), but the reasons are this
+        task's own: an earlier, finished payment's story must never be read out as the reason for a new one."""
+        self.task_start = len(self.messages)
+        self.scam_reasons = []
 
     @property
     def current_draft(self) -> Draft | None:
         return self.drafts.get(self.current_draft_id) if self.current_draft_id else None
 
     def escalate_scam(self, level: RiskLevel, reasons: list[str]) -> None:
-        """One-way escalation: only accepts a higher level."""
+        """One-way escalation: only accepts a higher level. Reasons are kept only for a real warning: a LOW verdict's
+        commentary ("looks like a normal transfer") is not a scam reason and must never be read out later."""
         if level.rank > self.scam_level.rank:
             self.scam_level = level
+        if level == RiskLevel.LOW:
+            return
         for r in reasons:
             if r not in self.scam_reasons:
                 self.scam_reasons.append(r)

@@ -145,7 +145,8 @@ def state_summary(session, bank) -> str:
                      "this may be a misheard amount: think what it sounds like and ask with your best guess "
                      "(\"Did you mean ...?\"). Don't just repeat your question.")
     if session.scam_level.rank > 0:
-        lines.append(f"Scam risk in this session: {session.scam_level.value} ({' '.join(session.scam_reasons[:2])})")
+        why = " ".join(session.scam_reasons[:2])
+        lines.append(f"Scam risk in this session: {session.scam_level.value}" + (f" ({why})" if why else ""))
     pc = session.pending_choice
     if pc:
         last = next((m["content"] for m in reversed(session.messages) if m["role"] == "user"), "")

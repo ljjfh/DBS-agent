@@ -299,7 +299,9 @@ class ToolGateway:
 
     def _run_judge(self, s: Session, summary: str):
         level_p = prot.effective(self.bank, s.user_id)
-        utterances = [m["content"] for m in s.messages if m["role"] == "user"]
+        # Judge THIS request: the words of the current task, not earlier finished payments (their scam signs, if any,
+        # already raised the session's level, which never goes down)
+        utterances = s.task_utterances() or [m["content"] for m in s.messages if m["role"] == "user"][-1:]
         level, reasons, _ = fraud.scan(" ".join(utterances[-6:]))
         s.escalate_scam(prot.cap_scam(level, level_p), reasons)
         if self.judge:

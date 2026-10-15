@@ -146,7 +146,7 @@ def evaluate(draft: Draft, bank: MockBank, ctx: RuleContext | None = None) -> Ri
     if ctx.scam_level.rank > RiskLevel.LOW.rank:
         level = RiskLevel.max(level, ctx.scam_level)
         hits.append(f"R40_SCAM_{ctx.scam_level.value}")
-        reasons.extend(ctx.scam_reasons)
+        reasons.extend(ctx.scam_reasons or ["Earlier in this conversation there were signs of a scam, so this needs extra care."])
 
     # ---- Evidence grounding: the model must not be the only source of the payee / amount ----
     g = ctx.grounding

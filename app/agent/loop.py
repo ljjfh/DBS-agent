@@ -195,7 +195,7 @@ class Agent:
                 s.care_mode = s.care_changed = answer
                 reply = CARE_ON if answer else CARE_OFF
                 s.messages.extend([{"role": "user", "content": text}, {"role": "assistant", "content": reply}])
-                s.task_start = len(s.messages)
+                s.start_task()
                 s.add_trace("ui", f"Care mode {'on' if answer else 'off'} (the customer answered Star's question)")
                 self.audit.append("ui.care_mode", s.session_id, {"on": answer, "by": "answer", "text": text})
                 return TurnResult(reply, {"type": "text", "care_mode": answer}, reply, s.trace[start:], "care mode")
@@ -247,15 +247,15 @@ class Agent:
             s.plan_specs.clear()
             reply = "OK, no payment will be sent from that request."
             s.messages.extend([{"role": "user", "content": text}, {"role": "assistant", "content": reply}])
-            s.task_start = len(s.messages)
+            s.start_task()
             return TurnResult(reply, {"type": "text"}, reply, s.trace[start:], "request guard")
         pending_edit = s.current_draft if s.phase in (Phase.AWAITING_AUTH, Phase.COOLING) else None
         if pending_edit and request_guard.correction(text):
             amount = parse_amount(text)
-            old_start = s.task_start
+            old_start, old_reasons = s.task_start, list(s.scam_reasons)   # a correction is the same task
             self.gateway.kernel.cancel(s, pending_edit.draft_id, reason="user correction")
             s.settle()
-            s.task_start = old_start
+            s.task_start, s.scam_reasons = old_start, old_reasons
             s.messages.append({"role": "user", "content": text})
             error = request_guard.problem(text)
             raw_level, reasons, _ = fraud.scan(text)
@@ -282,12 +282,12 @@ class Agent:
                 return TurnResult(reply, {"type": {Phase.FROZEN: "frozen", Phase.BLOCKED: "blocked", Phase.COOLING: "cooldown"}.get(s.phase, "confirm"), "card": card},
                                   reply, s.trace[start:], "request correction")
             reply = error or "Please make a new payment request with the recipient and amount."
-            s.task_start = len(s.messages)
+            s.start_task()
             return TurnResult(reply, {"type": "text"}, reply, s.trace[start:], "request guard")
         error = request_guard.problem(text) if detect_intent(text) in _MONEY_INTENTS else None
         if error:
             s.messages.extend([{"role": "user", "content": text}, {"role": "assistant", "content": error}])
-            s.task_start = len(s.messages)
+            s.start_task()
             return TurnResult(error, {"type": "text"}, error, s.trace[start:], "request guard")
 
         # 0. pre-hook, before any model sees the words (the planner included): deterministic scam scan
@@ -303,7 +303,7 @@ class Agent:
         # If the session was flagged earlier, later requests go to the model, but the tool gateway has already
         # shrunk the tool set (no more drafting transactions).
         if level.rank >= RiskLevel.HIGH.rank and fraud.wants_money_move(text):
-            return self._intercept(s, start, text)
+            return self._intercept(s, start, text, reasons)
 
         # 0. Plan
         plan_before = list(s.plan)
@@ -660,11 +660,11 @@ class Agent:
                               "hint": "Demo: Settings → Reset demo starts a clean conversation."})
 
     # ------------------------------------------------------------------ Intercept
-    def _intercept(self, s: Session, start: int, text: str) -> TurnResult:
+    def _intercept(self, s: Session, start: int, text: str, reasons: list[str] | None = None) -> TurnResult:
         s.plan.clear()
         if s.phase == Phase.IDLE:
             s.transition(Phase.BLOCKED)
-        reasons = s.scam_reasons[:3]
+        reasons = (reasons or s.scam_reasons)[:3]      # why THIS message was stopped, not earlier commentary
         reply = ("For your safety, I've stopped this one. " + " ".join(reasons) +
                  " If someone asked you to do this, please hang up and call the ScamShield helpline 1799, "
                  "or talk to your family first.")
