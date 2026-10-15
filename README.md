@@ -1,294 +1,272 @@
-# Star · DBS Conversational Transaction Agent (Hackathon prototype v0.4)
+# Star · a voice banking agent for DBS digibank
 
-A conversational transaction agent for everyone, optimized for elderly users. Core principle:
-**the LLM understands, the code decides, and the user authorizes.**
+Star lets customers bank by talking: "send 300 to my daughter", "pay the electricity bill, then put 1,000 into
+savings bonds", "move a grand to my joint account and buy DBS shares with half of it". It is built for everyone and
+designed first for seniors.
 
-**Transaction safety contract:** intent fidelity, completed plan dependencies, exact authorization and safe execution
-conditions now share an auditable decision record. Open **Security lab → Run risk demonstration** for eight isolated
-fault-injection scenarios and a clearly labelled five-candidate gate comparison. Confirmation cards expose expandable
-**Transaction safety evidence**; committed evidence is retained in signed transaction receipts as server observations.
-Large external transactions additionally need a separate simulated reviewer (`SECONDARY_REVIEW_KEY`); missing reviewer
-configuration fails closed. Transaction frequency is now a hard ledger-level limit. Setup, limitations and a five-minute
-demo script: [docs/RISK_CONTRACT.md](docs/RISK_CONTRACT.md).
+**Live demo:** https://star-dbs-agent.onrender.com (each browser gets its own demo customer, Mdm Chen)
 
-Semantic robustness update: colloquial SGD amounts, amount corrections that invalidate the old card,
-and receipt-bound proportional follow-ups are covered in [the semantic regression report](qa/SEMANTIC_REPORT.md).
-Try: "Move a grand to my joint account and then buy DBS shares with half of it".
-The Joint Account is a synthetic single-signatory account (new demo customers start with S$1,500). Internal transfers preserve
-total cash, and every step still needs its own reviewed signature. This does not implement DBS joint-account
-mandates or real securities execution. Uncertain names and amounts require clarification; real accent audio
-has not been benchmarked.
+One rule runs through the whole design: **the model understands, the code decides, the customer authorises.** The
+language model can look things up and prepare a draft. It has no tool that can move money. Every payment is checked by
+deterministic code, shown on a card built by code, signed on the customer's own device, and verified again by a
+payment gateway that trusts nothing upstream.
 
-> Prototype, not an official DBS product. The bank API is mocked. **The fingerprint sensor is simulated by default**
-> (the DBS brief allows mock biometrics): a clearly labelled sensor screen, and the user's tap unlocks a
-> non-extractable browser key that signs the exact card, which the kernel and the payment gateway both verify. Settings
-> → "Real Face ID / fingerprint" switches to a real **passkey** (Touch ID / Face ID / Windows Hello). The DBS logo and digibank
-> look are used for the hackathon demo only. What is real and what is simulated: [docs/SECURITY.md](docs/SECURITY.md).
+> Concept prototype for the Tencent Cloud AI Hackathon (DBS track), not an official DBS product. Bank APIs are mocked
+> and all money is synthetic. The fingerprint sensor is simulated by default (allowed by the brief); Settings →
+> "Real Face ID / fingerprint" switches to a real passkey. The DBS logo and digibank look are used for the demo only.
 
-## The five DBS challenge requirements, and where they live
+## Try it
 
-| Requirement | What Star does | Code | Try it |
-| --- | --- | --- | --- |
-| **Zero-UI multi-intent parsing** | Transfers, bill payments and **investments** (fixed deposit, Singapore Savings Bonds, unit trusts, an ETF, **SGX and US shares** such as DBS, Singtel, Apple, Microsoft — demo prices), with payee, amount, asset class and **source account**, turned into a structured draft. Compound requests ("send 350 to my son and invest 1000 in a fixed deposit") become a plan the agent works through step by step, the user confirming each one. Also: portfolio ("how are my investments doing?") and **instant card lock** for a lost wallet (protective, so no fingerprint needed; unlocking is not possible through Star). | `agent/tools.py` (draft tools), `agent/loop.py` (plan), `models.Draft` | "Put 200 into the income fund from my current account" · "Pay the electricity bill, then send 200 to my daughter" |
-| **Dynamic disambiguation** | Never guesses: asks one short question; when two payees match it names both with their account tails, as tap buttons. | `agent/llm.py`, `agent/loop._choices`, prompt | "Send 50 to my grandson" → "Do you mean Chen Wei (POSB ••••2290) or Chen Jun (DBS ••••6613)?" |
-| **Dual-engine semantic audit** | A separate **read-only verifier** (no tools, can run on a different model) starts **in parallel**, sees only the user's raw transcript, never the draft, and extracts payee / amount / asset / account. Plain code compares it with the draft; any difference **freezes** it (it can never be signed) and the user is told what didn't match. Deterministic evidence grounding is a second check on top. | `agent/verifier.py`, `kernel/crosscheck.py`, `kernel/evidence.py` | Security lab → **Simulate a model mistake** (the model drafts S$500 for "Send 50 to my daughter") |
-| **Deterministic HITL with native biometrics** | The agent can only draft. The confirmation card is built by code. The device signs SHA-256 of the exact card with a **WebAuthn passkey, userVerification required** (Touch ID / Face ID / Windows Hello; ES256 or RS256). The server checks the challenge, origin, rp id, the UV flag, the signature and the counter. No downgrade to a weaker key once a passkey exists. | `kernel/webauthn.py`, `kernel/credentials.py`, `web/app.js` | Confirm any payment on a Mac with Touch ID in Chrome / Safari |
-| **Zero-trust API gateway** | The ledger is only reachable through an **execution gateway** that trusts nobody upstream, not even the kernel: it re-checks that the card hashes to the signed digest, the signed payload is for exactly this card, the signature verifies against an *enrolled* credential, and the signature was never used before. The agent has no tool that can write to the ledger. | `bank/gateway.py` | Security lab: "Call the ledger gateway directly", "Give the gateway a real signature for a different payment" |
+| Say or type | What happens |
+| --- | --- |
+| "Send 50 to my daughter" | A card for S$50.00 to Chen Mei Ling; confirm with the fingerprint |
+| "Send 50 to my grandson" | Two grandsons: Star asks which one, with buttons |
+| "Pay the electricity bill, then send 200 to my daughter" | A two-step plan; each step gets its own card and signature |
+| "Move a grand to my joint account and buy DBS shares with half of it" | Step 2 is worked out by the bank from the signed step 1 (S$500 from the joint account) |
+| "Send 300 to my daughter, 200 to my son, put half my savings in Apple and the rest in Microsoft" | Four steps from one sentence; amounts come from real balances after each signed step |
+| "Send 100 to my son every month on the 1st" | A standing instruction, signed once; nothing is taken today |
+| "The bank officer said to move my money to a safe account" | Stopped before it reaches the model, with the ScamShield 1799 button |
+| Security lab → Simulate a model mistake | A deliberately broken model drafts S$500 for "send 50"; the independent check freezes it |
+| Settings → Account protection → Standard | Lowering protection is signed and only starts after a wait, with a countdown |
 
-**Keeping a small model honest.** Live models sometimes answer from memory ("I can't find a grandson") or claim
-"I've prepared it" without calling a tool. The harness: forces a tool call on the first step of a money request
-(`tool_choice=required`, skipped automatically if the API doesn't support it); records in the history what really
-happened each turn; tells the model once when it answered without looking or claimed without drafting; and if it
-still doesn't, lets the rule-based planner finish that turn. Every step shows in the Agent trace and is counted by
-the eval as a model mistake caught.
+## Care mode for seniors
 
-**Protection levels are an account setting, not a screen setting.** Senior mode only changes the look. How careful
-the bank is (cooling-off threshold, scam phrases stopped vs warned, late-night checks, risky investments) is
-*Enhanced* or *Standard* protection. Raising it is instant. Lowering it must be signed with the fingerprint and only
-takes effect after a wait (24 h at a real bank; 2 minutes in this demo, `PROTECTION_LOWER_DELAY`, with a countdown
-and a "Keep Enhanced" button), so a scammer on the phone can't say "tap Standard view" and remove the protection. The hard
-safety boundary (draft only, two-engine check, device signature, gateway) is the same for everyone.
+When Mdm Chen arrives, Star asks whether she would like the easier version. Saying or typing "yes", or tapping the
+button, switches to Care mode:
 
-**Every step is on record.** As the brief asks, the audit trail keeps the raw recording (each clip sent to Tencent
-ASR, stored under its SHA-256 and playable on the Audit trail page), the transcript, every draft with its rule and
-verifier results, and the device signature in the signed receipt. A card built from spoken words carries the
-recordings' hashes, so the fingerprint signs "this recording -> this card". Recordings are only linked when their
-transcript is exactly the words sent. Demo storage is the server disk (cleared on redeploy); a bank would use
-encrypted storage with a retention policy. With browser speech recognition (no Tencent keys) there is no audio to keep.
+- large text, one task at a time, a big microphone and four large starting buttons
+- plain words, amounts read in words and digits ("three hundred dollars (S$300.00)"), and every answer read aloud
+- the speaker button on each answer pauses and resumes; reading speed is set in Settings
+- a fuller read-back on the card ("You want to send three hundred dollars to your daughter Chen Mei Ling…")
 
-## Mock DBS APIs the agent calls
+She can switch back at any time ("normal view please"). Care mode changes how Star looks and talks, never how careful
+the bank is. That is a separate account setting (below), so a scammer who says "switch to the normal screen" removes
+no protection.
+
+## How a sentence becomes a payment
+
+1. **Voice.** Tencent Cloud ASR transcribes the recording (payee names are sent as hotwords). The recording is kept
+   for the audit trail under its SHA-256.
+2. **Scam screen.** Scam signs ("safe account", "bank officer said", OTPs, remote-control apps…) are checked before
+   any model sees the text.
+3. **Plan.** For a compound request the model writes a plan in a small closed vocabulary. Amounts are references
+   ("half of step 1", "what is left in savings"), never numbers it calculated.
+4. **Agent.** A ReAct loop calls read tools and draft tools only, with a harness that forces tool use, catches false
+   claims ("I've prepared it" with no draft) and falls back to a rule-based planner if the model misbehaves.
+5. **Kernel.** Deterministic checks on the draft:
+   - *grounding*: the payee and amount must come from the customer's own words (or from the bank's own calculation);
+   - *independent verifier*: a second model with no tools reads only the customer's words and never sees the draft.
+     Code compares the two field by field, and any difference freezes the card;
+   - *rules*: limits, balance, new payee, unusual amount, late night, suitability, frequency, scam escalation.
+6. **Card.** Built by code from the draft, never rewritten by the model. It shows "Based on what you said", how any
+   amount was worked out, the recording it came from, and every check.
+7. **Signature.** The device signs SHA-256 of the exact card with a passkey (Touch ID, Face ID, Windows Hello) or the
+   simulated sensor's non-extractable browser key.
+8. **Gateway and ledger.** The gateway re-verifies the card, signature, reviewer approval and dependencies, refuses
+   replays, and posts to the ledger under a lock. The customer can download a signed receipt and check it offline
+   (`python scripts/verify_receipt.py receipt.json`).
+
+Every step is written to a hash-chained audit log.
+
+## The DBS challenge requirements
+
+| Requirement | What Star does | Code |
+| --- | --- | --- |
+| **Zero-UI multi-intent parsing** | Transfers, bills, standing instructions, GIRO and investments (fixed deposit, savings bonds, unit trusts, an ETF, SGX and US shares) from one sentence, with payee, amount, asset class and source account. Compound requests become a plan; each step is confirmed on its own card. | `agent/planner.py`, `agent/loop.py`, `agent/tools.py` |
+| **Dynamic disambiguation** | Never guesses who. Two grandsons → "Chen Wei (POSB ••••2290) or Chen Jun (DBS ••••6613)?" as buttons. Unclear amounts get one short question ("Did you mean a grand, S$1,000?"). | `agent/loop.py`, `agent/prompts.py` |
+| **Dual-engine semantic audit** | A read-only verifier on the raw transcript runs in parallel; code diffs it against the draft and freezes any mismatch. Evidence grounding is a second, deterministic check. | `agent/verifier.py`, `kernel/crosscheck.py`, `kernel/evidence.py` |
+| **Deterministic human-in-the-loop with biometrics** | The agent only drafts. The card is code-built; the device signs its exact hash (WebAuthn, user verification required). No downgrade to a weaker key once a passkey exists. | `kernel/webauthn.py`, `kernel/signing.py`, `web/app.js` |
+| **Zero-trust API gateway** | The only door to the ledger. It re-checks the card hash, the signed payload, the enrolled credential, reviewer approval, dependencies and replays. | `bank/gateway.py` |
+| **Traceable and auditable** | Raw recording (SHA-256), transcript, drafts, verifier and rule results, decision records and the signed receipt, in a hash chain. The card carries the recording hashes, so the signature covers them. Audit trail page plays recordings back. | `kernel/audit.py`, `kernel/voice.py`, `kernel/contract.py` |
+
+## Risk controls
+
+How careful the bank is depends on the account's **protection level**, separate from the screen mode. Mdm Chen starts
+on Enhanced.
+
+| | Enhanced (default for seniors) | Standard |
+| --- | --- | --- |
+| Wait before confirming (transfers and investments) | above S$1,000 | above S$3,000 |
+| Scam signs in the request | stopped before the model | warning + "is this your own idea?" |
+| Late night (23:00–06:00 Singapore time) | extra question | none |
+| Investment above the customer's risk profile | treated as high risk, with a wait | warning + "do you understand it can lose value?" |
+| Separate reviewer for money to a never-paid person | above S$1,000 | above S$3,000 |
+
+Raising protection is instant. Lowering it must be signed on the device and only starts after a delay
+(`PROTECTION_LOWER_DELAY`: 2 minutes in the demo, 24 hours for a real bank), with a countdown and "Keep Enhanced".
+
+Always on, for everyone: unknown payee, insufficient balance, payments over S$5,000 (branch only), the daily transfer
+limit, paying more than a bill, more than 3 payments in 10 minutes (steps of one spoken request share a signed plan id
+and don't count against each other), a wait for the first transfer to a new payee, a question when an amount is over
+twice the usual, "safe account" requests, investments over S$3,000 need the separate reviewer. Large moves between the
+customer's own accounts, bills and family already paid before don't need the reviewer. The reviewer needs
+`SECONDARY_REVIEW_KEY` on the server; without it those payments fail closed.
+
+## Understanding people, not phrases
+
+**Multi-step requests.** "Put 1000 into the joint account, then use half that money for DBS stock" is not in any
+phrase list. The model translates it into a plan with references; code resolves each amount from **signed, executed**
+earlier steps and real balances, and the draft must use exactly that number (rule R53) and account. The verifier reads
+the original sentence plus the step number, never the plan. With `PLANNER=rules`, or if the model is down, a
+rule-based splitter is used.
+
+**Vague amounts.** "Half of my money", "20% of my savings", "whatever is left": the bank works the figure out and the
+card says how. If the model uses any other number, R53 blocks the card.
+
+**Misheard words.** Speech recognition turns "a grand" into "a grant", "a grind" or even "Agree!". The model works out
+what was meant, as a person would, and reports both words. Code only checks the reading: the misheard words are in
+the transcript, they sound alike, no number was added. Unsure → it asks; WHO always gets asked. The card says
+"we heard 'a grant' and read it as 'a grand'".
+
+**Keeping a model honest.** Live models sometimes answer from memory or claim "I've prepared it" without calling a
+tool. The harness forces a tool call on money requests, records what really happened each turn, nudges once, and
+otherwise lets the rule-based planner finish the turn. A blocked card is always explained in the bank's own words.
+
+## Mock DBS APIs
 
 `app/bank/dbs_api/` has one module per API from the [DBS developer catalogue](https://www.dbs.com/dbsdevelopers/discover/index.html)
-(names and purpose follow the catalogue; the fields are ours, as the real specifications aren't public). Each module
-registers its own agent tools, so teammates can add APIs without touching shared files. Every call shows in the agent
-trace as "DBS <API> · <method> <path> (mock)".
+(names and purpose follow the catalogue; the fields are ours). Each module registers its own agent tools, and each
+call appears in the agent trace as "DBS <API> · <method> <path> (mock)".
 
-| DBS API | What the agent can do | How it is protected |
+| DBS API | What the agent can do | Protection |
 | --- | --- | --- |
-| Deposit | List savings, current and **joint** accounts with details | read only |
-| Payees | List payees and own accounts; **add a new payee** | adding is grounded (every digit must be in the user's words) and **signed**; the first transfer to a new payee waits |
-| Limits | Check the **daily transfer limit**; lower or raise it | lowering is instant; raising is **signed and only starts after a delay**; transfers over the limit are blocked (R13) |
-| Fund Transfer | Transfer to saved people, and **between own accounts** ("move a grand to my joint account") | full payment pipeline: verifier, rules, card, signature, gateway |
-| Bill Payments | Utilities, town council, **credit card: full, minimum or an amount** | asks full or minimum if not said; more than the bill is blocked (R08) |
-| Standing Instructions | Set up "send 100 to my son **every month** on the 1st" (`draft_standing_instruction`, sharing the Fund Transfer pipeline); list; stop | the schedule is on the card and **signed**; the verifier freezes a one-off turned into a repeat (or the reverse) |
-| GIRO | List, **cancel**, set up | cancel is protective and instant (only what the user named); set-up is **signed** |
+| Deposit | Savings, current and joint accounts | read only |
+| Payees | List payees and own accounts; add a payee | adding is grounded in the user's words and signed; the first transfer waits |
+| Limits | Check, lower or raise the daily limit | lowering is instant; raising is signed and delayed |
+| Fund Transfer | To saved people and between own accounts | the full pipeline above |
+| Bill Payments | Utilities, town council, credit card (full, minimum or an amount) | asks full or minimum if not said; never more than the bill |
+| Standing Instructions | "Every month on the 1st", list, stop | the schedule is on the signed card; one-off vs repeat mismatches are frozen |
+| GIRO | List, cancel, set up | cancel is protective and instant; set-up is signed |
 
-Small models pick tools better from short lists, so the limits, GIRO / standing-order and add-payee tools are only
-offered when the conversation is about them.
+The demo world: Mdm Chen with savings, current and joint accounts; payees daughter Chen Mei Ling, son Chen Zhi Qiang,
+grandsons Chen Wei and Chen Jun; utilities, town council and credit card bills; nine investment products; a
+conservative risk profile.
 
-**Multi-step requests: the model plans, the code computes.** "Move a grand to my joint account and then buy DBS
-shares with half of it", "put 1000 into the joint account, then use half that money for DBS stock", "send 500 to my
-daughter and invest whatever is left in Apple": no list of phrases covers these, so the model translates the request
-into a small closed plan (`app/agent/planner.py`): steps, and amounts as *references* ("half of step 1's amount",
-"what is left in savings after step 1", "20% of savings"), never as numbers it calculated. The code then works each
-amount out from **signed, executed** earlier steps and real balances, and the draft must use exactly that number
-(R53) and account. The plan itself executes nothing: every step is still grounded in the user's original words,
-checked by the independent verifier (which reads the original sentence plus the step number, never the plan),
-shown on a card and signed. Offline, on a planner error, or with `PLANNER=rules`, the rule-based splitter is used.
-
-**Vague amounts.** "Buy Apple shares with half of my money", "20% of my savings", "move a grand to my joint account,
-then buy DBS shares with half of it": the bank's code works the amount out from the real balance (or the amount just
-said) and gives it to the model; the card says how it was worked out. If the model uses any other number, rule
-R53 blocks the card. "The rest" / "whatever is left" is never guessed: the agent asks for a figure.
-**Misheard words.** Speech recognition turns "a grand" into "a grant", "a grind" or even "Agree!". The model works
-out what the user meant, as a person would, and says what it read ("misheard": "a grant", "meant": "a grand"); it asks
-first when it isn't sure ("Did you mean a grand, S$1,000?"), and always asks about WHO. The kernel never rewrites the
-user's words; it only checks the model's reading: the misheard words are really in the transcript, they sound like
-what was meant, the reading adds no number, and what was meant is exactly the amount. The card then says "we heard
-“a grant” and read it as “a grand”". Money words are also sent to Tencent ASR as hotwords.
-
-## Running it
+## Run it locally
 
 ```bash
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env                                     # runs without any keys (offline mode)
+cp .env.example .env                                     # runs with no keys (offline rule model)
 python -m app.serve
 ```
 
-Open http://localhost:8000 (use `localhost`, not your LAN IP — see "Security" below). You land on a DBS digibank-style
-dashboard: balances, the Star assistant, "Behind your request" (the live safety checks) and upcoming bills. Speak,
-type, or tap a bill's **Pay** button. **Agent trace** (top right) opens the full Thought → Action → Observation log.
+Open http://localhost:8000 (use `localhost`: passkeys need it or HTTPS). **Agent trace** (top right) shows every
+Thought → Action → Observation step.
 
-Things to try: "Invest 1000 in savings bonds", "Send 50 to my daughter from my current account", "Send 50 to my
-grandson", the scam example, then **Security lab → Run all attacks** (22) and **Simulate a model mistake**, and
-**Settings → Account protection**.
-
-**Senior mode** (top-right button, remembered per browser) turns the same app into a one-task screen for elderly
-users: 20px+ text, no sidebar, a large round microphone, four big "what do you want to do" buttons, one question at
-a time with tap-to-answer choices, replies read aloud slowly, and a bigger confirmation card with the amount in
-words. Settings also has "Larger text", "Read replies aloud" and "Reset demo".
+### Tests and evaluation
 
 ```bash
-pip install -r tests/requirements.txt # includes the HTTP test client
-python -m unittest discover tests     # kernel, passkeys, verifier, gateway, contract, protection, Harness, HTTP
-python -m app.lab                    # security lab: 22 real attacks on an isolated sandbox
-python eval/run_contract_eval.py      # contract fault injection + measured gate replay -> eval/contract-report.json
-python eval/run_eval.py               # core + hard suites + attack tests -> eval/report.md / .json / .html
-python eval/run_eval.py --compare --repeat 3   # the headline run: rules-only baseline vs LLM agent, 3x each
-python eval/run_eval.py -v --only t1  # full trace for a single case
-LLM_PROVIDER=offline python eval/run_eval.py   # force the offline baseline even if .env has a model configured
+pip install -r tests/requirements.txt
+python -m unittest discover tests     # kernel, planner, verifier, gateway, contract, care mode, voice, HTTP
+python -m app.lab                     # security lab: 22 attacks on an isolated sandbox
+python eval/run_eval.py               # 84 core + 23 hard cases + attack tests -> eval/report.md / .json / .html
+python eval/run_eval.py --compare --repeat 3   # rules-only baseline vs the model agent, 3 runs each
+python eval/run_contract_eval.py      # 8 fault-injection scenarios + gate comparison -> eval/contract-report.json
+python qa/run_all.py                  # every layer, including browser end-to-end tests (needs Microsoft Edge)
 ```
 
-## Deploying online
+GitHub Actions runs the unit tests, the hard safety checks and the contract evaluation on every push and pull request.
 
-The app is one Python web service (no build step, no database). Passkeys need HTTPS, which every option below
-provides. Set `PUBLIC_DEMO=1` on any shared server: each browser then gets its own demo customer (its own balances,
-payments, resets and passkey), "Reset demo" only resets that browser, and model/speech calls are rate-limited per
-device so the API keys can't be drained.
+## Configuration
 
-**Render (quickest, free):** New + → Blueprint → pick this repository. `render.yaml` sets everything up in the
-Singapore region; type the secrets (`LLM_*`, `TENCENTCLOUD_*`) into the dashboard when asked. Every push to `main`
-redeploys. Free instances sleep after ~15 idle minutes (the first visit then takes about a minute); switch the plan
-to Starter for judging week.
-
-**Tencent Cloud Lighthouse / any Linux server with Docker:** copy `.env` to the server, then
-`PUBLIC_HOST=<your domain> docker compose -f deploy/compose.yaml up -d --build`. Caddy gets the HTTPS certificate
-automatically. Without a domain, use `<server IP with dashes>.sslip.io` (e.g. `43-128-1-2.sslip.io`).
-
-**Anything else that runs a Dockerfile** (Railway, Fly.io, Hugging Face Spaces): the `Dockerfile` listens on `$PORT`;
-the platform's hostname is allowed automatically, or set `PUBLIC_HOST`.
-
-Notes: run one process/instance. SQLite persists the synthetic ledger, receipts and session identity bindings; pending drafts stay in memory. On free tiers the disk is wiped on every deploy, so passkeys
-need re-enrolling (one fingerprint). If the model endpoint isn't reachable from the server (e.g. a campus-only API),
-Star falls back to the offline rule model and the trace says so.
-
-## Connecting a model (Tencent Hunyuan, Qwen or others)
-
-Set in `.env`:
+**Model.** Any OpenAI-compatible `/chat/completions` API with function calling:
 
 ```
 LLM_PROVIDER=openai_compat
 LLM_API_KEY=your key
 LLM_BASE_URL=https://api.hunyuan.cloud.tencent.com/v1
-LLM_MODEL=a model name your provider offers that supports Function Calling
+LLM_MODEL=a model your provider offers
 ```
 
-Optional: `LLM_VERIFIER_MODEL` runs the independent verifier on a different model (more independent engines).
+`LLM_VERIFIER_MODEL` runs the verifier on a different model; `LLM_JUDGE_MODEL` does the same for the scam assessment.
+If the model times out or errors, Star falls back to the offline rule model and the trace says so.
 
-Any OpenAI-compatible `/chat/completions` API works (Hunyuan international, a university Qwen endpoint, models
-provided by the competition, etc.); only change these settings. The variable name must be exactly `LLM_MODEL`.
-If the online model times out or errors, the agent automatically falls back to offline mode and the trace panel
-shows `Fallback` with the error. Check the trace after your first message to confirm the model is really in use.
+**Tencent Cloud ASR.** Set `TENCENTCLOUD_SECRET_ID` / `TENCENTCLOUD_SECRET_KEY`. The app records 16 kHz mono WAV and
+stops after 3 seconds of quiet (4 in Care mode, 50 seconds at most). The engine defaults to `16k_en`. Without keys the
+browser's own recognition is used, and there is no audio to keep for the audit trail.
 
-## Connecting Tencent Cloud ASR
+**Other settings.** `PUBLIC_DEMO=1` gives every browser its own demo customer and rate-limits model and speech calls
+per device. `RULE_HIGH_THRESHOLD`, `RULE_HIGH_THRESHOLD_STANDARD`, `RULE_COOLDOWN_SECONDS`, `RULE_VELOCITY_MAX`,
+`PROTECTION_LOWER_DELAY`, `REVIEW_INVEST_THRESHOLD` and `BANK_TIMEZONE` tune the rules (see `app/config.py`).
 
-Set `TENCENTCLOUD_SECRET_ID / SECRET_KEY` in `.env`. The frontend records 16k mono WAV and stops when the
-customer taps the mic again or has been quiet for 3 seconds after speaking (4 seconds in Senior mode; at most 50
-seconds per recording), the backend calls SentenceRecognition, and payee names (daughter, Mei Ling, …) are passed in
-automatically as temporary hotwords. Without keys, the frontend uses the browser's built-in speech recognition
-(Chrome) in continuous mode with the same pause rules, showing the words in the text box as they are heard.
+## Deploying
 
-The engine defaults to `16k_en`. The international endpoint (`asr.intl.tencentcloudapi.com`) does **not** support
-`16k_zh_large`; that engine is only available on the China endpoint.
+**Render:** New + → Blueprint → this repository. `render.yaml` sets up a Singapore service; type the secrets into the
+dashboard. Every push to `main` redeploys. **Docker:** `PUBLIC_HOST=<domain> docker compose -f deploy/compose.yaml up -d --build`
+(Caddy adds HTTPS). The `Dockerfile` also runs on Railway, Fly.io or Hugging Face Spaces.
 
-You can tell which recognizer was used from the trace panel: `Tencent Cloud ASR (16k_en, …ms): …` versus
-`Browser speech recognition: …`.
+Run one instance. SQLite keeps the synthetic ledger, receipts and session bindings; pending drafts live in memory. On
+free tiers the disk is wiped on every deploy: passkeys need re-enrolling, voice recordings are cleared, and open pages
+quietly start a fresh session.
 
-All we can tune is the engine (`ASR_ENGINE`), the hotword list, and post-processing. We can't change how well the
-ASR itself recognizes speech, so the design **assumes the ASR will mishear**: amounts and payees are always read
-back for confirmation, and authorization only accepts the biometric check.
+## Web server hardening
 
-## How a payment is authorized
+`app/security.py`: host allowlist (blocks DNS rebinding), same-origin JSON-only POSTs, size limits, a strict CSP with
+no inline code or third-party scripts, and a static-file allowlist so source, `.env` and the audit log can't be fetched.
 
-1. The agent can only **draft**. While it works, the **independent verifier** re-reads only the user's words
-   (in parallel). The kernel then checks the draft two ways: against the verifier's reading (`kernel/crosscheck.py`:
-   any stated field that differs → **FROZEN**), and against the literal words (`kernel/evidence.py`: payee not said →
-   HIGH, amount not said → MEDIUM, neither → BLOCK). Then the rules grade it (limits, new payee, suitability…).
-2. The card shows exactly what will happen, including **"Based on what you said: …"** and the verifier's result.
-3. On confirm, the browser asks for a **challenge** (the exact card + nonce + expiry). With a passkey, the browser
-   calls `navigator.credentials.get` with `challenge = SHA-256(challenge)` and `userVerification: "required"`: the OS
-   shows its own fingerprint / face prompt. By default (simulated sensor) the user taps the demo fingerprint screen
-   and a non-extractable WebCrypto key signs the same challenge.
-4. The kernel verifies (`kernel/webauthn.py` / `kernel/p256.py`, pure Python; uses `cryptography` if installed),
-   consumes the challenge once, re-runs the rules, and hands the signed instruction to the **execution gateway**,
-   which verifies everything again on its own before posting to the ledger.
-5. The user can download a **signed receipt** and check it offline, passkey signatures included:
-   `python scripts/verify_receipt.py receipt-TXN-XXXX.json`
-
-With **Settings → "Real Face ID / fingerprint"** on, the first payment asks your Mac / phone to save a passkey (one
-extra fingerprint touch); turning it off removes it and brings back the simulated sensor. Passkeys need `localhost`
-or HTTPS; Chrome and Safari both work.
-
-**On Windows** the prompt is **Windows Hello**: fingerprint, face, or the Windows Hello PIN (all three count as
-"user verified"). Set it up first in Settings → Accounts → Sign-in options, then use Chrome or Edge on
-`http://localhost:8000`. Both key types Windows Hello may create (ES256 and RSA/RS256) are supported. A PC without
-Windows Hello set up is offered a phone (QR code) or a security key instead. If Edge saves the passkey in Microsoft
-Password Manager, it may sign without a fingerprint check; the server refuses that and the card offers "Set up
-fingerprint again" (choose Windows Hello / this device).
-
-Open **Security lab** in the sidebar to run 22 real attacks: unsigned, attacker key, tampered amount, replay,
-expiry, cooling-off bypass, balance drained before execution, payment never asked for, hidden instructions, audit
-edits, **model writes the wrong amount / payee / account (frozen by the verifier)**, signing without the verifier,
-**passkey without fingerprint check, downgrade to a browser key, passkey for another site**, **calling the ledger
-gateway directly / with a signature for another payment**, and **switching off senior protection without a
-fingerprint**. Ideas for evidence grounding, device signing, receipts and the lab were adapted from a teammate's
-prototype (Aegis).
-
-## Security of the web server
-
-`app/security.py` hardens the local demo server (also adapted from Aegis):
-
-- **Host allowlist** — only answers to `localhost`, `127.0.0.1`, `[::1]` (blocks DNS rebinding). To demo from a phone
-  on the same Wi-Fi, add your laptop's IP: `ALLOWED_HOSTS=localhost,127.0.0.1,192.168.1.23`. Note that browsers only
-  allow Web Crypto signing on `localhost` or HTTPS, so on a LAN IP the payment step needs an HTTPS tunnel.
-- **Same-origin, JSON-only POSTs** — a foreign `Origin` gets 403, a form post gets 415, bodies over 32 KB (3 MB for
-  speech) get 413; missing fields or malformed JSON get a clean 400.
-- **Strict CSP** — no inline scripts or styles, no third-party code; framing denied; `nosniff`; `no-store`.
-- **Static allowlist** — only `index.html`, `app.js`, `styles.css` and the two SVGs are ever served; source code,
-  `.env` and the audit log can't be fetched.
-
-## Architecture and layout
+## Project layout
 
 ```
-User (voice / text)
-  └─ web/                    DBS digibank-style UI (layout, logo and HTTP hardening adapted from teammate's Aegis)
-      ├─ index.html          Shell only (no inline code, so the strict CSP holds)
-      ├─ app.js              Dashboard, assistant, Senior mode, confirmation card + device signing, Transactions,
-      │                      Payees, Audit trail, Security lab, Settings, voice (WAV → Tencent ASR / browser), TTS
-      └─ styles.css          DBS theme + Senior mode + Larger text + mobile layout
-      └─ app/server.py       HTTP API; /api/confirm is the only way money can move (needs a device signature
-                             over /api/challenge); /api/key registers the device key; /api/state feeds the
-                             dashboard; /api/audit/session/{id} exports the audit trail; /api/lab runs the lab
-      └─ app/security.py     Host allowlist, same-origin JSON-only POSTs, size limits, CSP and security headers
-          ├─ app/agent/      ── Untrusted zone: the model can only read and draft ──
-          │   ├─ loop.py         Constrained ReAct loop + Harness (plan splitting, phrase pre-check, step cap,
-          │   │                  output validation, fallback)
-          │   ├─ tools.py        Tool gateway: read / draft / control tiers, dynamic shrinking, argument
-          │   │                  validation, injection filtering on results
-          │   ├─ llm.py          OpenAI-compatible client + offline rule model (same interface)
-          │   ├─ fraud.py        Scam assessment: deterministic phrase rules + a separate second model call
-          │   │                  (can only escalate)
-          │   ├─ verifier.py     Independent read-only verifier (2nd engine): transcript only, runs in parallel
-          │   ├─ prompts.py      System prompt + structured per-turn state summary
-          │   ├─ presenter.py    Confirmation card (generated entirely by code from the draft) and read-back
-          │   └─ textparse.py    Amount parsing (digits and words), alias matching, amounts in words
-          ├─ app/kernel/     ── Deterministic kernel: out of the model's reach ──
-          │   ├─ rules.py        Rule engine (limits / new payee / unusual amount / late night / velocity /
-          │   │                  scam escalation)
-          │   ├─ state.py        Session state machine (can only advance in order)
-          │   ├─ evidence.py     Grounding: payee / amount must come from the user's own words
-          │   ├─ crosscheck.py   Dual-engine audit: field-by-field diff of draft vs verifier → freeze
-          │   ├─ webauthn.py     Passkey registration + assertion verification (CBOR, UV flag, counter)
-          │   ├─ credentials.py  Enrolled passkeys (per customer, kept across resets) + browser keys; no downgrade
-          │   ├─ protection.py   Enhanced / Standard protection: account setting, delayed lowering
-          │   ├─ signing.py      What you see is what you sign: digest, signed challenge, one-time token
-          │   ├─ p256.py         ECDSA P-256 verification of browser Web Crypto signatures (no dependency)
-          │   ├─ executor.py     Draft → authorize → pre-execution recheck → hand-off to the execution gateway
-          │   ├─ voice.py        Voice recordings for the audit trail (SHA-256 in the chain, signed on the card)
-          │   └─ audit.py        Append-only hash-chained audit log
-          ├─ app/lab.py      Security lab: 22 attacks against the real kernel in an isolated sandbox
-          ├─ app/bank/gateway.py     Zero-trust execution gateway: the only door to the ledger, re-verifies signatures
-          ├─ app/bank/mock_bank.py   Mock bank and fixed test world (Mdm Chen, two accounts, daughter, son, two
-          │                          grandsons, two bills, four investment products, a conservative risk profile)
-          └─ app/voice/asr.py        Tencent Cloud SentenceRecognition (TC3 signing + hotwords)
-eval/   cases.json (46 core cases, incl. investments and source accounts) + cases_hard.json (23 hard cases: paraphrase, multi-turn, scams without
-        keywords, injection, out of scope) + run_eval.py (scoring, baseline compare, pass^k, fallback
-        detection, harness-intervention counts, latency, security-lab attacks, one-page HTML scorecard)
-scripts/verify_receipt.py   offline check of a downloaded signed receipt
-docs/SECURITY.md            threats, what is implemented, what is simulated, what remains
-tests/  kernel tests + "misbehaving model" Harness tests + HTTP tests (real server on a free port)
-        + test_hackathon.py (one class per DBS requirement, plus protection levels)
+app/
+  server.py            HTTP API: chat, speech, challenge/confirm (the only way money moves), state, audit, voice playback
+  security.py          Host allowlist, same-origin JSON POSTs, size limits, CSP
+  config.py            All settings and rule thresholds (from .env)
+  runtime.py           Wires the layers together
+  serve.py             Local start-up
+  models.py            Draft, risk decision, card fields (what gets signed)
+  lab.py               Security lab: 22 attacks against the real kernel in a sandbox
+  contract_lab.py      Transaction-contract fault injection
+  agent/               Untrusted zone: the model can only read and draft
+    loop.py            ReAct loop + harness (plan, scam pre-check, care mode, output validation, fallback)
+    planner.py         Model planner: closed-vocabulary plan, amounts resolved in code
+    tools.py           Tool gateway: read / draft / control tiers, argument checks, injection filtering
+    llm.py             OpenAI-compatible client + offline rule model (same interface)
+    verifier.py        Independent read-only verifier (second engine)
+    fraud.py           Scam assessment: phrase rules + a separate model call (can only escalate)
+    prompts.py         System prompt (senior and everyday speaking styles) + per-turn state summary
+    presenter.py       Confirmation card and read-back, built by code
+    request_guard.py   Cancellations and requests this SGD-only demo can't carry out faithfully
+    textparse.py       Amounts in digits and words, names and aliases
+  kernel/              Deterministic kernel, out of the model's reach
+    executor.py        Draft → authorize → recheck → hand-off to the gateway
+    rules.py           Rule engine (limits, new payee, suitability, night, frequency, scam escalation)
+    evidence.py        Grounding: payee and amount must come from the user's words
+    crosscheck.py      Dual-engine audit: draft vs verifier → freeze
+    contract.py        Decision records and the separate-reviewer rule
+    protection.py      Enhanced / Standard protection, delayed lowering
+    changes.py         Signed account changes (add payee, raise limit, GIRO)
+    signing.py         What you see is what you sign: digest, challenge, one-time token
+    webauthn.py        Passkey registration and assertion checks
+    credentials.py     Enrolled passkeys and browser keys, no downgrade
+    p256.py            ECDSA P-256 verification (no dependency)
+    state.py           Session state machine
+    voice.py           Recordings for the audit trail (SHA-256, linked to the card)
+    audit.py           Append-only hash-chained audit log
+  bank/
+    gateway.py         Zero-trust execution gateway: the only door to the ledger
+    mock_bank.py       Synthetic bank and demo world
+    storage.py         SQLite persistence
+    dbs_api/           One module per mock DBS API (deposits, payees, limits, fund transfer, bills,
+                       standing instructions, GIRO)
+  voice/asr.py         Tencent Cloud SentenceRecognition (TC3 signing, hotwords)
+web/                   index.html, app.js (dashboard, assistant, Care mode, cards, signing, audit, lab,
+                       settings, voice, read-aloud), styles.css, logos
+tests/                 Unit, harness, planner, care mode, voice, contract and HTTP tests
+eval/                  Conversation evaluation (84 core + 23 hard cases) and contract fault injection
+qa/                    Extended and browser acceptance tests, semantic robustness reports
+docs/                  SECURITY.md (threats, what is real vs simulated), RISK_CONTRACT.md (transaction contract)
+scripts/               verify_receipt.py: offline check of a signed receipt
+deploy/, Dockerfile, render.yaml   Deployment
 ```
 
-Recovery/security fixes and test evidence: see [qa/FIX_REPORT.md](qa/FIX_REPORT.md). Run all regression layers with `python qa/run_all.py`.
+## What is real and what is simulated
+
+Real: the agent, planner, verifier, rules, grounding, card hashing, device signatures (real passkeys when enabled),
+gateway checks, hash-chained audit log, Tencent ASR and the voice archive. Simulated: the bank and its APIs, balances,
+market prices, the fingerprint sensor by default, the separate reviewer, family alerts and the ScamShield hand-off.
+Details and remaining gaps: [docs/SECURITY.md](docs/SECURITY.md) and [docs/RISK_CONTRACT.md](docs/RISK_CONTRACT.md).
+Test evidence: [qa/SEMANTIC_REPORT.md](qa/SEMANTIC_REPORT.md) and [qa/FIX_REPORT.md](qa/FIX_REPORT.md).
+
+Evidence grounding, device signing, receipts, the security lab and the server hardening were adapted from a
+teammate's earlier prototype (Aegis).
